@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>e-coli3 | Central Metabolism Live Atlas</title>
+    
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Link to Stylesheet -->
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!-- App Container -->
+    <div id="app">
+      <!-- Main Canvas Target for PixiJS -->
+      <canvas id="pixi-canvas"></canvas>
+
+      <!-- Top Navigation Header -->
+      <header class="app-header glass">
+        <div class="brand">
+          <span class="logo">⚡</span>
+          <h1>e-coli3</h1>
+          <span class="divider">|</span>
+          <span class="subtitle">E. coli Central Metabolism Live Atlas</span>
+        </div>
+        <div class="system-status">
+          <span class="status-indicator"></span>
+          <span class="status-text">Client-Side ODE Integrator</span>
+        </div>
+      </header>
+
+      <!-- Left Overlay Panel (Global Controls & Overview) -->
+      <aside class="left-panel panel glass">
+        <section class="control-section">
+          <h2>Simulation Controls</h2>
+          <div class="btn-group">
+            <button id="play-pause-btn" class="btn btn-primary">⏸ Pause</button>
+            <button id="reset-btn" class="btn btn-secondary">↺ Reset</button>
+          </div>
+          <div class="slider-group">
+            <label for="speed-slider">Simulation Speed: <span id="speed-val">1.0x</span></label>
+            <input type="range" id="speed-slider" min="0.1" max="5.0" step="0.1" value="1.0" />
+          </div>
+        </section>
+
+        <section class="pathway-section">
+          <h2>Pathway Camera Focus</h2>
+          <div class="grid-buttons">
+            <button class="btn btn-pathway" data-pathway="glycolysis">Glycolysis</button>
+            <button class="btn btn-pathway" data-pathway="tca">TCA Cycle</button>
+            <button class="btn btn-pathway" data-pathway="ppp">PPP Pathway</button>
+            <button class="btn btn-pathway" data-pathway="fit">Fit to View</button>
+          </div>
+        </section>
+
+        <section class="strain-section">
+          <h2>Metabolic Strain Model</h2>
+          <select id="strain-select" class="select-dropdown">
+            <option value="e_coli_core">Wild-Type Core (e_coli_core)</option>
+            <option value="iJO1366">Aerobic Growth (iJO1366)</option>
+            <option value="iML1515">Optimized Mutant (iML1515)</option>
+            <option value="iAF1260">Classic Strain (iAF1260)</option>
+            <option value="iJR904">Slow Fermenter (iJR904)</option>
+          </select>
+          <div id="strain-description" class="strain-desc">
+            Standard wild-type core model. Balanced and stable.
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Growth Rate</span>
+              <span id="metric-growth" class="metric-value">0.32 hr⁻¹</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">ATP Yield</span>
+              <span id="metric-atp" class="metric-value">12.5 mM/s</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="metabolite-list-section">
+          <h2>Metabolite Overview</h2>
+          <div id="metabolite-rows-container" class="metabolite-list">
+            <!-- Dynamically populated rows -->
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Overlay Panel (Metabolite / Reaction Inspector) -->
+      <aside id="inspector-panel" class="right-panel panel glass">
+        <!-- Default State: Empty -->
+        <div id="inspector-empty" class="inspector-placeholder">
+          <span class="placeholder-icon">🔬</span>
+          <p>Click on any metabolite node or reaction badge to inspect parameters, inject concentrations, and observe kinetics.</p>
+        </div>
+
+        <!-- Metabolite Inspector State -->
+        <div id="inspector-metabolite" class="inspector-content hidden">
+          <div class="inspector-header">
+            <span class="category-badge badge-metab">Metabolite</span>
+            <button class="close-inspector-btn">✕</button>
+          </div>
+          <h2 id="metab-name" class="inspector-title">Glucose-6-Phosphate</h2>
+          <div class="meta-row">
+            <span class="meta-label">BiGG ID:</span>
+            <span id="metab-bigg-id" class="meta-value code-font">g6p_c</span>
+          </div>
+          
+          <!-- Rolling Line Chart -->
+          <div class="chart-container">
+            <h3>Concentration History</h3>
+            <canvas id="rolling-chart"></canvas>
+            <div class="chart-legend">
+              <span class="current-conc-text">Current: <span id="metab-conc-val" class="highlight-val">1.20</span> mM</span>
+            </div>
+          </div>
+
+          <!-- Injection Interface -->
+          <div class="injection-container">
+            <h3>In Silico Injection</h3>
+            <p class="description-text">Inject a concentration spike directly into the cellular cytoplasm to observe metabolic transients.</p>
+            <div class="grid-buttons">
+              <button class="btn btn-inject" data-amount="1.0">+1.0 mM</button>
+              <button class="btn btn-inject" data-amount="5.0">+5.0 mM</button>
+              <button class="btn btn-inject" data-amount="10.0">+10.0 mM</button>
+              <button id="btn-deplete" class="btn btn-deplete">Deplete (0.1 mM)</button>
+            </div>
+          </div>
+
+          <!-- Kinetic Fluxes -->
+          <div class="fluxes-section">
+            <h3>Connected Flux Rates</h3>
+            <div id="metab-fluxes-list" class="flux-list">
+              <!-- Dynamically populated connected fluxes -->
+            </div>
+          </div>
+
+          <!-- Cross references -->
+          <div class="db-section">
+            <h3>Database Cross-References</h3>
+            <div id="metab-cross-refs" class="db-grid">
+              <!-- Dynamically populated cross references -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Reaction Inspector State -->
+        <div id="inspector-reaction" class="inspector-content hidden">
+          <div class="inspector-header">
+            <span class="category-badge badge-reaction">Reaction</span>
+            <button class="close-inspector-btn">✕</button>
+          </div>
+          <h2 id="rxn-name" class="inspector-title">Phosphofructokinase</h2>
+          <div class="meta-row">
+            <span class="meta-label">BiGG ID:</span>
+            <span id="rxn-bigg-id" class="meta-value code-font">PFK</span>
+          </div>
+
+          <!-- Stoichiometric Equation -->
+          <div class="equation-box">
+            <h3>Reaction Stoichiometry</h3>
+            <div id="rxn-equation" class="equation-text code-font">f6p_c + atp_c &rarr; fdp_c + adp_c + h_c</div>
+          </div>
+
+          <!-- Flux value indicator -->
+          <div class="flux-yield-card">
+            <span class="flux-label">Current Rate (Flux)</span>
+            <span id="rxn-flux-val" class="flux-value">12.50 mM/s</span>
+            <div class="flux-direction-bar">
+              <div id="flux-dir-indicator" class="flux-dir-fill"></div>
+            </div>
+          </div>
+
+          <!-- Parameters Tuning -->
+          <div class="parameters-container">
+            <h3>Kinetic Parameters</h3>
+            <div class="param-slider">
+              <div class="param-label-row">
+                <label for="vmax-slider">Maximum Velocity (Vmax)</label>
+                <span id="vmax-val" class="code-font">15.0</span>
+              </div>
+              <input type="range" id="vmax-slider" min="0.0" max="40.0" step="0.5" value="15.0" />
+            </div>
+            <div class="param-slider">
+              <div class="param-label-row">
+                <label for="km-slider">Michaelis Constant (Km)</label>
+                <span id="km-val" class="code-font">0.3</span>
+              </div>
+              <input type="range" id="km-slider" min="0.05" max="5.0" step="0.05" value="0.3" />
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Hover Tooltip -->
+      <div id="tooltip" class="tooltip glass hidden">
+        <h4 id="tooltip-title">G6P</h4>
+        <div class="tooltip-row">
+          <span>Concentration:</span>
+          <span id="tooltip-conc" class="value text-emerald">1.25 mM</span>
+        </div>
+        <div class="tooltip-row">
+          <span>Net Flux:</span>
+          <span id="tooltip-flux" class="value text-indigo">+2.40 mM/s</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Entry Script -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
