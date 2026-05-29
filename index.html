@@ -121,8 +121,11 @@
           <!-- Injection Interface -->
           <div class="injection-container">
             <h3>In Silico Injection</h3>
-            <p class="description-text">Inject a concentration spike directly into the cellular cytoplasm to observe metabolic transients.</p>
-            <div class="grid-buttons">
+            <p id="injection-desc" class="description-text">Inject a concentration spike directly into the cellular cytoplasm to observe metabolic transients.</p>
+            <div id="injection-warning" class="injection-warning hidden">
+              ⚠️ In silico injection is disabled. This metabolite is not transported across the cell membrane.
+            </div>
+            <div id="injection-buttons" class="grid-buttons">
               <button class="btn btn-inject" data-amount="1.0">+1.0 mM</button>
               <button class="btn btn-inject" data-amount="5.0">+5.0 mM</button>
               <button class="btn btn-inject" data-amount="10.0">+10.0 mM</button>

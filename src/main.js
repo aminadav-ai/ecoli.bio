@@ -346,6 +346,22 @@ function setupUIListeners() {
 }
 
 /**
+ * Helper to check if a metabolite is transportable (ends with _e, or has a corresponding _e counterpart in the model).
+ */
+function isMetaboliteTransportable(biggId) {
+  if (!biggId) return false;
+  if (biggId.endsWith('_e')) return true;
+  if (biggId.endsWith('_c')) {
+    const base = biggId.slice(0, -2);
+    const extId = base + '_e';
+    if (simulation && simulation.metabolites[extId]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Event handler triggered when a user clicks on a metabolite circle in Pixi canvas.
  */
 function handleMetaboliteSelect(node) {
@@ -367,6 +383,22 @@ function handleMetaboliteSelect(node) {
   // Fill in static metadata
   document.getElementById('metab-name').textContent = node.name;
   document.getElementById('metab-bigg-id').textContent = node.biggId;
+
+  // Show/Hide injection buttons based on transportable status
+  const isTransportable = isMetaboliteTransportable(node.biggId);
+  const descEl = document.getElementById('injection-desc');
+  const warningEl = document.getElementById('injection-warning');
+  const buttonsEl = document.getElementById('injection-buttons');
+
+  if (isTransportable) {
+    descEl.classList.remove('hidden');
+    buttonsEl.classList.remove('hidden');
+    warningEl.classList.add('hidden');
+  } else {
+    descEl.classList.add('hidden');
+    buttonsEl.classList.add('hidden');
+    warningEl.classList.remove('hidden');
+  }
 
   // Render cross references
   populateCrossReferences(node.biggId);

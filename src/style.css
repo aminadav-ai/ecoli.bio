@@ -761,6 +761,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .text-emerald { color: #34d399; }
 .text-indigo { color: #a5b4fc; }
 
+.injection-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  border-left: 3px solid #fbbf24;
+}
+
 /* Utilities */
 .hidden {
   display: none !important;
