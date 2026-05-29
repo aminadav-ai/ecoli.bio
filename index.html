@@ -47,6 +47,28 @@
           </div>
         </section>
 
+        <section class="intervention-section">
+          <h2>Metabolic Engineering Toolkit</h2>
+          <div class="form-group">
+            <label for="perturbation-select">Select Metabolic Perturbation</label>
+            <select id="perturbation-select" class="select-dropdown">
+              <option value="none">None (Baseline)</option>
+              <option value="pgi">PGI Enzyme Inhibition</option>
+              <option value="tca">TCA Cycle Block (CS)</option>
+              <option value="atp">ATP Demand Surge</option>
+              <option value="nad">NAD+ Regeneration Failure</option>
+            </select>
+          </div>
+          <div class="slider-group">
+            <label for="perturbation-slider">Perturbation Intensity: <span id="perturbation-val">100%</span></label>
+            <input type="range" id="perturbation-slider" min="0" max="200" step="5" value="100" />
+          </div>
+          <div class="btn-group">
+            <button id="apply-perturbation-btn" class="btn btn-primary">Apply Intervention</button>
+            <button id="reset-wt-btn" class="btn btn-secondary">Reset to WT</button>
+          </div>
+        </section>
+
         <section class="pathway-section">
           <h2>Pathway Camera Focus</h2>
           <div class="grid-buttons">
@@ -78,6 +100,10 @@
               <span class="metric-label">ATP Yield</span>
               <span id="metric-atp" class="metric-value">12.5 mM/s</span>
             </div>
+          </div>
+          <div class="sparkline-container">
+            <span class="sparkline-title">Growth Rate Trend</span>
+            <canvas id="growth-sparkline"></canvas>
           </div>
         </section>
 

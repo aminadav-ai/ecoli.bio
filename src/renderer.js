@@ -46,6 +46,10 @@ export class PixiRenderer {
     this.hoveredReaction = null;
     this.selectedNodeId = null;
     this.selectedReactionId = null;
+
+    // Perturbation state
+    this.perturbedReactionId = null;
+    this.perturbedIntensity = 100;
   }
 
   /**
@@ -346,6 +350,14 @@ export class PixiRenderer {
     this.selectedNodeId = null;
     this.selectedReactionId = null;
     this.updateReactionBadgeHighlight();
+  }
+
+  /**
+   * Sets the active engineering perturbation reaction highlight.
+   */
+  setPerturbedReaction(rxnId, intensity = 100) {
+    this.perturbedReactionId = rxnId;
+    this.perturbedIntensity = intensity;
   }
 
   /**
@@ -727,6 +739,26 @@ export class PixiRenderer {
         }
       });
     });
+
+    // 3. Draw Perturbation Highlight
+    if (this.perturbedReactionId) {
+      const rxn = this.reactions.find(r => r.biggId === this.perturbedReactionId);
+      if (rxn && rxn.labelX && rxn.labelY) {
+        const pulse = 1.0 + 0.15 * Math.sin(animationFrameCount * 0.15);
+        const width = 56 * pulse;
+        const height = 24 * pulse;
+        
+        let color = 0xef4444; // default red (inhibition / block)
+        if (this.perturbedIntensity > 100) {
+          color = 0x34d399; // green (overexpression / activation)
+        } else if (this.perturbedIntensity === 100) {
+          color = 0x6366f1; // indigo (neutral baseline)
+        }
+        
+        mg.roundRect(rxn.labelX - width / 2, rxn.labelY - height / 2, width, height, 4)
+          .stroke({ width: 2.5, color, alpha: 0.95 });
+      }
+    }
   }
 
   /**

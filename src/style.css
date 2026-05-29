@@ -774,6 +774,61 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-left: 3px solid #fbbf24;
 }
 
+/* Metabolic Engineering Toolkit */
+.intervention-section {
+  border-top: 1px solid rgba(239, 68, 68, 0.15);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.02);
+  padding: 16px 0;
+  margin: 12px 0;
+}
+
+.intervention-section h2 {
+  color: #fca5a5 !important;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Growth Sparkline */
+.sparkline-container {
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sparkline-title {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#growth-sparkline {
+  width: 100%;
+  height: 40px;
+  display: block;
+}
+
 /* Utilities */
 .hidden {
   display: none !important;

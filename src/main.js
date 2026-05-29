@@ -72,6 +72,12 @@ let chartHistory = [];
 let chartCanvas = null;
 let chartCtx = null;
 
+// Growth rate chart variables
+const maxGrowthPoints = 120;
+let growthHistory = [];
+let growthCanvas = null;
+let growthCtx = null;
+
 // Timesteps tracking
 let accumulatedTime = 0.0;
 const simTickRate = 50.0; // 50ms (20Hz)
@@ -106,6 +112,8 @@ async function bootstrap() {
 
   // 4. Setup rolling chart canvas references
   chartCanvas = document.getElementById('rolling-chart');
+  growthCanvas = document.getElementById('growth-sparkline');
+  initializeGrowthHistory();
 
   // 5. Wire up DOM UI Listeners
   setupUIListeners();
@@ -143,6 +151,15 @@ function gameLoop(currentTime) {
             chartHistory.shift();
           }
         }
+      }
+
+      // Update growth rate history dynamically
+      const baseGrowth = getBaseGrowthRate(simulation.activeModel);
+      const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
+      const currentGrowth = Math.max(0.0, (biomassFlux / 9.4335e-8) * baseGrowth);
+      growthHistory.push(currentGrowth);
+      if (growthHistory.length > maxGrowthPoints) {
+        growthHistory.shift();
       }
     }
     accumulatedTime -= simTickRate;
@@ -189,6 +206,76 @@ function setupUIListeners() {
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
   });
 
+  // Perturbation intensity slider value display
+  const pertSlider = document.getElementById('perturbation-slider');
+  const pertVal = document.getElementById('perturbation-val');
+  pertSlider.addEventListener('input', (e) => {
+    pertVal.textContent = `${e.target.value}%`;
+  });
+
+  // Apply perturbation button
+  document.getElementById('apply-perturbation-btn').addEventListener('click', () => {
+    const pertSelect = document.getElementById('perturbation-select');
+    const scenario = pertSelect.value;
+    const intensity = parseFloat(pertSlider.value);
+    const multiplier = intensity / 100;
+
+    // 1. Reset all perturbation multipliers in simulation
+    for (const rxn of Object.values(simulation.reactions)) {
+      rxn.perturbationMultiplier = 1.0;
+    }
+
+    // 2. Apply chosen perturbation
+    let targetRxn = null;
+    if (scenario === 'pgi') {
+      targetRxn = 'PGI';
+    } else if (scenario === 'tca') {
+      targetRxn = 'CS';
+    } else if (scenario === 'atp') {
+      targetRxn = 'ATPM';
+    } else if (scenario === 'nad') {
+      targetRxn = 'NADH16';
+    }
+
+    if (targetRxn) {
+      if (simulation.reactions[targetRxn]) {
+        simulation.reactions[targetRxn].perturbationMultiplier = multiplier;
+      }
+      renderer.setPerturbedReaction(targetRxn, intensity);
+      console.log(`[Perturbation] Applied: ${scenario} (${intensity}%) to ${targetRxn}`);
+    } else {
+      renderer.setPerturbedReaction(null);
+      console.log('[Perturbation] Reset to baseline.');
+    }
+  });
+
+  // Reset to WT button
+  document.getElementById('reset-wt-btn').addEventListener('click', () => {
+    // Reset perturbation inputs
+    const pertSelect = document.getElementById('perturbation-select');
+    pertSelect.value = 'none';
+    pertSlider.value = 100;
+    pertVal.textContent = '100%';
+
+    // Reset strain select
+    const strainSelect = document.getElementById('strain-select');
+    strainSelect.value = 'e_coli_core';
+    // Dispatch change event to trigger strain description updates
+    strainSelect.dispatchEvent(new Event('change'));
+
+    // Clear all simulation perturbation multipliers
+    for (const rxn of Object.values(simulation.reactions)) {
+      rxn.perturbationMultiplier = 1.0;
+    }
+
+    // Reset simulation concentration values
+    simulation.reset();
+    renderer.setPerturbedReaction(null);
+    initializeGrowthHistory();
+
+    console.log('[Perturbation] Fully reset to Wild-Type.');
+  });
+
   // Camera focuses
   document.querySelectorAll('.btn-pathway').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -214,6 +301,7 @@ function setupUIListeners() {
     const strainId = e.target.value;
     simulation.selectStrain(strainId);
     chartHistory = [];
+    initializeGrowthHistory();
 
     // Update strain metadata texts and placeholder yields
     const metadata = simulation.strains[strainId];
@@ -621,6 +709,20 @@ function updateUIPanelValues() {
       }
     }
   }
+
+  // Update growth rate dynamically
+  const baseGrowth = getBaseGrowthRate(simulation.activeModel);
+  const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
+  const currentGrowth = Math.max(0.0, (biomassFlux / 9.4335e-8) * baseGrowth);
+  document.getElementById('metric-growth').textContent = `${currentGrowth.toFixed(2)} hr⁻¹`;
+
+  // Update ATP yield dynamically based on active ATP synthesis rate (ATPS4r flux)
+  const atpsFlux = Math.max(0.0, -1.0 * (simulation.reactions['ATPS4r']?.flux || 0));
+  const currentAtpYield = (atpsFlux / 1.7718) * 12.5;
+  document.getElementById('metric-atp').textContent = `${currentAtpYield.toFixed(1)} mM/s`;
+
+  // Draw growth rate trend line
+  drawGrowthSparkline();
 }
 
 /**
@@ -799,3 +901,92 @@ function drawConcentrationChart() {
 
 // Boot on window load
 window.addEventListener('DOMContentLoaded', bootstrap);
+
+/**
+ * Helper to get the baseline growth rate for a given strain model.
+ */
+function getBaseGrowthRate(strainId) {
+  if (strainId === 'iJO1366') return 0.41;
+  if (strainId === 'iML1515') return 0.48;
+  if (strainId === 'iAF1260') return 0.28;
+  if (strainId === 'iJR904') return 0.22;
+  return 0.32; // e_coli_core
+}
+
+/**
+ * Initializes the growth history array as a flat line.
+ */
+function initializeGrowthHistory() {
+  const baseGrowth = getBaseGrowthRate(simulation ? simulation.activeModel : 'e_coli_core');
+  growthHistory = Array(maxGrowthPoints).fill(baseGrowth);
+}
+
+/**
+ * Custom 2D canvas drawing function for the growth rate trend sparkline.
+ */
+function drawGrowthSparkline() {
+  if (!growthCanvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = growthCanvas.getBoundingClientRect();
+  growthCanvas.width = rect.width * dpr;
+  growthCanvas.height = 40 * dpr;
+
+  growthCtx = growthCanvas.getContext('2d');
+  growthCtx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = 40;
+
+  growthCtx.clearRect(0, 0, w, h);
+
+  if (growthHistory.length < 2) return;
+
+  let maxVal = Math.max(...growthHistory);
+  let minVal = Math.min(...growthHistory);
+
+  if (maxVal - minVal < 0.05) {
+    maxVal = minVal + 0.1;
+    minVal = Math.max(0.0, minVal - 0.05);
+  }
+  maxVal = Math.max(0.2, maxVal);
+
+  const plotH = h - 6;
+  const plotW = w - 6;
+
+  growthCtx.strokeStyle = '#34d399';
+  growthCtx.lineWidth = 1.5;
+  growthCtx.beginPath();
+
+  growthHistory.forEach((val, i) => {
+    const x = (i / (maxGrowthPoints - 1)) * plotW + 3;
+    const y = h - 3 - ((val - minVal) / (maxVal - minVal)) * plotH;
+
+    if (i === 0) {
+      growthCtx.moveTo(x, y);
+    } else {
+      growthCtx.lineTo(x, y);
+    }
+  });
+  growthCtx.stroke();
+
+  const lastIdx = growthHistory.length - 1;
+  const grad = growthCtx.createLinearGradient(0, 3, 0, h - 3);
+  grad.addColorStop(0, 'rgba(52, 211, 153, 0.12)');
+  grad.addColorStop(1, 'rgba(52, 211, 153, 0.0)');
+
+  growthCtx.fillStyle = grad;
+  growthCtx.lineTo((lastIdx / (maxGrowthPoints - 1)) * plotW + 3, h - 3);
+  growthCtx.lineTo(3, h - 3);
+  growthCtx.closePath();
+  growthCtx.fill();
+
+  const lastVal = growthHistory[lastIdx];
+  const lastX = (lastIdx / (maxGrowthPoints - 1)) * plotW + 3;
+  const lastY = h - 3 - ((lastVal - minVal) / (maxVal - minVal)) * plotH;
+
+  growthCtx.fillStyle = '#34d399';
+  growthCtx.beginPath();
+  growthCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  growthCtx.fill();
+}

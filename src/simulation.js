@@ -234,6 +234,7 @@ export class Simulation {
         stoichiometry: stoichiometry,
         vMax: defaultVmax,
         km: defaultKm,
+        perturbationMultiplier: 1.0,
         flux: 0.0
       };
     }
@@ -310,7 +311,7 @@ export class Simulation {
       // 1. Calculate reaction fluxes
       const currentFluxes = {};
       for (const [rxnId, rxn] of Object.entries(this.reactions)) {
-        const vMax = rxn.vMax * this.fluxMultiplier;
+        const vMax = rxn.vMax * this.fluxMultiplier * (rxn.perturbationMultiplier !== undefined ? rxn.perturbationMultiplier : 1.0);
         const km = rxn.km * this.kmMultiplier;
 
         // Rate = Vmax * Product( [S_i] / (Km + [S_i]) )
