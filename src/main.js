@@ -165,6 +165,7 @@ function gameLoop(currentTime) {
  * Configures event listeners for left panel controls and right panel details.
  */
 function setupUIListeners() {
+  const canvasElement = document.getElementById('pixi-canvas');
   // Play/Pause button
   const playPauseBtn = document.getElementById('play-pause-btn');
   playPauseBtn.addEventListener('click', () => {

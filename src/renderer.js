@@ -198,7 +198,6 @@ export class PixiRenderer {
 
     // 1. Draw coordinate grid lines
     const gridSpacing = 400;
-    g.setStrokeStyle({ width: 1.5, color: 0x6366f1, alpha: 0.03 });
     for (let x = -500; x < 6500; x += gridSpacing) {
       g.moveTo(x, -500);
       g.lineTo(x, 5500);
@@ -207,11 +206,11 @@ export class PixiRenderer {
       g.moveTo(-500, y);
       g.lineTo(6500, y);
     }
+    g.stroke({ width: 1.5, color: 0x6366f1, alpha: 0.03 });
 
     // 2. Draw reaction paths (smooth Bezier curves)
     this.reactions.forEach(rxn => {
       rxn.segments.forEach(seg => {
-        g.setStrokeStyle({ width: 2.5, color: 0x3f3f46, alpha: 0.6 }); // subtle default line
         const pts = seg.points;
         g.moveTo(pts[0].x, pts[0].y);
         for (let i = 1; i < pts.length; i++) {
@@ -219,6 +218,7 @@ export class PixiRenderer {
         }
       });
     });
+    g.stroke({ width: 2.5, color: 0x3f3f46, alpha: 0.6 });
   }
 
   /**
@@ -280,7 +280,7 @@ export class PixiRenderer {
       const height = 18;
 
       const bg = new Graphics();
-      bg.rect(-width / 2, -height / 2, width, height, 4);
+      bg.roundRect(-width / 2, -height / 2, width, height, 4);
       bg.fill({ color: 0x0f172a, alpha: 0.85 });
       bg.stroke({ color: 0x6366f1, width: 1.0, alpha: 0.4 });
       
@@ -293,7 +293,7 @@ export class PixiRenderer {
       bg.on('pointerover', () => {
         this.hoveredReaction = rxn;
         bg.clear();
-        bg.rect(-width / 2, -height / 2, width, height, 4);
+        bg.roundRect(-width / 2, -height / 2, width, height, 4);
         bg.fill({ color: 0x1e293b, alpha: 0.95 });
         bg.stroke({ color: 0x818cf8, width: 1.5 });
       });
@@ -301,7 +301,7 @@ export class PixiRenderer {
       bg.on('pointerout', () => {
         this.hoveredReaction = null;
         bg.clear();
-        bg.rect(-width / 2, -height / 2, width, height, 4);
+        bg.roundRect(-width / 2, -height / 2, width, height, 4);
         bg.fill({ color: 0x0f172a, alpha: 0.85 });
         bg.stroke({ 
           color: this.selectedReactionId === rxn.id ? 0xf472b6 : 0x6366f1, 
@@ -359,7 +359,7 @@ export class PixiRenderer {
         const bg = rxn.badgeElement;
         
         bg.clear();
-        bg.rect(-width / 2, -height / 2, width, height, 4);
+        bg.roundRect(-width / 2, -height / 2, width, height, 4);
         
         if (this.selectedReactionId === rxn.id) {
           bg.fill({ color: 0x1e1b4b, alpha: 0.9 });
@@ -655,21 +655,16 @@ export class PixiRenderer {
 
       // Draw highlighted ring if selected
       if (this.selectedNodeId === node.id) {
-        mg.setStrokeStyle({ width: 3.5, color: 0x818cf8, alpha: 1.0 });
-        mg.drawCircle(node.x, node.y, radius + 4);
+        mg.circle(node.x, node.y, radius + 4).stroke({ width: 3.5, color: 0x818cf8, alpha: 1.0 });
       } else if (this.hoveredNode && this.hoveredNode.id === node.id) {
-        mg.setStrokeStyle({ width: 2.0, color: 0xffffff, alpha: 0.8 });
-        mg.drawCircle(node.x, node.y, radius + 3);
+        mg.circle(node.x, node.y, radius + 3).stroke({ width: 2.0, color: 0xffffff, alpha: 0.8 });
       }
 
       // Draw metabolite node fill
-      mg.setStrokeStyle(null);
-      mg.fill({ color, alpha });
-      mg.drawCircle(node.x, node.y, radius);
+      mg.circle(node.x, node.y, radius).fill({ color, alpha });
 
       // Draw thin inner white rim
-      mg.setStrokeStyle({ width: 1.0, color: 0xffffff, alpha: 0.25 });
-      mg.drawCircle(node.x, node.y, radius - 1);
+      mg.circle(node.x, node.y, radius - 1).stroke({ width: 1.0, color: 0xffffff, alpha: 0.25 });
     });
 
     // 2. Draw Moving Flux Particles
@@ -727,12 +722,8 @@ export class PixiRenderer {
           const py = pts[i0].y + f * (pts[i1].y - pts[i0].y);
 
           // Render glowing dot
-          pg.setStrokeStyle(null);
-          pg.fill({ color, alpha: 0.8 });
-          
-          // Particle size scales slightly with flux magnitude
           const pRadius = 2.0 + Math.min(2.5, absFlux * 0.15);
-          pg.drawCircle(px, py, pRadius);
+          pg.circle(px, py, pRadius).fill({ color, alpha: 0.8 });
         }
       });
     });
