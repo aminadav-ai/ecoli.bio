@@ -405,6 +405,11 @@ function handleMetaboliteSelect(node) {
     descEl.classList.add('hidden');
     buttonsEl.classList.add('hidden');
     warningEl.classList.remove('hidden');
+    if (node.biggId === 'h2o_c' || node.biggId === 'h2o_e') {
+      warningEl.textContent = '⚠️ In silico injection is disabled. Water is in excess and physiologically buffered.';
+    } else {
+      warningEl.textContent = '⚠️ In silico injection is disabled. This metabolite is not transported across the cell membrane.';
+    }
   }
 
   // Render cross references
