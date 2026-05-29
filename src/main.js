@@ -346,19 +346,26 @@ function setupUIListeners() {
 }
 
 /**
- * Helper to check if a metabolite is transportable (ends with _e, or has a corresponding _e counterpart in the model).
+ * Helper to check if a metabolite is in the main list of transportable carbon sources
+ * that E. coli can effectively import from the medium (D-Glucose, Acetate, Glycerol, Succinate, Lactate).
  */
 function isMetaboliteTransportable(biggId) {
   if (!biggId) return false;
-  if (biggId.endsWith('_e')) return true;
-  if (biggId.endsWith('_c')) {
-    const base = biggId.slice(0, -2);
-    const extId = base + '_e';
-    if (simulation && simulation.metabolites[extId]) {
-      return true;
-    }
+
+  const allowedBases = new Set([
+    'glc__D', // D-Glucose
+    'ac',     // Acetate
+    'glyc',   // Glycerol
+    'succ',   // Succinate
+    'lac__D'  // Lactate
+  ]);
+
+  let base = biggId;
+  if (biggId.endsWith('_c') || biggId.endsWith('_e')) {
+    base = biggId.slice(0, -2);
   }
-  return false;
+
+  return allowedBases.has(base);
 }
 
 /**
