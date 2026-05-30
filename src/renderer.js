@@ -8,6 +8,21 @@
 
 import { Application, Container, Graphics, Text, Rectangle } from 'pixi.js';
 
+// Helper to measure text width and height synchronously using HTML5 Canvas 2D
+function measureTextSize(text, fontSize, fontFamily) {
+  if (!measureTextSize.canvas) {
+    measureTextSize.canvas = document.createElement('canvas');
+    measureTextSize.context = measureTextSize.canvas.getContext('2d');
+  }
+  const ctx = measureTextSize.context;
+  ctx.font = `500 ${fontSize}px ${fontFamily}`;
+  const metrics = ctx.measureText(text);
+  const width = metrics.width;
+  // Approximate height based on font size or bounding box if available
+  const height = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || (fontSize * 0.9);
+  return { width, height };
+}
+
 export class PixiRenderer {
   constructor(canvasElement, onSelectMetabolite, onSelectReaction) {
     this.canvas = canvasElement;
@@ -312,18 +327,14 @@ export class PixiRenderer {
       if (!rxn.labelX || !rxn.labelY) return;
 
       // Calculate width and height dynamically based on the text bounding box
-      let textWidth = 40;
-      let textHeight = 12;
-      if (rxn.textElement) {
-        textWidth = rxn.textElement.width;
-        textHeight = rxn.textElement.height;
-      }
+      const labelFontSize = Math.max(6, Math.round(this.baseFontSize * 10 / 12));
+      const size = measureTextSize(rxn.biggId, labelFontSize, 'Inter, sans-serif');
 
       // Add padding around the text
       const paddingX = 8;
       const paddingY = 4;
-      const width = Math.max(20, textWidth + paddingX);
-      const height = Math.max(10, textHeight + paddingY);
+      const width = Math.max(20, size.width + paddingX);
+      const height = Math.max(10, size.height + paddingY);
 
       rxn.badgeWidth = width;
       rxn.badgeHeight = height;
