@@ -333,7 +333,7 @@ export class PixiRenderer {
 
       // Add padding around the text (proportional to font size)
       const paddingX = Math.round(labelFontSize * 0.75);
-      const paddingY = Math.round(labelFontSize * 0.4);
+      const paddingY = Math.round(labelFontSize * 0.5);
       const width = Math.max(20, size.width + paddingX);
       const height = Math.max(10, size.height + paddingY);
 
