@@ -332,8 +332,8 @@ export class PixiRenderer {
       const size = measureTextSize(rxn.biggId, labelFontSize, 'Inter, sans-serif');
 
       // Add padding around the text
-      const paddingX = 8;
-      const paddingY = 4;
+      const paddingX = 14;
+      const paddingY = 8;
       const width = Math.max(20, size.width + paddingX);
       const height = Math.max(10, size.height + paddingY);
 
