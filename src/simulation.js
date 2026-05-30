@@ -234,6 +234,8 @@ export class Simulation {
         stoichiometry: stoichiometry,
         vMax: defaultVmax,
         km: defaultKm,
+        defaultVmax: defaultVmax,
+        defaultKm: defaultKm,
         perturbationMultiplier: 1.0,
         flux: 0.0
       };

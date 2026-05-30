@@ -51,6 +51,7 @@ export class PixiRenderer {
     this.baseFontSize = 12;
     this.activeNamespace = 'common';
     this.getLabelText = null;
+    this.lastSimReactions = null;
   }
 
   /**
@@ -325,22 +326,12 @@ export class PixiRenderer {
       // Selection indicator
       bg.on('pointerover', () => {
         this.hoveredReaction = rxn;
-        bg.clear();
-        bg.roundRect(-width / 2, -height / 2, width, height, 4);
-        bg.fill({ color: 0x1e293b, alpha: 0.95 });
-        bg.stroke({ color: 0x818cf8, width: 1.5 });
+        this.updateReactionBadgeHighlight();
       });
 
       bg.on('pointerout', () => {
         this.hoveredReaction = null;
-        bg.clear();
-        bg.roundRect(-width / 2, -height / 2, width, height, 4);
-        bg.fill({ color: 0x0f172a, alpha: 0.85 });
-        bg.stroke({ 
-          color: this.selectedReactionId === rxn.id ? 0xf472b6 : 0x6366f1, 
-          width: this.selectedReactionId === rxn.id ? 1.5 : 1.0, 
-          alpha: this.selectedReactionId === rxn.id ? 1.0 : 0.4 
-        });
+        this.updateReactionBadgeHighlight();
       });
 
       bg.on('pointerdown', (e) => {
@@ -393,16 +384,54 @@ export class PixiRenderer {
         const height = 18;
         const bg = rxn.badgeElement;
         
+        let strokeColor = 0x6366f1; // default indigo
+        let strokeWidth = 1.0;
+        let strokeAlpha = 0.4;
+        let fillColor = 0x0f172a;
+        let fillAlpha = 0.85;
+
+        // Check if modified compared to defaults in simulation
+        if (this.lastSimReactions) {
+          const simRxn = this.lastSimReactions[rxn.biggId];
+          if (simRxn && simRxn.defaultVmax !== undefined && simRxn.defaultKm !== undefined) {
+            const ratio = simRxn.vMax / simRxn.km;
+            const defaultRatio = simRxn.defaultVmax / simRxn.defaultKm;
+            const diff = ratio - defaultRatio;
+
+            if (diff > 1e-4) {
+              strokeColor = 0x10b981; // green (activation/upregulation)
+              strokeWidth = 2.0;
+              strokeAlpha = 0.9;
+            } else if (diff < -1e-4) {
+              strokeColor = 0xef4444; // red (inhibition/downregulation)
+              strokeWidth = 2.0;
+              strokeAlpha = 0.9;
+            }
+          }
+        }
+
+        if (this.selectedReactionId === rxn.id) {
+          fillColor = 0x1e1b4b;
+          fillAlpha = 0.95;
+          strokeWidth = 2.5;
+          if (strokeColor === 0x6366f1) {
+            strokeColor = 0x818cf8;
+          }
+          strokeAlpha = 1.0;
+        } else if (this.hoveredReaction && this.hoveredReaction.id === rxn.id) {
+          fillColor = 0x1e293b;
+          fillAlpha = 0.95;
+          strokeWidth = 2.0;
+          if (strokeColor === 0x6366f1) {
+            strokeColor = 0x818cf8;
+          }
+          strokeAlpha = 1.0;
+        }
+
         bg.clear();
         bg.roundRect(-width / 2, -height / 2, width, height, 4);
-        
-        if (this.selectedReactionId === rxn.id) {
-          bg.fill({ color: 0x1e1b4b, alpha: 0.9 });
-          bg.stroke({ color: 0x818cf8, width: 2.0 });
-        } else {
-          bg.fill({ color: 0x0f172a, alpha: 0.85 });
-          bg.stroke({ color: 0x6366f1, width: 1.0, alpha: 0.4 });
-        }
+        bg.fill({ color: fillColor, alpha: fillAlpha });
+        bg.stroke({ color: strokeColor, width: strokeWidth, alpha: strokeAlpha });
       }
     });
   }
@@ -656,6 +685,9 @@ export class PixiRenderer {
    */
   renderUpdate(simMetabolites, simReactions, animationFrameCount) {
     if (!this.viewport) return;
+
+    this.lastSimReactions = simReactions;
+    this.updateReactionBadgeHighlight();
 
     // Update camera layout values dynamically to center focused highlights if needed
     // 1. Draw Metabolites Pulsation
