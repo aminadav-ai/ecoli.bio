@@ -64,7 +64,7 @@ export class PixiRenderer {
 
     // Label font settings
     this.baseFontSize = 12;
-    this.activeNamespace = 'common';
+    this.activeNamespace = 'bigg';
     this.getLabelText = null;
     this.lastSimReactions = null;
   }
@@ -331,9 +331,9 @@ export class PixiRenderer {
       const labelFontSize = Math.max(6, Math.round(this.baseFontSize * 10 / 12));
       const size = measureTextSize(rxn.biggId, labelFontSize, 'Inter, sans-serif');
 
-      // Add padding around the text
-      const paddingX = 14;
-      const paddingY = 8;
+      // Add padding around the text (proportional to font size)
+      const paddingX = Math.round(labelFontSize * 0.75);
+      const paddingY = Math.round(labelFontSize * 0.4);
       const width = Math.max(20, size.width + paddingX);
       const height = Math.max(10, size.height + paddingY);
 
