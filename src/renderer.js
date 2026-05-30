@@ -49,6 +49,8 @@ export class PixiRenderer {
 
     // Label font settings
     this.baseFontSize = 12;
+    this.activeNamespace = 'common';
+    this.getLabelText = null;
   }
 
   /**
@@ -250,7 +252,11 @@ export class PixiRenderer {
         align: 'left'
       };
 
-      const text = new Text({ text: node.name, style });
+      const labelText = (this.activeNamespace === 'common') 
+        ? node.name 
+        : (this.getLabelText ? this.getLabelText(node.biggId, this.activeNamespace) : node.name);
+      
+      const text = new Text({ text: labelText, style });
       text.x = node.labelX;
       text.y = node.labelY - 5;
       text.anchor.set(0, 0.5); // align left, middle
@@ -283,6 +289,14 @@ export class PixiRenderer {
    */
   updateLabelFontSize(newSize) {
     this.baseFontSize = newSize;
+    this.createStaticTexts();
+  }
+
+  /**
+   * Updates the active namespace and redraws the texts.
+   */
+  updateLabelNamespace(namespace) {
+    this.activeNamespace = namespace;
     this.createStaticTexts();
   }
 

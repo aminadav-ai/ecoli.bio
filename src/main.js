@@ -48,6 +48,23 @@ function getDatabaseKey(biggId) {
   return null;
 }
 
+// Get label text for a node given a namespace
+function getLabelTextForNamespace(biggId, namespace) {
+  if (namespace === 'common') {
+    const metab = simulation.metabolites[biggId];
+    return metab ? metab.name : biggId;
+  }
+  const ns = namespace.toLowerCase().replace(' id', '').replace(' ', ''); // e.g. "BiGG ID" -> "bigg"
+  if (ns === 'bigg') return biggId;
+  const dbKey = getDatabaseKey(biggId);
+  if (!dbKey) return biggId;
+  const db = NAMESPACE_DATABASE[dbKey];
+  if (!db) return biggId;
+  
+  const val = db[ns];
+  return (val && val !== '-') ? val : biggId;
+}
+
 // Pathway metabolite groups for camera focus centering
 const PATHWAY_FOCUS_IDS = {
   glycolysis: new Set(['glc__D_e', 'glc__D_c', 'g6p_c', 'f6p_c', 'fdp_c', 'dhap_c', 'g3p_c', '13dpg_c', '3pg_c', '2pg_c', 'pep_c', 'pyr_c']),
@@ -108,6 +125,7 @@ async function bootstrap() {
     handleMetaboliteSelect,
     handleReactionSelect
   );
+  renderer.getLabelText = getLabelTextForNamespace;
   await renderer.init(mapData);
 
   // 4. Setup rolling chart canvas references
@@ -214,6 +232,26 @@ function setupUIListeners() {
     fontSizeVal.textContent = `${size}px`;
     if (renderer) {
       renderer.updateLabelFontSize(size);
+    }
+  });
+
+  // Namespace select listener
+  const namespaceSelect = document.getElementById('namespace-select');
+  const namespaceDesc = document.getElementById('namespace-desc');
+  const NAMESPACE_DESCRIPTIONS = {
+    common: 'Standard readable chemical nomenclature for central metabolism.',
+    ecocyc: 'Escherichia coli encyclopedia of genes and metabolic pathways.',
+    bigg: 'Standard for genome-scale metabolic models (E. coli K-12).',
+    kegg: 'Kyoto Encyclopedia of Genes and Genomes pathways database.',
+    chebi: 'Chemical Entities of Biological Interest ontology and dictionary.',
+    hmdb: 'Chemical cross-reference database (Universal reference).'
+  };
+
+  namespaceSelect.addEventListener('change', (e) => {
+    const val = e.target.value;
+    namespaceDesc.textContent = NAMESPACE_DESCRIPTIONS[val] || '';
+    if (renderer) {
+      renderer.updateLabelNamespace(val);
     }
   });
 
