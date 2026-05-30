@@ -282,6 +282,7 @@ export class PixiRenderer {
       text.y = rxn.labelY;
       text.anchor.set(0.5, 0.5);
       this.textContainer.addChild(text);
+      rxn.textElement = text;
     });
   }
 
@@ -310,8 +311,22 @@ export class PixiRenderer {
     this.reactions.forEach(rxn => {
       if (!rxn.labelX || !rxn.labelY) return;
 
-      const width = 50;
-      const height = 18;
+      // Calculate width and height dynamically based on the text bounding box
+      let textWidth = 40;
+      let textHeight = 12;
+      if (rxn.textElement) {
+        textWidth = rxn.textElement.width;
+        textHeight = rxn.textElement.height;
+      }
+
+      // Add padding around the text
+      const paddingX = 8;
+      const paddingY = 4;
+      const width = Math.max(20, textWidth + paddingX);
+      const height = Math.max(10, textHeight + paddingY);
+
+      rxn.badgeWidth = width;
+      rxn.badgeHeight = height;
 
       const bg = new Graphics();
       bg.roundRect(-width / 2, -height / 2, width, height, 4);
@@ -380,8 +395,8 @@ export class PixiRenderer {
   updateReactionBadgeHighlight() {
     this.reactions.forEach(rxn => {
       if (rxn.badgeElement) {
-        const width = 50;
-        const height = 18;
+        const width = rxn.badgeWidth || 50;
+        const height = rxn.badgeHeight || 18;
         const bg = rxn.badgeElement;
         
         let strokeColor = 0x6366f1; // default indigo
