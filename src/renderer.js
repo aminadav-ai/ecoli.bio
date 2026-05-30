@@ -63,7 +63,7 @@ export class PixiRenderer {
     this.selectedReactionId = null;
 
     // Label font settings
-    this.baseFontSize = 12;
+    this.baseFontSize = 30;
     this.activeNamespace = 'bigg';
     this.getLabelText = null;
     this.lastSimReactions = null;
