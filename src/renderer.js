@@ -67,6 +67,7 @@ export class PixiRenderer {
     this.activeNamespace = 'bigg';
     this.getLabelText = null;
     this.lastSimReactions = null;
+    this.mapWarnings = [];
   }
 
   /**
@@ -124,10 +125,11 @@ export class PixiRenderer {
    */
   parseEscherMap(mapData) {
     const data = mapData[1];
+    this.mapWarnings = [];
 
     // 1. Parse Nodes
     for (const [nodeId, node] of Object.entries(data.nodes)) {
-      this.nodes[nodeId] = {
+      const parsedNode = {
         id: nodeId,
         biggId: node.bigg_id,
         name: node.name,
@@ -138,8 +140,52 @@ export class PixiRenderer {
         labelY: node.label_y
       };
 
+      this.nodes[nodeId] = parsedNode;
+
       if (node.node_type === 'metabolite') {
-        this.metabNodes.push(this.nodes[nodeId]);
+        // Check if label coordinates are missing or far away
+        const hasLabelX = node.label_x !== undefined && node.label_x !== null;
+        const hasLabelY = node.label_y !== undefined && node.label_y !== null;
+        if (!hasLabelX || !hasLabelY) {
+          const warningMsg = `Metabolite "${node.name}" (${node.bigg_id}) is missing label coordinates in JSON.`;
+          console.warn(`[Map Warning] ${warningMsg}`);
+          this.mapWarnings.push({
+            id: nodeId,
+            biggId: node.bigg_id,
+            name: node.name,
+            type: 'missing',
+            message: warningMsg
+          });
+        } else {
+          const dist = Math.hypot(node.label_x - node.x, node.label_y - node.y);
+          if (dist > 100) {
+            const warningMsg = `Metabolite "${node.name}" (${node.bigg_id}) label is too far from node circle (${dist.toFixed(1)}px, threshold is 100px).`;
+            console.warn(`[Map Warning] ${warningMsg}`);
+            this.mapWarnings.push({
+              id: nodeId,
+              biggId: node.bigg_id,
+              name: node.name,
+              type: 'far',
+              distance: dist,
+              message: warningMsg
+            });
+          }
+        }
+
+        // Determine preferred/original side
+        let preferredSide = 'right'; // default
+        if (hasLabelX && hasLabelY) {
+          const dx = node.label_x - node.x;
+          const dy = node.label_y - node.y;
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            preferredSide = dx >= 0 ? 'right' : 'left';
+          } else {
+            preferredSide = dy >= 0 ? 'bottom' : 'top';
+          }
+        }
+        parsedNode.preferredSide = preferredSide;
+
+        this.metabNodes.push(parsedNode);
       }
     }
 
@@ -204,10 +250,318 @@ export class PixiRenderer {
       this.reactions.push(reaction);
     }
 
-    // 3. Draw static map background grid lines and reaction lines (pre-rendered once)
+    // 3. Spatial precomputation & Draw static map background grid lines and reaction lines (pre-rendered once)
+    this.precomputeSpatialLayout();
     this.drawStaticMap();
     this.createStaticTexts();
     this.createReactionBadges();
+  }
+
+  /**
+   * Precomputes spatial coordinates, distances, and exit angles to enable high-speed runtime overlap checks.
+   */
+  precomputeSpatialLayout() {
+    // 1. Precompute nearby nodes for label-label overlap checks
+    const distanceThreshold = 250;
+    this.metabNodes.forEach(node => {
+      node.nearbyNodes = [];
+      this.metabNodes.forEach(other => {
+        if (other.id === node.id) return;
+        const dist = Math.hypot(other.x - node.x, other.y - node.y);
+        if (dist < distanceThreshold) {
+          node.nearbyNodes.push(other);
+        }
+      });
+    });
+
+    // 2. Precompute restricted sectors (angles) for reaction lines and other nodes
+    this.metabNodes.forEach(node => {
+      node.restrictedAngles = [];
+
+      // A. Incident reaction segments
+      this.reactions.forEach(rxn => {
+        rxn.segments.forEach(seg => {
+          let exitAngle = null;
+
+          if (seg.from.id === node.id && seg.points.length > 1) {
+            const pt = seg.points[1];
+            exitAngle = Math.atan2(pt.y - node.y, pt.x - node.x);
+          } else if (seg.to.id === node.id && seg.points.length > 1) {
+            const pt = seg.points[seg.points.length - 2];
+            exitAngle = Math.atan2(pt.y - node.y, pt.x - node.x);
+          }
+
+          if (exitAngle !== null) {
+            node.restrictedAngles.push({
+              angle: exitAngle,
+              weight: 1.2,
+              type: 'incident_segment'
+            });
+          }
+        });
+      });
+
+      // B. Nearby reaction segments (passing close but not connected)
+      this.reactions.forEach(rxn => {
+        rxn.segments.forEach(seg => {
+          if (seg.from.id === node.id || seg.to.id === node.id) return;
+
+          let minDist = Infinity;
+          let closestPt = null;
+
+          seg.points.forEach(pt => {
+            const dist = Math.hypot(pt.x - node.x, pt.y - node.y);
+            if (dist < minDist) {
+              minDist = dist;
+              closestPt = pt;
+            }
+          });
+
+          if (minDist < 100 && closestPt) {
+            const angle = Math.atan2(closestPt.y - node.y, closestPt.x - node.x);
+            const weight = ((100 - minDist) / 100) * 0.8;
+            node.restrictedAngles.push({
+              angle: angle,
+              weight: weight,
+              type: 'nearby_segment'
+            });
+          }
+        });
+      });
+
+      // C. Nearby metabolite circles
+      node.nearbyNodes.forEach(other => {
+        const dist = Math.hypot(other.x - node.x, other.y - node.y);
+        if (dist < 150) {
+          const angle = Math.atan2(other.y - node.y, other.x - node.x);
+          const weight = ((150 - dist) / 150) * 1.0;
+          node.restrictedAngles.push({
+            angle: angle,
+            weight: weight,
+            type: 'nearby_node'
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Dynamically positions metabolite labels in a two-pass algorithm to avoid collisions
+   * with metabolite circles, reaction lines, other labels, and reaction badges.
+   */
+  updateLabelPositions() {
+    if (!this.textContainer || this.metabNodes.length === 0) return;
+
+    const normalizeAngle = (angle) => {
+      while (angle < -Math.PI) angle += 2 * Math.PI;
+      while (angle > Math.PI) angle -= 2 * Math.PI;
+      return angle;
+    };
+
+    const padding = 8; // padding around the circle
+
+    // Pass 1: Measure text size and place at preferred side
+    this.metabNodes.forEach(node => {
+      if (!node.textElement) return;
+
+      const labelText = node.textElement.text;
+      const fontSize = Number(node.textElement.style.fontSize) || this.baseFontSize;
+      const size = measureTextSize(labelText, fontSize, 'Outfit, sans-serif');
+      node.labelWidth = size.width;
+      node.labelHeight = size.height;
+
+      const radius = node.renderedRadius || 18;
+
+      let x = node.x;
+      let y = node.y;
+
+      const side = node.preferredSide || 'right';
+      if (side === 'right') {
+        x = node.x + radius + padding;
+        y = node.y;
+        node.pass1Rect = {
+          xMin: x,
+          xMax: x + node.labelWidth,
+          yMin: y - node.labelHeight / 2,
+          yMax: y + node.labelHeight / 2
+        };
+      } else if (side === 'left') {
+        x = node.x - radius - padding;
+        y = node.y;
+        node.pass1Rect = {
+          xMin: x - node.labelWidth,
+          xMax: x,
+          yMin: y - node.labelHeight / 2,
+          yMax: y + node.labelHeight / 2
+        };
+      } else if (side === 'top') {
+        x = node.x;
+        y = node.y - radius - padding;
+        node.pass1Rect = {
+          xMin: x - node.labelWidth / 2,
+          xMax: x + node.labelWidth / 2,
+          yMin: y - node.labelHeight,
+          yMax: y
+        };
+      } else if (side === 'bottom') {
+        x = node.x;
+        y = node.y + radius + padding;
+        node.pass1Rect = {
+          xMin: x - node.labelWidth / 2,
+          xMax: x + node.labelWidth / 2,
+          yMin: y,
+          yMax: y + node.labelHeight
+        };
+      }
+    });
+
+    // Pass 2: Evaluate candidate sides and pick the best one
+    const sides = ['right', 'left', 'top', 'bottom'];
+    const sideAngles = {
+      right: 0,
+      bottom: Math.PI / 2,
+      left: Math.PI,
+      top: -Math.PI / 2
+    };
+
+    this.metabNodes.forEach(node => {
+      if (!node.textElement) return;
+
+      const radius = node.renderedRadius || 18;
+      const W = node.labelWidth;
+      const H = node.labelHeight;
+      const preferred = node.preferredSide || 'right';
+
+      let bestSide = preferred;
+      let minPenalty = Infinity;
+
+      sides.forEach(side => {
+        let penalty = 0;
+
+        let cx = node.x;
+        let cy = node.y;
+        let cRect = { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
+
+        if (side === 'right') {
+          cx = node.x + radius + padding;
+          cy = node.y;
+          cRect = { xMin: cx, xMax: cx + W, yMin: cy - H / 2, yMax: cy + H / 2 };
+        } else if (side === 'left') {
+          cx = node.x - radius - padding;
+          cy = node.y;
+          cRect = { xMin: cx - W, xMax: cx, yMin: cy - H / 2, yMax: cy + H / 2 };
+        } else if (side === 'top') {
+          cx = node.x;
+          cy = node.y - radius - padding;
+          cRect = { xMin: cx - W / 2, xMax: cx + W / 2, yMin: cy - H, yMax: cy };
+        } else if (side === 'bottom') {
+          cx = node.x;
+          cy = node.y + radius + padding;
+          cRect = { xMin: cx - W / 2, xMax: cx + W / 2, yMin: cy, yMax: cy + H };
+        }
+
+        // 1. Connection/Reaction Line and Clutter overlap
+        const sideAngle = sideAngles[side];
+        if (node.restrictedAngles) {
+          node.restrictedAngles.forEach(restricted => {
+            const diff = Math.abs(normalizeAngle(sideAngle - restricted.angle));
+            const angleThreshold = Math.PI / 3;
+            if (diff < angleThreshold) {
+              penalty += restricted.weight * (1.0 - diff / angleThreshold) * 3.5;
+            }
+          });
+        }
+
+        // 2. Label-Label Overlaps with nearby nodes' labels
+        if (node.nearbyNodes) {
+          node.nearbyNodes.forEach(other => {
+            if (other.pass1Rect) {
+              const overlap = !(
+                cRect.xMax < other.pass1Rect.xMin ||
+                cRect.xMin > other.pass1Rect.xMax ||
+                cRect.yMax < other.pass1Rect.yMin ||
+                cRect.yMin > other.pass1Rect.yMax
+              );
+              if (overlap) {
+                penalty += 12.0;
+              }
+            }
+          });
+        }
+
+        // 3. Collision with Reaction Badges
+        this.reactions.forEach(rxn => {
+          if (rxn.labelX && rxn.labelY && rxn.badgeWidth && rxn.badgeHeight) {
+            const bxMin = rxn.labelX - rxn.badgeWidth / 2;
+            const bxMax = rxn.labelX + rxn.badgeWidth / 2;
+            const byMin = rxn.labelY - rxn.badgeHeight / 2;
+            const byMax = rxn.labelY + rxn.badgeHeight / 2;
+
+            const overlap = !(
+              cRect.xMax < bxMin ||
+              cRect.xMin > bxMax ||
+              cRect.yMax < byMin ||
+              cRect.yMin > byMax
+            );
+            if (overlap) {
+              penalty += 8.0;
+            }
+          }
+        });
+
+        // 4. Preferred direction bonus
+        if (side === preferred) {
+          penalty -= 0.6;
+        }
+
+        // 5. Readability bias (prefer horizontal text alignment)
+        if (side === 'right' || side === 'left') {
+          penalty -= 0.15;
+        }
+
+        if (penalty < minPenalty) {
+          minPenalty = penalty;
+          bestSide = side;
+        }
+      });
+
+      let finalX = node.x;
+      let finalY = node.y;
+      let finalAnchorX = 0;
+      let finalAnchorY = 0.5;
+
+      if (bestSide === 'right') {
+        finalX = node.x + radius + padding;
+        finalY = node.y;
+        finalAnchorX = 0;
+        finalAnchorY = 0.5;
+        node.finalRect = { xMin: finalX, xMax: finalX + W, yMin: finalY - H / 2, yMax: finalY + H / 2 };
+      } else if (bestSide === 'left') {
+        finalX = node.x - radius - padding;
+        finalY = node.y;
+        finalAnchorX = 1;
+        finalAnchorY = 0.5;
+        node.finalRect = { xMin: finalX - W, xMax: finalX, yMin: finalY - H / 2, yMax: finalY + H / 2 };
+      } else if (bestSide === 'top') {
+        finalX = node.x;
+        finalY = node.y - radius - padding;
+        finalAnchorX = 0.5;
+        finalAnchorY = 1;
+        node.finalRect = { xMin: finalX - W / 2, xMax: finalX + W / 2, yMin: finalY - H, yMax: finalY };
+      } else if (bestSide === 'bottom') {
+        finalX = node.x;
+        finalY = node.y + radius + padding;
+        finalAnchorX = 0.5;
+        finalAnchorY = 0;
+        node.finalRect = { xMin: finalX - W / 2, xMax: finalX + W / 2, yMin: finalY, yMax: finalY + H };
+      }
+
+      node.textElement.x = finalX;
+      node.textElement.y = finalY;
+      node.textElement.anchor.set(finalAnchorX, finalAnchorY);
+      
+      node.pass1Rect = node.finalRect;
+    });
   }
 
   /**
@@ -299,6 +653,9 @@ export class PixiRenderer {
       this.textContainer.addChild(text);
       rxn.textElement = text;
     });
+
+    // Run dynamic label positions
+    this.updateLabelPositions();
   }
 
   /**
@@ -822,7 +1179,8 @@ export class PixiRenderer {
       });
     });
 
-
+    // Run dynamic label positioning to avoid overlaps
+    this.updateLabelPositions();
   }
 
   /**

@@ -27,9 +27,27 @@
           <span class="divider">|</span>
           <span class="subtitle">E. coli Central Metabolism Live Atlas</span>
         </div>
-        <div class="system-status">
-          <span class="status-indicator"></span>
-          <span class="status-text">Client-Side ODE Integrator</span>
+        <div class="header-actions">
+          <!-- Map Warnings Panel -->
+          <div id="map-warnings-container" class="map-warnings-container hidden">
+            <button id="warnings-toggle-btn" class="warnings-badge-btn">
+              <span class="warning-icon">⚠️</span>
+              <span id="warnings-count">0 warnings</span>
+            </button>
+            <div id="warnings-dropdown" class="warnings-dropdown glass hidden">
+              <div class="dropdown-header">
+                <h3>Map Warnings</h3>
+                <button id="warnings-close-btn" class="close-dropdown-btn">✕</button>
+              </div>
+              <ul id="warnings-list" class="warnings-list">
+                <!-- Warnings list will be dynamically populated -->
+              </ul>
+            </div>
+          </div>
+          <div class="system-status">
+            <span class="status-indicator"></span>
+            <span class="status-text">Client-Side ODE Integrator</span>
+          </div>
         </div>
       </header>
 

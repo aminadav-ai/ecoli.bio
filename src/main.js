@@ -100,6 +100,64 @@ let accumulatedTime = 0.0;
 const simTickRate = 50.0; // 50ms (20Hz)
 
 /**
+ * Populates and wires up event listeners for the map loading warnings badge.
+ */
+function initializeWarningsUI() {
+  const warnings = renderer ? renderer.mapWarnings : [];
+  const container = document.getElementById('map-warnings-container');
+  const countEl = document.getElementById('warnings-count');
+  const listEl = document.getElementById('warnings-list');
+  const toggleBtn = document.getElementById('warnings-toggle-btn');
+  const closeBtn = document.getElementById('warnings-close-btn');
+  const dropdown = document.getElementById('warnings-dropdown');
+
+  if (!container || warnings.length === 0) {
+    if (container) container.classList.add('hidden');
+    return;
+  }
+
+  // Show container and update badge count
+  container.classList.remove('hidden');
+  countEl.textContent = `${warnings.length} warning${warnings.length > 1 ? 's' : ''}`;
+
+  // Populate list
+  listEl.innerHTML = '';
+  warnings.forEach(warn => {
+    const li = document.createElement('li');
+    li.className = 'warning-item';
+
+    if (warn.type === 'missing') {
+      li.innerHTML = `⚠️ <strong>${warn.biggId}</strong>: missing coordinates.`;
+    } else if (warn.type === 'far') {
+      li.innerHTML = `⚠️ <strong>${warn.biggId}</strong>: label offset is <span class="dist">${warn.distance.toFixed(1)}px</span> (threshold: 100px).`;
+    } else {
+      li.innerHTML = warn.message;
+    }
+    listEl.appendChild(li);
+  });
+
+  // Wire up toggling dropdown
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  });
+
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.add('hidden');
+  });
+
+  // Close dropdown on click outside
+  document.addEventListener('click', () => {
+    dropdown.classList.add('hidden');
+  });
+
+  dropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
+
+/**
  * Bootstraps the application, loading assets and launching the loops.
  */
 async function bootstrap() {
@@ -127,6 +185,9 @@ async function bootstrap() {
   );
   renderer.getLabelText = getLabelTextForNamespace;
   await renderer.init(mapData);
+
+  // Initialize warnings UI if there are any map loading warnings
+  initializeWarningsUI();
 
   // 4. Setup rolling chart canvas references
   chartCanvas = document.getElementById('rolling-chart');
