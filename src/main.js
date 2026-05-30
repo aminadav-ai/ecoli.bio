@@ -206,74 +206,15 @@ function setupUIListeners() {
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
   });
 
-  // Perturbation intensity slider value display
-  const pertSlider = document.getElementById('perturbation-slider');
-  const pertVal = document.getElementById('perturbation-val');
-  pertSlider.addEventListener('input', (e) => {
-    pertVal.textContent = `${e.target.value}%`;
-  });
-
-  // Apply perturbation button
-  document.getElementById('apply-perturbation-btn').addEventListener('click', () => {
-    const pertSelect = document.getElementById('perturbation-select');
-    const scenario = pertSelect.value;
-    const intensity = parseFloat(pertSlider.value);
-    const multiplier = intensity / 100;
-
-    // 1. Reset all perturbation multipliers in simulation
-    for (const rxn of Object.values(simulation.reactions)) {
-      rxn.perturbationMultiplier = 1.0;
+  // Label font size slider
+  const fontSizeSlider = document.getElementById('font-size-slider');
+  const fontSizeVal = document.getElementById('font-size-val');
+  fontSizeSlider.addEventListener('input', (e) => {
+    const size = parseInt(e.target.value, 10);
+    fontSizeVal.textContent = `${size}px`;
+    if (renderer) {
+      renderer.updateLabelFontSize(size);
     }
-
-    // 2. Apply chosen perturbation
-    let targetRxn = null;
-    if (scenario === 'pgi') {
-      targetRxn = 'PGI';
-    } else if (scenario === 'tca') {
-      targetRxn = 'CS';
-    } else if (scenario === 'atp') {
-      targetRxn = 'ATPM';
-    } else if (scenario === 'nad') {
-      targetRxn = 'NADH16';
-    }
-
-    if (targetRxn) {
-      if (simulation.reactions[targetRxn]) {
-        simulation.reactions[targetRxn].perturbationMultiplier = multiplier;
-      }
-      renderer.setPerturbedReaction(targetRxn, intensity);
-      console.log(`[Perturbation] Applied: ${scenario} (${intensity}%) to ${targetRxn}`);
-    } else {
-      renderer.setPerturbedReaction(null);
-      console.log('[Perturbation] Reset to baseline.');
-    }
-  });
-
-  // Reset to WT button
-  document.getElementById('reset-wt-btn').addEventListener('click', () => {
-    // Reset perturbation inputs
-    const pertSelect = document.getElementById('perturbation-select');
-    pertSelect.value = 'none';
-    pertSlider.value = 100;
-    pertVal.textContent = '100%';
-
-    // Reset strain select
-    const strainSelect = document.getElementById('strain-select');
-    strainSelect.value = 'e_coli_core';
-    // Dispatch change event to trigger strain description updates
-    strainSelect.dispatchEvent(new Event('change'));
-
-    // Clear all simulation perturbation multipliers
-    for (const rxn of Object.values(simulation.reactions)) {
-      rxn.perturbationMultiplier = 1.0;
-    }
-
-    // Reset simulation concentration values
-    simulation.reset();
-    renderer.setPerturbedReaction(null);
-    initializeGrowthHistory();
-
-    console.log('[Perturbation] Fully reset to Wild-Type.');
   });
 
   // Camera focuses

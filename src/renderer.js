@@ -47,9 +47,8 @@ export class PixiRenderer {
     this.selectedNodeId = null;
     this.selectedReactionId = null;
 
-    // Perturbation state
-    this.perturbedReactionId = null;
-    this.perturbedIntensity = 100;
+    // Label font settings
+    this.baseFontSize = 12;
   }
 
   /**
@@ -229,7 +228,15 @@ export class PixiRenderer {
    * Creates static text nodes in Pixi for metabolites and reactions.
    */
   createStaticTexts() {
-    this.textContainer.removeChildren();
+    // Destroy existing text children to prevent memory leaks in PixiJS
+    if (this.textContainer) {
+      this.textContainer.children.forEach(child => {
+        if (child.destroy) {
+          child.destroy();
+        }
+      });
+      this.textContainer.removeChildren();
+    }
 
     // Draw Metabolite Name Labels
     this.metabNodes.forEach(node => {
@@ -237,7 +244,7 @@ export class PixiRenderer {
 
       const style = {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: 12,
+        fontSize: this.baseFontSize,
         fill: 0x8a99ad,
         fontWeight: 'bold',
         align: 'left'
@@ -257,7 +264,7 @@ export class PixiRenderer {
 
       const style = {
         fontFamily: 'Inter, sans-serif',
-        fontSize: 10,
+        fontSize: Math.max(6, Math.round(this.baseFontSize * 10 / 12)),
         fill: 0x4f46e5,
         fontWeight: '500',
         align: 'center'
@@ -269,6 +276,14 @@ export class PixiRenderer {
       text.anchor.set(0.5, 0.5);
       this.textContainer.addChild(text);
     });
+  }
+
+  /**
+   * Updates the base font size for map labels and redraws the texts.
+   */
+  updateLabelFontSize(newSize) {
+    this.baseFontSize = newSize;
+    this.createStaticTexts();
   }
 
   /**
@@ -352,13 +367,7 @@ export class PixiRenderer {
     this.updateReactionBadgeHighlight();
   }
 
-  /**
-   * Sets the active engineering perturbation reaction highlight.
-   */
-  setPerturbedReaction(rxnId, intensity = 100) {
-    this.perturbedReactionId = rxnId;
-    this.perturbedIntensity = intensity;
-  }
+
 
   /**
    * Redraw reaction badges to update highlights.
@@ -740,25 +749,7 @@ export class PixiRenderer {
       });
     });
 
-    // 3. Draw Perturbation Highlight
-    if (this.perturbedReactionId) {
-      const rxn = this.reactions.find(r => r.biggId === this.perturbedReactionId);
-      if (rxn && rxn.labelX && rxn.labelY) {
-        const pulse = 1.0 + 0.15 * Math.sin(animationFrameCount * 0.15);
-        const width = 56 * pulse;
-        const height = 24 * pulse;
-        
-        let color = 0xef4444; // default red (inhibition / block)
-        if (this.perturbedIntensity > 100) {
-          color = 0x34d399; // green (overexpression / activation)
-        } else if (this.perturbedIntensity === 100) {
-          color = 0x6366f1; // indigo (neutral baseline)
-        }
-        
-        mg.roundRect(rxn.labelX - width / 2, rxn.labelY - height / 2, width, height, 4)
-          .stroke({ width: 2.5, color, alpha: 0.95 });
-      }
-    }
+
   }
 
   /**

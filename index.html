@@ -47,25 +47,11 @@
           </div>
         </section>
 
-        <section class="intervention-section">
-          <h2>Metabolic Engineering Toolkit</h2>
-          <div class="form-group">
-            <label for="perturbation-select">Select Metabolic Perturbation</label>
-            <select id="perturbation-select" class="select-dropdown">
-              <option value="none">None (Baseline)</option>
-              <option value="pgi">PGI Enzyme Inhibition</option>
-              <option value="tca">TCA Cycle Block (CS)</option>
-              <option value="atp">ATP Demand Surge</option>
-              <option value="nad">NAD+ Regeneration Failure</option>
-            </select>
-          </div>
+        <section class="display-section">
+          <h2>Map Settings</h2>
           <div class="slider-group">
-            <label for="perturbation-slider">Perturbation Intensity: <span id="perturbation-val">100%</span></label>
-            <input type="range" id="perturbation-slider" min="0" max="200" step="5" value="100" />
-          </div>
-          <div class="btn-group">
-            <button id="apply-perturbation-btn" class="btn btn-primary">Apply Intervention</button>
-            <button id="reset-wt-btn" class="btn btn-secondary">Reset to WT</button>
+            <label for="font-size-slider">Label Font Size: <span id="font-size-val">12px</span></label>
+            <input type="range" id="font-size-slider" min="8" max="20" step="1" value="12" />
           </div>
         </section>
 

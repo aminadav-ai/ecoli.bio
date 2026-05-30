@@ -190,6 +190,7 @@ body, html {
 }
 
 .control-section,
+.display-section,
 .pathway-section,
 .strain-section,
 .metabolite-list-section,
@@ -774,18 +775,18 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-left: 3px solid #fbbf24;
 }
 
-/* Metabolic Engineering Toolkit */
-.intervention-section {
-  border-top: 1px solid rgba(239, 68, 68, 0.15);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.15);
-  background: rgba(239, 68, 68, 0.02);
+/* Map Settings Section */
+.display-section {
+  border-top: 1px solid rgba(99, 102, 241, 0.15);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+  background: rgba(99, 102, 241, 0.02);
   padding: 16px 0;
   margin: 12px 0;
 }
 
-.intervention-section h2 {
-  color: #fca5a5 !important;
-  text-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+.display-section h2 {
+  color: #a5b4fc !important;
+  text-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
 }
 
 .form-group {
