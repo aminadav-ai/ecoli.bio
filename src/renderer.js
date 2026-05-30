@@ -307,6 +307,7 @@ export class PixiRenderer {
   updateLabelFontSize(newSize) {
     this.baseFontSize = newSize;
     this.createStaticTexts();
+    this.createReactionBadges();
   }
 
   /**
