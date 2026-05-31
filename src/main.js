@@ -11,6 +11,7 @@ import { PixiRenderer } from './renderer.js';
 
 // Database cross-reference IDs mapped to BiGG IDs
 const NAMESPACE_DATABASE = {
+  // Glycolysis / Gluconeogenesis & Pentose Phosphate Pathway intermediates
   GLC_EXT: { name: 'D-Glucose (extracellular)', ecocyc: 'D-GLUCOSE', bigg: 'glc__D_e', kegg: 'C00267', chebi: '17634', hmdb: 'HMDB0000122' },
   GLC_INT: { name: 'D-Glucose (intracellular)', ecocyc: 'D-GLUCOSE', bigg: 'glc__D_c', kegg: 'C00267', chebi: '17634', hmdb: 'HMDB0000122' },
   G6P: { name: 'Glucose 6-phosphate', ecocyc: 'GLUCOSE-6-P', bigg: 'g6p_c', kegg: 'C00092', chebi: '14314', hmdb: 'HMDB0001401' },
@@ -21,22 +22,81 @@ const NAMESPACE_DATABASE = {
   BPG: { name: '1,3-Bisphosphoglycerate', ecocyc: '1-3-DIPHOSPHOGLYCERATE', bigg: '13dpg_c', kegg: 'C00236', chebi: '16001', hmdb: 'HMDB0001430' },
   PEP: { name: 'Phosphoenolpyruvate', ecocyc: 'PHOSPHO-ENOL-PYRUVATE', bigg: 'pep_c', kegg: 'C00074', chebi: '18021', hmdb: 'HMDB0000263' },
   PYRU: { name: 'Pyruvate', ecocyc: 'PYRUVATE', bigg: 'pyr_c', kegg: 'C00022', chebi: '15361', hmdb: 'HMDB0000243' },
+  PYRU_EXT: { name: 'Pyruvate (extracellular)', ecocyc: 'PYRUVATE', bigg: 'pyr_e', kegg: 'C00022', chebi: '15361', hmdb: 'HMDB0000243' },
+  '3PG': { name: '3-Phospho-D-glycerate', ecocyc: '3-P-GLYCERATE', bigg: '3pg_c', kegg: 'C00197', chebi: '17794', hmdb: 'HMDB0000807' },
+  '2PG': { name: '2-Phospho-D-glycerate', ecocyc: '2-PG', bigg: '2pg_c', kegg: 'C00631', chebi: '17835', hmdb: 'HMDB0000007' },
+  
+  // TCA Cycle & Glyoxylate Bypass intermediates
   ACCOA: { name: 'Acetyl-CoA', ecocyc: 'ACETYL-COA', bigg: 'accoa_c', kegg: 'C00024', chebi: '15379', hmdb: 'HMDB0001206' },
   OXALO: { name: 'Oxaloacetate', ecocyc: 'OXALOACETATE', bigg: 'oaa_c', kegg: 'C00036', chebi: '16452', hmdb: 'HMDB0000223' },
   CITRATE: { name: 'Citrate', ecocyc: 'CITRATE', bigg: 'cit_c', kegg: 'C00158', chebi: '16947', hmdb: 'HMDB0000094' },
   ISOCIT: { name: 'Isocitrate', ecocyc: 'ISOCITRATE', bigg: 'icit_c', kegg: 'C00311', chebi: '16088', hmdb: 'HMDB0000193' },
   AKG: { name: 'Alpha-ketoglutarate', ecocyc: '2-KETOGLUTARATE', bigg: 'akg_c', kegg: 'C00026', chebi: '16810', hmdb: 'HMDB0000208' },
+  AKG_EXT: { name: 'Alpha-ketoglutarate (extracellular)', ecocyc: '2-KETOGLUTARATE', bigg: 'akg_e', kegg: 'C00026', chebi: '16810', hmdb: 'HMDB0000208' },
   SUCCOA: { name: 'Succinyl-CoA', ecocyc: 'SUCCINYL-COA', bigg: 'succoa_c', kegg: 'C00091', chebi: '15380', hmdb: 'HMDB0001150' },
   SUCC: { name: 'Succinate', ecocyc: 'SUCCINATE', bigg: 'succ_c', kegg: 'C00042', chebi: '15741', hmdb: 'HMDB0000254' },
+  SUCC_EXT: { name: 'Succinate (extracellular)', ecocyc: 'SUCCINATE', bigg: 'succ_e', kegg: 'C00042', chebi: '15741', hmdb: 'HMDB0000254' },
   FUMAR: { name: 'Fumarate', ecocyc: 'FUMARATE', bigg: 'fum_c', kegg: 'C00122', chebi: '18012', hmdb: 'HMDB0000134' },
+  FUMAR_EXT: { name: 'Fumarate (extracellular)', ecocyc: 'FUMARATE', bigg: 'fum_e', kegg: 'C00122', chebi: '18012', hmdb: 'HMDB0000134' },
   MALATE: { name: 'L-Malate', ecocyc: 'MALATE', bigg: 'mal__L_c', kegg: 'C00149', chebi: '15589', hmdb: 'HMDB0000156' },
+  MALATE_EXT: { name: 'L-Malate (extracellular)', ecocyc: 'MALATE', bigg: 'mal__L_e', kegg: 'C00149', chebi: '15589', hmdb: 'HMDB0000156' },
+  GLX: { name: 'Glyoxylate', ecocyc: 'GLYOXYLATE', bigg: 'glx_c', kegg: 'C00048', chebi: '16842', hmdb: 'HMDB0000119' },
+  ACON_C: { name: 'cis-Aconitate', ecocyc: 'CIS-ACONITATE', bigg: 'acon_C_c', kegg: 'C00417', chebi: '16405', hmdb: 'HMDB0000072' },
+
+  // Pentose Phosphate Pathway (PPP)
   '6PGL': { name: '6-Phosphoglucono-d-lactone', ecocyc: 'D-GLUCONO-15-LACTONE-6-P', bigg: '6pgl_c', kegg: 'C01236', chebi: '16075', hmdb: 'HMDB0001149' },
   '6PGC': { name: '6-Phosphogluconate', ecocyc: 'D-GLUCONATE-6-P', bigg: '6pgc_c', kegg: 'C00345', chebi: '17960', hmdb: 'HMDB0001314' },
   RL5P: { name: 'Ribulose 5-phosphate', ecocyc: 'RIBULOSE-5P', bigg: 'ru5p__D_c', kegg: 'C00199', chebi: '16712', hmdb: 'HMDB0001188' },
   R5P: { name: 'Ribose 5-phosphate', ecocyc: 'RIBOSE-5P', bigg: 'r5p_c', kegg: 'C00117', chebi: '17797', hmdb: 'HMDB0000283' },
   X5P: { name: 'Xylulose 5-phosphate', ecocyc: 'D-XYLULOSE-5-P', bigg: 'xu5p__D_c', kegg: 'C00231', chebi: '16332', hmdb: 'HMDB0001287' },
   S7P: { name: 'Sedoheptulose 7-phosphate', ecocyc: 'SEDOHEPTULOSE-7P', bigg: 's7p_c', kegg: 'C05382', chebi: '15714', hmdb: 'HMDB0001072' },
-  E4P: { name: 'Erythrose 4-phosphate', ecocyc: 'ERYTHROSE-4P', bigg: 'e4p_c', kegg: 'C00279', chebi: '16897', hmdb: 'HMDB0001479' }
+  E4P: { name: 'Erythrose 4-phosphate', ecocyc: 'ERYTHROSE-4P', bigg: 'e4p_c', kegg: 'C00279', chebi: '16897', hmdb: 'HMDB0001479' },
+
+  // Fermentation & Transport metabolites
+  AC: { name: 'Acetate', ecocyc: 'ACETATE', bigg: 'ac_c', kegg: 'C00033', chebi: '30089', hmdb: 'HMDB0000042' },
+  AC_EXT: { name: 'Acetate (extracellular)', ecocyc: 'ACETATE', bigg: 'ac_e', kegg: 'C00033', chebi: '30089', hmdb: 'HMDB0000042' },
+  ACALD: { name: 'Acetaldehyde', ecocyc: 'ACETALDEHYDE', bigg: 'acald_c', kegg: 'C00084', chebi: '15343', hmdb: 'HMDB0000087' },
+  ACALD_EXT: { name: 'Acetaldehyde (extracellular)', ecocyc: 'ACETALDEHYDE', bigg: 'acald_e', kegg: 'C00084', chebi: '15343', hmdb: 'HMDB0000087' },
+  ACTP: { name: 'Acetyl phosphate', ecocyc: 'ACETYL-P', bigg: 'actp_c', kegg: 'C00227', chebi: '15370', hmdb: 'HMDB0001487' },
+  ETOH: { name: 'Ethanol', ecocyc: 'ETHANOL', bigg: 'etoh_c', kegg: 'C00469', chebi: '16236', hmdb: 'HMDB0000108' },
+  ETOH_EXT: { name: 'Ethanol (extracellular)', ecocyc: 'ETHANOL', bigg: 'etoh_e', kegg: 'C00469', chebi: '16236', hmdb: 'HMDB0000108' },
+  FOR: { name: 'Formate', ecocyc: 'FORMATE', bigg: 'for_c', kegg: 'C00058', chebi: '15740', hmdb: 'HMDB0000135' },
+  FOR_EXT: { name: 'Formate (extracellular)', ecocyc: 'FORMATE', bigg: 'for_e', kegg: 'C00058', chebi: '15740', hmdb: 'HMDB0000135' },
+  FRU_EXT: { name: 'D-Fructose (extracellular)', ecocyc: 'FRUCTOSE', bigg: 'fru_e', kegg: 'C00095', chebi: '15824', hmdb: 'HMDB0000122' },
+  LAC: { name: 'D-Lactate', ecocyc: 'D-LACTATE', bigg: 'lac__D_c', kegg: 'C00256', chebi: '16021', hmdb: 'HMDB0001311' },
+  LAC_EXT: { name: 'D-Lactate (extracellular)', ecocyc: 'D-LACTATE', bigg: 'lac__D_e', kegg: 'C00256', chebi: '16021', hmdb: 'HMDB0001311' },
+
+  // Energy & Electron Carriers / Cofactors
+  ATP: { name: 'ATP', ecocyc: 'ATP', bigg: 'atp_c', kegg: 'C00002', chebi: '15422', hmdb: 'HMDB0000538' },
+  ADP: { name: 'ADP', ecocyc: 'ADP', bigg: 'adp_c', kegg: 'C00008', chebi: '16761', hmdb: 'HMDB0000077' },
+  AMP: { name: 'AMP', ecocyc: 'AMP', bigg: 'amp_c', kegg: 'C00020', chebi: '16027', hmdb: 'HMDB0000045' },
+  NAD: { name: 'NAD+', ecocyc: 'NAD', bigg: 'nad_c', kegg: 'C00003', chebi: '15846', hmdb: 'HMDB0000902' },
+  NADH: { name: 'NADH', ecocyc: 'NADH', bigg: 'nadh_c', kegg: 'C00004', chebi: '16908', hmdb: 'HMDB0001482' },
+  NADP: { name: 'NADP+', ecocyc: 'NADP', bigg: 'nadp_c', kegg: 'C00006', chebi: '25523', hmdb: 'HMDB0000217' },
+  NADPH: { name: 'NADPH', ecocyc: 'NADPH', bigg: 'nadph_c', kegg: 'C00005', chebi: '16474', hmdb: 'HMDB0000221' },
+  COA: { name: 'CoA', ecocyc: 'CO-A', bigg: 'coa_c', kegg: 'C00010', chebi: '15346', hmdb: 'HMDB0001435' },
+  Q8: { name: 'Ubiquinone-8', ecocyc: 'UBIQUINONE-8', bigg: 'q8_c', kegg: 'C05842', chebi: '46245', hmdb: 'HMDB0060370' },
+  Q8H2: { name: 'Ubiquinol-8', ecocyc: 'UBIQUINOL-8', bigg: 'q8h2_c', kegg: 'C11346', chebi: '17996', hmdb: 'HMDB0060370' },
+
+  // Amino Acids
+  GLN: { name: 'L-Glutamine', ecocyc: 'GLN', bigg: 'gln__L_c', kegg: 'C00064', chebi: '18050', hmdb: 'HMDB0000641' },
+  GLN_EXT: { name: 'L-Glutamine (extracellular)', ecocyc: 'GLN', bigg: 'gln__L_e', kegg: 'C00064', chebi: '18050', hmdb: 'HMDB0000641' },
+  GLU: { name: 'L-Glutamate', ecocyc: 'GLU', bigg: 'glu__L_c', kegg: 'C00025', chebi: '16015', hmdb: 'HMDB0000148' },
+  GLU_EXT: { name: 'L-Glutamate (extracellular)', ecocyc: 'GLU', bigg: 'glu__L_e', kegg: 'C00025', chebi: '16015', hmdb: 'HMDB0000148' },
+
+  // Inorganic compounds & Small Buffer molecules
+  H2O: { name: 'Water', ecocyc: 'WATER', bigg: 'h2o_c', kegg: 'C00001', chebi: '15377', hmdb: 'HMDB0002111' },
+  H2O_EXT: { name: 'Water (extracellular)', ecocyc: 'WATER', bigg: 'h2o_e', kegg: 'C00001', chebi: '15377', hmdb: 'HMDB0002111' },
+  H: { name: 'H+', ecocyc: 'PROTON', bigg: 'h_c', kegg: 'C00080', chebi: '15378', hmdb: 'HMDB0059597' },
+  H_EXT: { name: 'H+ (extracellular)', ecocyc: 'PROTON', bigg: 'h_e', kegg: 'C00080', chebi: '15378', hmdb: 'HMDB0059597' },
+  NH4: { name: 'Ammonium', ecocyc: 'AMMONIUM', bigg: 'nh4_c', kegg: 'C01342', chebi: '28938', hmdb: 'HMDB0000051' },
+  NH4_EXT: { name: 'Ammonium (extracellular)', ecocyc: 'AMMONIUM', bigg: 'nh4_e', kegg: 'C01342', chebi: '28938', hmdb: 'HMDB0000051' },
+  PI: { name: 'Phosphate', ecocyc: 'INORGANIC-PHOSPHATE', bigg: 'pi_c', kegg: 'C00009', chebi: '43474', hmdb: 'HMDB0001429' },
+  PI_EXT: { name: 'Phosphate (extracellular)', ecocyc: 'INORGANIC-PHOSPHATE', bigg: 'pi_e', kegg: 'C00009', chebi: '43474', hmdb: 'HMDB0001429' },
+  O2: { name: 'Oxygen', ecocyc: 'OXYGEN', bigg: 'o2_c', kegg: 'C00007', chebi: '15379', hmdb: 'HMDB0001377' },
+  O2_EXT: { name: 'Oxygen (extracellular)', ecocyc: 'OXYGEN', bigg: 'o2_e', kegg: 'C00007', chebi: '15379', hmdb: 'HMDB0001377' },
+  CO2: { name: 'CO2', ecocyc: 'CARBON-DIOXIDE', bigg: 'co2_c', kegg: 'C00011', chebi: '16526', hmdb: 'HMDB0001967' },
+  CO2_EXT: { name: 'CO2 (extracellular)', ecocyc: 'CARBON-DIOXIDE', bigg: 'co2_e', kegg: 'C00011', chebi: '16526', hmdb: 'HMDB0001967' }
 };
 
 // Map BiGG ID to Database keys
