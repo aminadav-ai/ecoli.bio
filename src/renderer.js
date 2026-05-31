@@ -108,8 +108,8 @@ export class PixiRenderer {
     // 4. Parse Escher data
     this.parseEscherMap(mapData);
 
-    // 5. Setup Viewport Fit (Initial Centering)
-    this.fitMapToScreen();
+    // 5. Setup Viewport Fit (Initial Centering & Startup Zoom Animation)
+    this.fitMapToScreen(true, true);
 
     // 6. Setup Interactive Listeners for Zoom/Pan and click selection
     this.setupInteractivity();
@@ -753,7 +753,7 @@ export class PixiRenderer {
   /**
    * Fits the entire metabolic map centered inside the viewport canvas.
    */
-  fitMapToScreen(smooth = true) {
+  fitMapToScreen(smooth = true, startupAnimation = false) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     
     this.metabNodes.forEach(node => {
@@ -773,29 +773,44 @@ export class PixiRenderer {
     const scaleY = (this.app.renderer.height - padding) / mapH;
     
     // Choose the limiting scale factor
-    const finalZoom = Math.min(scaleX, scaleY);
-    this.targetZoom = Math.max(0.12, Math.min(1.5, finalZoom)); // clamp initial zoom
+    const fitZoom = Math.min(scaleX, scaleY);
+    const clampedFitZoom = Math.max(0.12, Math.min(1.5, fitZoom));
 
     const mapCenterX = (minX + maxX) / 2;
     const mapCenterY = (minY + maxY) / 2;
 
-    this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
-    this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
+    if (startupAnimation && smooth) {
+      // End zoom level should be zoomed in (closer)
+      // clampedFitZoom is the scale to fit the whole map (e.g. ~0.3).
+      // We zoom in by a factor of 2.2 (so zoom target is e.g. ~0.66).
+      // We clamp it to a maximum of 1.3 to avoid zooming in too far on huge screens.
+      this.targetZoom = Math.max(0.15, Math.min(1.3, clampedFitZoom * 2.2));
+      
+      this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
+      this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
 
-    if (smooth) {
-      // Start zoomed out (65% of target) and smoothly animate (fly-in)
-      this.zoom = this.targetZoom * 0.65;
+      // Start zoomed out (where the whole map fits the screen)
+      this.zoom = clampedFitZoom;
       this.viewport.x = this.app.renderer.width / 2 - mapCenterX * this.zoom;
       this.viewport.y = this.app.renderer.height / 2 - mapCenterY * this.zoom;
       this.viewport.scale.set(this.zoom);
       this.isCameraAnimating = true;
     } else {
-      // Set instantly (no animation)
-      this.zoom = this.targetZoom;
-      this.viewport.x = this.targetPosition.x;
-      this.viewport.y = this.targetPosition.y;
-      this.viewport.scale.set(this.zoom);
-      this.isCameraAnimating = false;
+      this.targetZoom = clampedFitZoom;
+      this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
+      this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
+
+      if (smooth) {
+        // Smoothly animate from the current camera state to the fitted state
+        this.isCameraAnimating = true;
+      } else {
+        // Set instantly (no animation)
+        this.zoom = this.targetZoom;
+        this.viewport.x = this.targetPosition.x;
+        this.viewport.y = this.targetPosition.y;
+        this.viewport.scale.set(this.zoom);
+        this.isCameraAnimating = false;
+      }
     }
   }
 
