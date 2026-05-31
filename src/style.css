@@ -404,17 +404,13 @@ body, html {
 .btn-zoom {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 8px;
-  background: rgba(99, 102, 241, 0.06);
+  height: 42px;
+  background: rgba(99, 102, 241, 0.05);
   border: 1px solid rgba(99, 102, 241, 0.15);
   border-radius: 8px;
   color: #a5b4fc;
-  font-size: 11px;
-  font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
