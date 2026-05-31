@@ -158,18 +158,12 @@ export class PixiRenderer {
           });
         }
 
-        // Determine preferred/original side
-        let preferredSide = 'right'; // default
+        // Determine preferred angle
+        let preferredAngle = 0; // default to right (0 radians)
         if (hasLabelX && hasLabelY) {
-          const dx = node.label_x - node.x;
-          const dy = node.label_y - node.y;
-          if (Math.abs(dx) >= Math.abs(dy)) {
-            preferredSide = dx >= 0 ? 'right' : 'left';
-          } else {
-            preferredSide = dy >= 0 ? 'bottom' : 'top';
-          }
+          preferredAngle = Math.atan2(node.label_y - node.y, node.label_x - node.x);
         }
-        parsedNode.preferredSide = preferredSide;
+        parsedNode.preferredAngle = preferredAngle;
 
         this.metabNodes.push(parsedNode);
       }
@@ -346,7 +340,7 @@ export class PixiRenderer {
 
     const padding = 8; // padding around the circle
 
-    // Pass 1: Measure text size and place at preferred side
+    // Pass 1: Measure text size and place at preferred angle
     this.metabNodes.forEach(node => {
       if (!node.textElement) return;
 
@@ -357,108 +351,81 @@ export class PixiRenderer {
       node.labelHeight = size.height;
 
       const radius = node.renderedRadius || 18;
+      const distToLabel = radius + padding;
+      const theta = node.preferredAngle !== undefined ? node.preferredAngle : 0;
 
-      let x = node.x;
-      let y = node.y;
+      const x = node.x + distToLabel * Math.cos(theta);
+      const y = node.y + distToLabel * Math.sin(theta);
+      const ax = 0.5 - 0.5 * Math.cos(theta);
+      const ay = 0.5 - 0.5 * Math.sin(theta);
 
-      const side = node.preferredSide || 'right';
-      if (side === 'right') {
-        x = node.x + radius + padding;
-        y = node.y;
-        node.pass1Rect = {
-          xMin: x,
-          xMax: x + node.labelWidth,
-          yMin: y - node.labelHeight / 2,
-          yMax: y + node.labelHeight / 2
-        };
-      } else if (side === 'left') {
-        x = node.x - radius - padding;
-        y = node.y;
-        node.pass1Rect = {
-          xMin: x - node.labelWidth,
-          xMax: x,
-          yMin: y - node.labelHeight / 2,
-          yMax: y + node.labelHeight / 2
-        };
-      } else if (side === 'top') {
-        x = node.x;
-        y = node.y - radius - padding;
-        node.pass1Rect = {
-          xMin: x - node.labelWidth / 2,
-          xMax: x + node.labelWidth / 2,
-          yMin: y - node.labelHeight,
-          yMax: y
-        };
-      } else if (side === 'bottom') {
-        x = node.x;
-        y = node.y + radius + padding;
-        node.pass1Rect = {
-          xMin: x - node.labelWidth / 2,
-          xMax: x + node.labelWidth / 2,
-          yMin: y,
-          yMax: y + node.labelHeight
-        };
-      }
+      node.pass1Rect = {
+        xMin: x - ax * node.labelWidth,
+        xMax: x + (1 - ax) * node.labelWidth,
+        yMin: y - ay * node.labelHeight,
+        yMax: y + (1 - ay) * node.labelHeight
+      };
     });
 
-    // Pass 2: Evaluate candidate sides and pick the best one
-    const sides = ['right', 'left', 'top', 'bottom'];
-    const sideAngles = {
-      right: 0,
-      bottom: Math.PI / 2,
-      left: Math.PI,
-      top: -Math.PI / 2
-    };
+    // Pass 2: Evaluate 12 candidate angles and pick the best one
+    const numCandidates = 12;
+    const candidateAngles = [];
+    for (let i = 0; i < numCandidates; i++) {
+      candidateAngles.push((i * 2 * Math.PI) / numCandidates - Math.PI);
+    }
 
     this.metabNodes.forEach(node => {
       if (!node.textElement) return;
 
       const radius = node.renderedRadius || 18;
+      const distToLabel = radius + padding;
       const W = node.labelWidth;
       const H = node.labelHeight;
-      const preferred = node.preferredSide || 'right';
+      const prefTheta = node.preferredAngle !== undefined ? node.preferredAngle : 0;
 
-      let bestSide = preferred;
+      let bestTheta = prefTheta;
       let minPenalty = Infinity;
 
-      sides.forEach(side => {
+      candidateAngles.forEach(theta => {
         let penalty = 0;
 
-        let cx = node.x;
-        let cy = node.y;
-        let cRect = { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
+        const cx = node.x + distToLabel * Math.cos(theta);
+        const cy = node.y + distToLabel * Math.sin(theta);
+        const ax = 0.5 - 0.5 * Math.cos(theta);
+        const ay = 0.5 - 0.5 * Math.sin(theta);
 
-        if (side === 'right') {
-          cx = node.x + radius + padding;
-          cy = node.y;
-          cRect = { xMin: cx, xMax: cx + W, yMin: cy - H / 2, yMax: cy + H / 2 };
-        } else if (side === 'left') {
-          cx = node.x - radius - padding;
-          cy = node.y;
-          cRect = { xMin: cx - W, xMax: cx, yMin: cy - H / 2, yMax: cy + H / 2 };
-        } else if (side === 'top') {
-          cx = node.x;
-          cy = node.y - radius - padding;
-          cRect = { xMin: cx - W / 2, xMax: cx + W / 2, yMin: cy - H, yMax: cy };
-        } else if (side === 'bottom') {
-          cx = node.x;
-          cy = node.y + radius + padding;
-          cRect = { xMin: cx - W / 2, xMax: cx + W / 2, yMin: cy, yMax: cy + H };
-        }
+        const cRect = {
+          xMin: cx - ax * W,
+          xMax: cx + (1 - ax) * W,
+          yMin: cy - ay * H,
+          yMax: cy + (1 - ay) * H
+        };
 
-        // 1. Connection/Reaction Line and Clutter overlap
-        const sideAngle = sideAngles[side];
-        if (node.restrictedAngles) {
-          node.restrictedAngles.forEach(restricted => {
-            const diff = Math.abs(normalizeAngle(sideAngle - restricted.angle));
-            const angleThreshold = Math.PI / 3;
-            if (diff < angleThreshold) {
-              penalty += restricted.weight * (1.0 - diff / angleThreshold) * 3.5;
+        // 1. Collision with neighboring circles (metabolite nodes)
+        if (node.nearbyNodes) {
+          node.nearbyNodes.forEach(other => {
+            const rOther = other.renderedRadius || 18;
+            const px = Math.max(cRect.xMin, Math.min(other.x, cRect.xMax));
+            const py = Math.max(cRect.yMin, Math.min(other.y, cRect.yMax));
+            const dist = Math.hypot(other.x - px, other.y - py);
+            if (dist < rOther) {
+              penalty += 50.0; // High penalty for circle overlap
             }
           });
         }
 
-        // 2. Label-Label Overlaps with nearby nodes' labels
+        // 2. Overlap with incident reaction segments or nearby segments
+        if (node.restrictedAngles) {
+          node.restrictedAngles.forEach(restricted => {
+            const diff = Math.abs(normalizeAngle(theta - restricted.angle));
+            const angleThreshold = Math.PI / 4; // 45 degrees
+            if (diff < angleThreshold) {
+              penalty += restricted.weight * (1.0 - diff / angleThreshold) * 6.0;
+            }
+          });
+        }
+
+        // 3. Label-Label Overlaps with nearby nodes' labels
         if (node.nearbyNodes) {
           node.nearbyNodes.forEach(other => {
             if (other.pass1Rect) {
@@ -469,13 +436,13 @@ export class PixiRenderer {
                 cRect.yMin > other.pass1Rect.yMax
               );
               if (overlap) {
-                penalty += 12.0;
+                penalty += 15.0; // Moderate penalty for label overlap
               }
             }
           });
         }
 
-        // 3. Collision with Reaction Badges
+        // 4. Collision with Reaction Badges
         this.reactions.forEach(rxn => {
           if (rxn.labelX && rxn.labelY && rxn.badgeWidth && rxn.badgeHeight) {
             const bxMin = rxn.labelX - rxn.badgeWidth / 2;
@@ -490,62 +457,37 @@ export class PixiRenderer {
               cRect.yMin > byMax
             );
             if (overlap) {
-              penalty += 8.0;
+              penalty += 10.0;
             }
           }
         });
 
-        // 4. Preferred direction bonus
-        if (side === preferred) {
-          penalty -= 0.6;
-        }
-
-        // 5. Readability bias (prefer horizontal text alignment)
-        if (side === 'right' || side === 'left') {
-          penalty -= 0.15;
-        }
+        // 5. Deviation from preferred angle
+        const angleDiff = Math.abs(normalizeAngle(theta - prefTheta));
+        penalty += angleDiff * 3.0; // Keep near original layout if possible
 
         if (penalty < minPenalty) {
           minPenalty = penalty;
-          bestSide = side;
+          bestTheta = theta;
         }
       });
 
-      let finalX = node.x;
-      let finalY = node.y;
-      let finalAnchorX = 0;
-      let finalAnchorY = 0.5;
-
-      if (bestSide === 'right') {
-        finalX = node.x + radius + padding;
-        finalY = node.y;
-        finalAnchorX = 0;
-        finalAnchorY = 0.5;
-        node.finalRect = { xMin: finalX, xMax: finalX + W, yMin: finalY - H / 2, yMax: finalY + H / 2 };
-      } else if (bestSide === 'left') {
-        finalX = node.x - radius - padding;
-        finalY = node.y;
-        finalAnchorX = 1;
-        finalAnchorY = 0.5;
-        node.finalRect = { xMin: finalX - W, xMax: finalX, yMin: finalY - H / 2, yMax: finalY + H / 2 };
-      } else if (bestSide === 'top') {
-        finalX = node.x;
-        finalY = node.y - radius - padding;
-        finalAnchorX = 0.5;
-        finalAnchorY = 1;
-        node.finalRect = { xMin: finalX - W / 2, xMax: finalX + W / 2, yMin: finalY - H, yMax: finalY };
-      } else if (bestSide === 'bottom') {
-        finalX = node.x;
-        finalY = node.y + radius + padding;
-        finalAnchorX = 0.5;
-        finalAnchorY = 0;
-        node.finalRect = { xMin: finalX - W / 2, xMax: finalX + W / 2, yMin: finalY, yMax: finalY + H };
-      }
+      // Apply best placement properties
+      const finalX = node.x + distToLabel * Math.cos(bestTheta);
+      const finalY = node.y + distToLabel * Math.sin(bestTheta);
+      const finalAnchorX = 0.5 - 0.5 * Math.cos(bestTheta);
+      const finalAnchorY = 0.5 - 0.5 * Math.sin(bestTheta);
 
       node.textElement.x = finalX;
       node.textElement.y = finalY;
       node.textElement.anchor.set(finalAnchorX, finalAnchorY);
-      
+
+      node.finalRect = {
+        xMin: finalX - finalAnchorX * W,
+        xMax: finalX + (1 - finalAnchorX) * W,
+        yMin: finalY - finalAnchorY * H,
+        yMax: finalY + (1 - finalAnchorY) * H
+      };
       node.pass1Rect = node.finalRect;
     });
   }
