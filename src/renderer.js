@@ -42,6 +42,7 @@ export class PixiRenderer {
     this.targetZoom = 1.0;
     this.targetPosition = { x: 0, y: 0 };
     this.isCameraAnimating = false;
+    this.cameraLerpSpeed = 0.1;
 
     // Local registers
     this.nodes = {};      // nodeId -> parsed node
@@ -782,9 +783,9 @@ export class PixiRenderer {
     if (startupAnimation && smooth) {
       // End zoom level should be zoomed in (closer)
       // clampedFitZoom is the scale to fit the whole map (e.g. ~0.3).
-      // We zoom in by a factor of 2.2 (so zoom target is e.g. ~0.66).
-      // We clamp it to a maximum of 1.3 to avoid zooming in too far on huge screens.
-      this.targetZoom = Math.max(0.15, Math.min(1.3, clampedFitZoom * 2.2));
+      // We zoom in by a factor of 3.3 (so zoom target is e.g. ~1.0).
+      // We clamp it to a maximum of 1.8 to avoid zooming in too far on huge screens.
+      this.targetZoom = Math.max(0.15, Math.min(1.8, clampedFitZoom * 3.3));
       
       this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
       this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
@@ -794,11 +795,15 @@ export class PixiRenderer {
       this.viewport.x = this.app.renderer.width / 2 - mapCenterX * this.zoom;
       this.viewport.y = this.app.renderer.height / 2 - mapCenterY * this.zoom;
       this.viewport.scale.set(this.zoom);
+      
+      // Make the startup zoom animation slower and more majestic
+      this.cameraLerpSpeed = 0.025;
       this.isCameraAnimating = true;
     } else {
       this.targetZoom = clampedFitZoom;
       this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
       this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
+      this.cameraLerpSpeed = 0.1; // reset/ensure default speed
 
       if (smooth) {
         // Smoothly animate from the current camera state to the fitted state
@@ -919,7 +924,7 @@ export class PixiRenderer {
   updateCamera(deltaTime) {
     if (!this.isCameraAnimating) return;
 
-    const lerpSpeed = 0.1 * deltaTime; // Adjust speed of transitions
+    const lerpSpeed = this.cameraLerpSpeed * deltaTime; // Adjust speed of transitions
 
     this.zoom += (this.targetZoom - this.zoom) * lerpSpeed;
     this.viewport.scale.set(this.zoom);
@@ -937,6 +942,7 @@ export class PixiRenderer {
       this.viewport.y = this.targetPosition.y;
       this.viewport.scale.set(this.zoom);
       this.isCameraAnimating = false;
+      this.cameraLerpSpeed = 0.1; // reset to default normal speed
     }
   }
 
