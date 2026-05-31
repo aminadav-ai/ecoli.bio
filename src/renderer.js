@@ -521,7 +521,7 @@ export class PixiRenderer {
         }
       });
     });
-    g.stroke({ width: 2.5, color: 0x3f3f46, alpha: 0.6 });
+    g.stroke({ width: 10.0, color: 0x2b76b4, alpha: 0.55 });
   }
 
   /**
