@@ -1023,7 +1023,8 @@ export class PixiRenderer {
       const simMetab = simMetabolites[node.biggId];
       if (!simMetab) return;
 
-      const concentration = simMetab.concentration;
+      // Visual concentration cap for water (55M is too massive for visual scaling)
+      const concentration = node.biggId.includes('h2o') ? 1.0 : simMetab.concentration;
 
       // Radius changes dynamically: base + scale based on square root of concentration
       const baseRadius = node.biggId.includes('glc__D') ? 22 : 15;
