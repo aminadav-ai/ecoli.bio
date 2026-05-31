@@ -210,6 +210,14 @@ body, html {
   color: #cbd5e1;
   border-left: 2px solid #f87171;
   text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.warning-item:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #ffffff;
 }
 
 .warning-item strong {

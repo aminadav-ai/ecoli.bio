@@ -133,6 +133,21 @@ function initializeWarningsUI() {
     } else {
       li.innerHTML = warn.message;
     }
+
+    // Click on warning item selects and centers the corresponding metabolite node
+    li.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (renderer && renderer.metabNodes) {
+        const node = renderer.metabNodes.find(n => n.id === warn.id || n.biggId === warn.biggId);
+        if (node) {
+          renderer.selectMetabolite(node.id);
+          handleMetaboliteSelect(node);
+          renderer.focusOnCoordinates(node.x, node.y, 0.85);
+          dropdown.classList.add('hidden');
+        }
+      }
+    });
+
     listEl.appendChild(li);
   });
 
