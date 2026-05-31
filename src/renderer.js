@@ -156,20 +156,6 @@ export class PixiRenderer {
             type: 'missing',
             message: warningMsg
           });
-        } else {
-          const dist = Math.hypot(node.label_x - node.x, node.label_y - node.y);
-          if (dist > 100) {
-            const warningMsg = `Metabolite "${node.name}" (${node.bigg_id}) label is too far from node circle (${dist.toFixed(1)}px, threshold is 100px).`;
-            console.warn(`[Map Warning] ${warningMsg}`);
-            this.mapWarnings.push({
-              id: nodeId,
-              biggId: node.bigg_id,
-              name: node.name,
-              type: 'far',
-              distance: dist,
-              message: warningMsg
-            });
-          }
         }
 
         // Determine preferred/original side
