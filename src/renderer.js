@@ -753,7 +753,7 @@ export class PixiRenderer {
   /**
    * Fits the entire metabolic map centered inside the viewport canvas.
    */
-  fitMapToScreen() {
+  fitMapToScreen(smooth = true) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     
     this.metabNodes.forEach(node => {
@@ -773,19 +773,30 @@ export class PixiRenderer {
     const scaleY = (this.app.renderer.height - padding) / mapH;
     
     // Choose the limiting scale factor
-    this.zoom = Math.min(scaleX, scaleY);
-    this.zoom = Math.max(0.12, Math.min(1.5, this.zoom)); // clamp initial zoom
+    const finalZoom = Math.min(scaleX, scaleY);
+    this.targetZoom = Math.max(0.12, Math.min(1.5, finalZoom)); // clamp initial zoom
 
     const mapCenterX = (minX + maxX) / 2;
     const mapCenterY = (minY + maxY) / 2;
 
-    this.viewport.x = this.app.renderer.width / 2 - mapCenterX * this.zoom;
-    this.viewport.y = this.app.renderer.height / 2 - mapCenterY * this.zoom;
-    this.viewport.scale.set(this.zoom);
+    this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
+    this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
 
-    this.targetZoom = this.zoom;
-    this.targetPosition.x = this.viewport.x;
-    this.targetPosition.y = this.viewport.y;
+    if (smooth) {
+      // Start zoomed out (65% of target) and smoothly animate (fly-in)
+      this.zoom = this.targetZoom * 0.65;
+      this.viewport.x = this.app.renderer.width / 2 - mapCenterX * this.zoom;
+      this.viewport.y = this.app.renderer.height / 2 - mapCenterY * this.zoom;
+      this.viewport.scale.set(this.zoom);
+      this.isCameraAnimating = true;
+    } else {
+      // Set instantly (no animation)
+      this.zoom = this.targetZoom;
+      this.viewport.x = this.targetPosition.x;
+      this.viewport.y = this.targetPosition.y;
+      this.viewport.scale.set(this.zoom);
+      this.isCameraAnimating = false;
+    }
   }
 
   /**
