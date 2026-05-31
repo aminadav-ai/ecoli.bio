@@ -98,13 +98,31 @@
           </div>
         </section>
 
-        <section class="pathway-section">
-          <h2>Pathway Camera Focus</h2>
-          <div class="grid-buttons">
-            <button class="btn btn-pathway" data-pathway="glycolysis">Glycolysis</button>
-            <button class="btn btn-pathway" data-pathway="tca">TCA Cycle</button>
-            <button class="btn btn-pathway" data-pathway="ppp">PPP Pathway</button>
-            <button class="btn btn-pathway" data-pathway="fit">Fit to View</button>
+        <section class="navigation-section">
+          <h2>Map Navigation</h2>
+          <div class="zoom-btn-group">
+            <button class="btn btn-zoom" id="btn-zoom-in" title="Zoom In">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Zoom In</span>
+            </button>
+            <button class="btn btn-zoom" id="btn-zoom-out" title="Zoom Out">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Zoom Out</span>
+            </button>
+            <button class="btn btn-zoom" id="btn-zoom-canvas" title="Zoom to Canvas">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 5 5 5 5 9"></polyline>
+                <line x1="5" y1="5" x2="11" y2="11"></line>
+                <polyline points="15 19 19 19 19 15"></polyline>
+                <line x1="19" y1="19" x2="13" y2="13"></line>
+              </svg>
+              <span>Zoom to Canvas</span>
+            </button>
           </div>
         </section>
 

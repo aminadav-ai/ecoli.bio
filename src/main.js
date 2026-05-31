@@ -397,20 +397,22 @@ function setupUIListeners() {
     }
   });
 
-  // Camera focuses
-  document.querySelectorAll('.btn-pathway').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pathway = btn.getAttribute('data-pathway');
-      if (pathway === 'fit') {
-        renderer.fitMapToScreen();
-      } else {
-        const ids = PATHWAY_FOCUS_IDS[pathway];
-        if (ids) {
-          renderer.focusOnPathway(ids);
-        }
-      }
+  // Map zoom controls
+  const btnZoomIn = document.getElementById('btn-zoom-in');
+  const btnZoomOut = document.getElementById('btn-zoom-out');
+  const btnZoomCanvas = document.getElementById('btn-zoom-canvas');
+
+  if (btnZoomIn && btnZoomOut && btnZoomCanvas) {
+    btnZoomIn.addEventListener('click', () => {
+      if (renderer) renderer.zoomIn();
     });
-  });
+    btnZoomOut.addEventListener('click', () => {
+      if (renderer) renderer.zoomOut();
+    });
+    btnZoomCanvas.addEventListener('click', () => {
+      if (renderer) renderer.zoomToCanvas();
+    });
+  }
 
   // Strain selector
   const strainSelect = document.getElementById('strain-select');

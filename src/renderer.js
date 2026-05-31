@@ -871,6 +871,49 @@ export class PixiRenderer {
   }
 
   /**
+   * Smoothly zooms in centered on the middle of the screen.
+   */
+  zoomIn() {
+    const baseZoom = this.isCameraAnimating ? this.targetZoom : this.zoom;
+    this.targetZoom = Math.max(0.08, Math.min(4.0, baseZoom * 1.3));
+    
+    const screenCenterX = this.app.renderer.width / 2;
+    const screenCenterY = this.app.renderer.height / 2;
+    const worldCenterX = (screenCenterX - this.viewport.x) / this.zoom;
+    const worldCenterY = (screenCenterY - this.viewport.y) / this.zoom;
+    
+    this.targetPosition.x = screenCenterX - worldCenterX * this.targetZoom;
+    this.targetPosition.y = screenCenterY - worldCenterY * this.targetZoom;
+    
+    this.isCameraAnimating = true;
+  }
+
+  /**
+   * Smoothly zooms out centered on the middle of the screen.
+   */
+  zoomOut() {
+    const baseZoom = this.isCameraAnimating ? this.targetZoom : this.zoom;
+    this.targetZoom = Math.max(0.08, Math.min(4.0, baseZoom / 1.3));
+    
+    const screenCenterX = this.app.renderer.width / 2;
+    const screenCenterY = this.app.renderer.height / 2;
+    const worldCenterX = (screenCenterX - this.viewport.x) / this.zoom;
+    const worldCenterY = (screenCenterY - this.viewport.y) / this.zoom;
+    
+    this.targetPosition.x = screenCenterX - worldCenterX * this.targetZoom;
+    this.targetPosition.y = screenCenterY - worldCenterY * this.targetZoom;
+    
+    this.isCameraAnimating = true;
+  }
+
+  /**
+   * Fits the entire canvas on the screen.
+   */
+  zoomToCanvas() {
+    this.fitMapToScreen(true, false);
+  }
+
+  /**
    * Updates camera animation using linear interpolation (lerp).
    */
   updateCamera(deltaTime) {

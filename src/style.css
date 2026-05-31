@@ -395,22 +395,50 @@ body, html {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.grid-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.zoom-btn-group {
+  display: flex;
   gap: 8px;
+  width: 100%;
 }
 
-.btn-pathway {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.18);
+.btn-zoom {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 8px;
   color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
-.btn-pathway:hover {
-  background: rgba(99, 102, 241, 0.16);
+.btn-zoom svg {
+  color: #818cf8;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.btn-zoom:hover {
+  background: rgba(99, 102, 241, 0.14);
   border: 1px solid #6366f1;
   color: #ffffff;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-zoom:hover svg {
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.btn-zoom:active {
+  transform: translateY(0);
 }
 
 .btn-inject {
