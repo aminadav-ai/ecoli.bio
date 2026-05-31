@@ -261,6 +261,9 @@ async function bootstrap() {
   renderer.getLabelText = getLabelTextForNamespace;
   await renderer.init(mapData);
 
+  // Check if any map metabolites are missing from our namespace database
+  checkMetaboliteDatabaseCompleteness();
+
   // Initialize warnings UI if there are any map loading warnings
   initializeWarningsUI();
 
@@ -1283,4 +1286,42 @@ function hideSearchResults() {
     resultsDropdown.classList.add('hidden');
   }
 }
+
+/**
+ * Checks if all metabolite nodes on the map are defined in NAMESPACE_DATABASE.
+ * If any are missing, pushes warning objects to renderer.mapWarnings.
+ */
+function checkMetaboliteDatabaseCompleteness() {
+  if (!renderer || !renderer.metabNodes) return;
+
+  const dbMetaboliteBiggs = new Set(
+    Object.values(NAMESPACE_DATABASE).map(db => db.bigg.toLowerCase())
+  );
+
+  const missingMetabolites = new Map(); // biggId -> nodeName
+
+  renderer.metabNodes.forEach(node => {
+    const normId = node.biggId.toLowerCase();
+    if (!dbMetaboliteBiggs.has(normId)) {
+      missingMetabolites.set(node.biggId, node.name);
+    }
+  });
+
+  if (missingMetabolites.size > 0) {
+    missingMetabolites.forEach((name, biggId) => {
+      const warningMsg = `Metabolite "${name}" (${biggId}) is missing from database cross-references (NAMESPACE_DATABASE).`;
+      console.warn(`[Database Warning] ${warningMsg}`);
+      
+      // Push warning object to renderer's warnings list
+      renderer.mapWarnings.push({
+        id: biggId,
+        biggId: biggId,
+        name: name,
+        type: 'database_missing',
+        message: `⚠️ <strong>${biggId}</strong>: missing from database cross-references.`
+      });
+    });
+  }
+}
+
 
