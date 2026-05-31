@@ -404,7 +404,7 @@ export class PixiRenderer {
         // 1. Collision with neighboring circles (metabolite nodes)
         if (node.nearbyNodes) {
           node.nearbyNodes.forEach(other => {
-            const rOther = other.renderedRadius || 18;
+            const rOther = (other.renderedRadius || 18) + 6; // Add a 6px visual gap from neighboring circles
             const px = Math.max(cRect.xMin, Math.min(other.x, cRect.xMax));
             const py = Math.max(cRect.yMin, Math.min(other.y, cRect.yMax));
             const dist = Math.hypot(other.x - px, other.y - py);
@@ -429,14 +429,16 @@ export class PixiRenderer {
         if (node.nearbyNodes) {
           node.nearbyNodes.forEach(other => {
             if (other.pass1Rect) {
+              const gapX = 12; // Minimum 12px horizontal gap
+              const gapY = 6;  // Minimum 6px vertical gap
               const overlap = !(
-                cRect.xMax < other.pass1Rect.xMin ||
-                cRect.xMin > other.pass1Rect.xMax ||
-                cRect.yMax < other.pass1Rect.yMin ||
-                cRect.yMin > other.pass1Rect.yMax
+                cRect.xMax + gapX < other.pass1Rect.xMin ||
+                cRect.xMin - gapX > other.pass1Rect.xMax ||
+                cRect.yMax + gapY < other.pass1Rect.yMin ||
+                cRect.yMin - gapY > other.pass1Rect.yMax
               );
               if (overlap) {
-                penalty += 15.0; // Moderate penalty for label overlap
+                penalty += 25.0; // Stronger penalty for label proximity overlap
               }
             }
           });
