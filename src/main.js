@@ -197,6 +197,9 @@ async function bootstrap() {
   // 5. Wire up DOM UI Listeners
   setupUIListeners();
 
+  // Setup Map Search Bar
+  setupSearch();
+
   // 6. Populate Overview list initially
   populateOverviewList();
 
@@ -1030,3 +1033,179 @@ function drawGrowthSparkline() {
   growthCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
   growthCtx.fill();
 }
+
+/**
+ * Setup Search UI and event handlers for top search panel.
+ */
+function setupSearch() {
+  const searchInput = document.getElementById('map-search-input');
+  const searchClearBtn = document.getElementById('search-clear-btn');
+  const resultsDropdown = document.getElementById('search-results-dropdown');
+  const resultsList = document.getElementById('search-results-list');
+
+  if (!searchInput || !searchClearBtn || !resultsDropdown || !resultsList) return;
+
+  // Perform search on input
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    if (query.length > 0) {
+      searchClearBtn.classList.remove('hidden');
+      performSearch(query);
+    } else {
+      searchClearBtn.classList.add('hidden');
+      hideSearchResults();
+    }
+  });
+
+  // Clear search on button click
+  searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClearBtn.classList.add('hidden');
+    hideSearchResults();
+    searchInput.focus();
+  });
+
+  // Handle Enter keypress to choose the first result
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const firstItem = resultsList.querySelector('.search-result-item');
+      if (firstItem) {
+        firstItem.click();
+        searchInput.blur();
+      }
+    }
+  });
+
+  // Close search suggestions on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-container')) {
+      hideSearchResults();
+    }
+  });
+}
+
+/**
+ * Filters metabolites and reactions by name or ID, sorting and presenting results.
+ */
+function performSearch(query) {
+  const resultsList = document.getElementById('search-results-list');
+  const resultsDropdown = document.getElementById('search-results-dropdown');
+  if (!resultsList || !resultsDropdown) return;
+
+  resultsList.innerHTML = '';
+
+  const matches = [];
+
+  // 1. Search Metabolite Nodes present on the map
+  if (renderer && renderer.metabNodes) {
+    renderer.metabNodes.forEach(node => {
+      const commonName = node.name || '';
+      const biggId = node.biggId || '';
+
+      const matchesCommon = commonName.toLowerCase().includes(query);
+      const matchesBigg = biggId.toLowerCase().includes(query);
+
+      if (matchesCommon || matchesBigg) {
+        matches.push({
+          type: 'metabolite',
+          id: node.id,
+          biggId: biggId,
+          name: commonName,
+          node: node
+        });
+      }
+    });
+  }
+
+  // 2. Search Reaction Badges present on the map
+  if (renderer && renderer.reactions) {
+    renderer.reactions.forEach(rxn => {
+      const rxnName = rxn.name || '';
+      const biggId = rxn.biggId || '';
+
+      const matchesName = rxnName.toLowerCase().includes(query);
+      const matchesBigg = biggId.toLowerCase().includes(query);
+
+      if (matchesName || matchesBigg) {
+        matches.push({
+          type: 'reaction',
+          id: rxn.id,
+          biggId: biggId,
+          name: rxnName,
+          reaction: rxn
+        });
+      }
+    });
+  }
+
+  // Sort matches so that exact/prefix matches come first
+  matches.sort((a, b) => {
+    const aBiggStarts = a.biggId.toLowerCase().startsWith(query);
+    const bBiggStarts = b.biggId.toLowerCase().startsWith(query);
+    if (aBiggStarts && !bBiggStarts) return -1;
+    if (!aBiggStarts && bBiggStarts) return 1;
+
+    const aNameStarts = a.name.toLowerCase().startsWith(query);
+    const bNameStarts = b.name.toLowerCase().startsWith(query);
+    if (aNameStarts && !bNameStarts) return -1;
+    if (!aNameStarts && bNameStarts) return 1;
+
+    return a.name.localeCompare(b.name);
+  });
+
+  // Limit suggestions list length
+  const maxResults = 10;
+  const displayedMatches = matches.slice(0, maxResults);
+
+  if (displayedMatches.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'search-result-empty';
+    li.textContent = 'No results found';
+    resultsList.appendChild(li);
+  } else {
+    displayedMatches.forEach(match => {
+      const li = document.createElement('li');
+      li.className = 'search-result-item';
+
+      const badgeClass = match.type === 'metabolite' ? 'badge-metabolite' : 'badge-reaction';
+      const displayName = match.name || match.biggId;
+
+      li.innerHTML = `
+        <div class="search-result-info">
+          <span class="search-result-title">${displayName}</span>
+          <span class="search-result-subtitle">${match.biggId}</span>
+        </div>
+        <span class="search-result-badge ${badgeClass}">${match.type}</span>
+      `;
+
+      // Select, highlight, center and open inspector for matching element
+      li.addEventListener('click', () => {
+        if (match.type === 'metabolite') {
+          renderer.selectMetabolite(match.node.id);
+          handleMetaboliteSelect(match.node);
+          renderer.focusOnCoordinates(match.node.x, match.node.y, 0.85);
+        } else {
+          renderer.selectReaction(match.reaction.id);
+          handleReactionSelect(match.reaction);
+          renderer.focusOnCoordinates(match.reaction.labelX, match.reaction.labelY, 0.85);
+        }
+        hideSearchResults();
+      });
+
+      resultsList.appendChild(li);
+    });
+  }
+
+  resultsDropdown.classList.remove('hidden');
+}
+
+/**
+ * Hides search results dropdown panel.
+ */
+function hideSearchResults() {
+  const resultsDropdown = document.getElementById('search-results-dropdown');
+  if (resultsDropdown) {
+    resultsDropdown.classList.add('hidden');
+  }
+}
+

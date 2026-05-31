@@ -27,6 +27,19 @@
           <span class="divider">|</span>
           <span class="subtitle">E. coli Central Metabolism Live Atlas</span>
         </div>
+        
+        <!-- Map Search Panel -->
+        <div class="search-container">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="map-search-input" placeholder="Search metabolites & reactions..." autocomplete="off" />
+            <button id="search-clear-btn" class="search-clear-btn hidden">✕</button>
+          </div>
+          <div id="search-results-dropdown" class="search-results-dropdown glass hidden">
+            <ul id="search-results-list"></ul>
+          </div>
+        </div>
+
         <div class="header-actions">
           <!-- Map Warnings Panel -->
           <div id="map-warnings-container" class="map-warnings-container hidden">

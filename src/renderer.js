@@ -902,6 +902,19 @@ export class PixiRenderer {
   }
 
   /**
+   * Smoothly pans and zooms the camera to focus on specific coordinates.
+   */
+  focusOnCoordinates(x, y, targetZoom = 0.85) {
+    this.targetZoom = targetZoom;
+    this.targetPosition.x = this.app.renderer.width / 2 - x * this.targetZoom;
+    // Offset slightly to the left to compensate for the right details panel
+    this.targetPosition.x -= 100;
+    this.targetPosition.y = this.app.renderer.height / 2 - y * this.targetZoom;
+
+    this.isCameraAnimating = true;
+  }
+
+  /**
    * Updates camera animation using linear interpolation (lerp).
    */
   updateCamera(deltaTime) {
