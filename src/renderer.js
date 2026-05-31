@@ -967,6 +967,7 @@ export class PixiRenderer {
       this.viewportStart.x = this.viewport.x;
       this.viewportStart.y = this.viewport.y;
       el.setPointerCapture(e.pointerId);
+      el.style.cursor = 'grabbing';
     });
 
     el.addEventListener('pointermove', (e) => {
@@ -985,11 +986,12 @@ export class PixiRenderer {
         return;
       }
 
-      // Otherwise, handle mouse hover tooltips
+      // Otherwise, handle mouse hover tooltips and grab/pointer cursor
       const node = this.hitTestMetabolite(canvasX, canvasY);
+      el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
+
       if (node !== this.hoveredNode) {
         this.hoveredNode = node;
-        el.style.cursor = node ? 'pointer' : 'default';
         
         // Custom event to main controller for tooltips
         const event = new CustomEvent('metabolite-hover', { detail: node });
@@ -1003,6 +1005,12 @@ export class PixiRenderer {
         try {
           el.releasePointerCapture(e.pointerId);
         } catch (err) {}
+        
+        // Restore cursor based on hover state
+        const canvasX = e.clientX;
+        const canvasY = e.clientY;
+        const node = this.hitTestMetabolite(canvasX, canvasY);
+        el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
       }
     };
 
