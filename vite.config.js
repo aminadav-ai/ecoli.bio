@@ -468,8 +468,24 @@ Ensure your response is valid JSON matching the schema requested. The metabolite
         const geminiJson = await geminiResponse.json();
         const geminiOutputText = geminiJson.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         
+        let responseData = {};
+        try {
+          responseData = JSON.parse(geminiOutputText);
+        } catch (e) {
+          responseData = { canMap: false, states: [] };
+        }
+
+        // Add usage metadata
+        responseData.usage = {
+          sentCharacters: promptText.length,
+          receivedCharacters: geminiOutputText.length,
+          promptTokens: geminiJson.usageMetadata?.promptTokenCount || 0,
+          completionTokens: geminiJson.usageMetadata?.candidatesTokenCount || 0,
+          totalTokens: geminiJson.usageMetadata?.totalTokenCount || 0
+        };
+        
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(geminiOutputText);
+        res.end(JSON.stringify(responseData));
       } catch (err) {
         console.error('Error in analyze-dataset/gemini:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

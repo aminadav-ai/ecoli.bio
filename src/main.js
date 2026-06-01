@@ -1766,7 +1766,12 @@ async function performGeoAnalysis() {
     });
 
     if (!initResponse.ok) {
-      throw new Error(`NCBI metadata query failed: ${initResponse.statusText}`);
+      let errMsg = initResponse.statusText;
+      try {
+        const errData = await initResponse.json();
+        if (errData && errData.error) errMsg = errData.error;
+      } catch (e) {}
+      throw new Error(`NCBI metadata query failed: ${errMsg}`);
     }
 
     const initData = await initResponse.json();
@@ -1820,7 +1825,12 @@ async function performGeoAnalysis() {
     });
 
     if (!geminiResponse.ok) {
-      throw new Error(`AI model query failed: ${geminiResponse.statusText}`);
+      let errMsg = geminiResponse.statusText;
+      try {
+        const errData = await geminiResponse.json();
+        if (errData && errData.error) errMsg = errData.error;
+      } catch (e) {}
+      throw new Error(`AI model query failed: ${errMsg}`);
     }
 
     const geminiData = await geminiResponse.json();
@@ -1854,6 +1864,20 @@ async function performGeoAnalysis() {
         if (geoStateDesc) geoStateDesc.textContent = geminiData.states[0].description || '';
         applyMetabolicState(geminiData.states[0]);
         renderStateDetails(geminiData.states[0]);
+      }
+    }
+
+    // Display usage statistics
+    if (geminiData.usage) {
+      const usageEl = document.getElementById('geo-analysis-usage');
+      if (usageEl) {
+        const u = geminiData.usage;
+        let usageText = `Sent: ${(u.sentCharacters / 1024).toFixed(1)} KB`;
+        if (u.promptTokens) usageText += ` (${u.promptTokens} tokens)`;
+        usageText += ` | Received: ${(u.receivedCharacters / 1024).toFixed(1)} KB`;
+        if (u.completionTokens) usageText += ` (${u.completionTokens} tokens)`;
+        usageEl.textContent = usageText;
+        usageEl.classList.remove('hidden');
       }
     }
 
@@ -2000,9 +2024,14 @@ function renderStateDetails(state) {
 function resetStateDetails() {
   const geoStateDetailsBtn = document.getElementById('geo-state-details-btn');
   const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+  const geoAnalysisUsage = document.getElementById('geo-analysis-usage');
   if (geoStateDetailsBtn) geoStateDetailsBtn.textContent = 'Show Details';
   if (geoStateDetailsPanel) {
     geoStateDetailsPanel.innerHTML = '';
     geoStateDetailsPanel.classList.add('hidden');
+  }
+  if (geoAnalysisUsage) {
+    geoAnalysisUsage.textContent = '';
+    geoAnalysisUsage.classList.add('hidden');
   }
 }
