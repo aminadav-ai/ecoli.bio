@@ -470,7 +470,7 @@ export class Simulation {
    * Maximizes biomass production rate under current substrate limitations.
    */
   solveFBA() {
-    const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c'));
+    const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c') && !this.bufferedIds.has(id));
     const rxnIds = Object.keys(this.reactions);
 
     // 1. Build variables mapping. Split reversible reactions into forward/backward components.
