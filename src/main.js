@@ -1313,6 +1313,29 @@ function setupGeoSearch() {
     });
   }
 
+  // Setup selected dataset AI analysis actions
+  const geoAnalyzeBtn = document.getElementById('geo-analyze-btn');
+  const geoStateSelect = document.getElementById('geo-state-select');
+  const geoStateDesc = document.getElementById('geo-state-desc');
+
+  if (geoAnalyzeBtn) {
+    geoAnalyzeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      performGeoAnalysis();
+    });
+  }
+
+  if (geoStateSelect) {
+    geoStateSelect.addEventListener('change', (e) => {
+      const selectedIndex = e.target.value;
+      if (geoSelectedDataset && geoSelectedDataset.analysisStates && geoSelectedDataset.analysisStates[selectedIndex]) {
+        const state = geoSelectedDataset.analysisStates[selectedIndex];
+        if (geoStateDesc) geoStateDesc.textContent = state.description || '';
+        applyMetabolicState(state);
+      }
+    });
+  }
+
   function showGeoDropdown() {
     geoDropdown.classList.remove('hidden');
     geoDropdownBtn.classList.add('active');
@@ -1658,6 +1681,14 @@ function selectGeoDataset(dataset) {
     }
   }
 
+  // Reset AI analysis panel elements
+  const geoAnalyzeBtn = document.getElementById('geo-analyze-btn');
+  const geoAnalysisLoading = document.getElementById('geo-analysis-loading');
+  const geoAnalysisResults = document.getElementById('geo-analysis-results');
+  if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
+  if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+  if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+
   geoSelectedPanel.classList.remove('hidden');
   console.log(`[GEO] Selected active dataset: ${dataset.accession}`);
 }
@@ -1671,7 +1702,150 @@ function deselectGeoDataset() {
   if (geoSelectedPanel) {
     geoSelectedPanel.classList.add('hidden');
   }
+
+  // Reset AI analysis panel elements
+  const geoAnalyzeBtn = document.getElementById('geo-analyze-btn');
+  const geoAnalysisLoading = document.getElementById('geo-analysis-loading');
+  const geoAnalysisResults = document.getElementById('geo-analysis-results');
+  if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
+  if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+  if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+
   console.log('[GEO] Deselected active dataset.');
+}
+
+/**
+ * Sends a POST request to analyze the active GEO dataset with Gemini.
+ * Parses metabolic states, populates the dropdown select menu, and applies simulation overrides.
+ */
+async function performGeoAnalysis() {
+  if (!geoSelectedDataset) return;
+
+  const geoAnalyzeBtn = document.getElementById('geo-analyze-btn');
+  const geoAnalysisLoading = document.getElementById('geo-analysis-loading');
+  const geoAnalysisResults = document.getElementById('geo-analysis-results');
+  const geoStateSelect = document.getElementById('geo-state-select');
+  const geoStateDesc = document.getElementById('geo-state-desc');
+
+  if (geoAnalyzeBtn) geoAnalyzeBtn.classList.add('hidden');
+  if (geoAnalysisLoading) geoAnalysisLoading.classList.remove('hidden');
+  if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+
+  try {
+    const response = await fetch('/api/analyze-dataset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        accession: geoSelectedDataset.accession,
+        title: geoSelectedDataset.title,
+        summary: geoSelectedDataset.summary
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Analysis request failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+
+    if (!data.canMap || !data.states || data.states.length === 0) {
+      alert('Gemini analyzed this dataset but concluded that its conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).');
+      if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
+      return;
+    }
+
+    // Store analysis states in active dataset
+    geoSelectedDataset.analysisStates = data.states;
+
+    // Populate dropdown options
+    if (geoStateSelect) {
+      geoStateSelect.innerHTML = '';
+      data.states.forEach((state, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = state.name;
+        geoStateSelect.appendChild(option);
+      });
+
+      // Display first state and apply it
+      if (data.states.length > 0) {
+        if (geoStateDesc) geoStateDesc.textContent = data.states[0].description || '';
+        applyMetabolicState(data.states[0]);
+      }
+    }
+
+    if (geoAnalysisResults) geoAnalysisResults.classList.remove('hidden');
+    console.log('[GEO] AI Analysis completed successfully.');
+
+  } catch (err) {
+    console.error('[GEO Analysis Error] ', err);
+    if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+    if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
+    alert(`AI Analysis failed: ${err.message || 'Unknown network error'}`);
+  }
+}
+
+/**
+ * Overwrites metabolite concentrations and reaction parameters in the simulation,
+ * and zooms/centers camera focus on the target pathways.
+ */
+function applyMetabolicState(state) {
+  if (!simulation || !state || !state.data) return;
+
+  // 1. Apply metabolite concentrations
+  if (state.data.metabolites) {
+    for (const [id, conc] of Object.entries(state.data.metabolites)) {
+      if (simulation.metabolites[id]) {
+        simulation.metabolites[id].concentration = Number(conc);
+        console.log(`[GEO AI] Set concentration of ${id} to ${conc} mM`);
+      }
+    }
+  }
+
+  // 2. Apply reaction parameters (vMax, km)
+  if (state.data.reactions) {
+    for (const [id, params] of Object.entries(state.data.reactions)) {
+      if (simulation.reactions[id]) {
+        if (typeof params === 'object') {
+          if (params.vMax !== undefined) {
+            simulation.updateParameter(id, 'vMax', Number(params.vMax));
+            console.log(`[GEO AI] Set vMax of ${id} to ${params.vMax}`);
+          }
+          if (params.km !== undefined) {
+            simulation.updateParameter(id, 'km', Number(params.km));
+            console.log(`[GEO AI] Set km of ${id} to ${params.km}`);
+          }
+        } else {
+          simulation.updateParameter(id, 'vMax', Number(params));
+          console.log(`[GEO AI] Set vMax of ${id} to ${params}`);
+        }
+      }
+    }
+  }
+
+  // 3. Zoom/Center and highlight relevant metabolites
+  if (renderer && state.focusMetaboliteIds && state.focusMetaboliteIds.length > 0) {
+    const focusSet = new Set(state.focusMetaboliteIds);
+    
+    // Zoom/Center camera on pathway
+    renderer.focusOnPathway(focusSet);
+
+    // Auto-select the first highlighted metabolite in the inspector sidebar
+    if (renderer.metabNodes) {
+      const matchedNode = renderer.metabNodes.find(n => focusSet.has(n.biggId));
+      if (matchedNode) {
+        renderer.selectMetabolite(matchedNode.id);
+        handleMetaboliteSelect(matchedNode);
+      }
+    }
+  }
 }
 
 
