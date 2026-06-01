@@ -16,6 +16,7 @@ export class Simulation {
     this.fluxMultiplier = 1.0;
     this.kmMultiplier = 1.0;
     this.lastBasis = null;
+    this.tickCounter = 0;
 
     // Define cofactors and inorganic molecules to buffer (hold at constant physiological concentrations)
     this.bufferedIds = new Set([
@@ -248,6 +249,7 @@ export class Simulation {
    */
   reset() {
     this.lastBasis = null;
+    this.tickCounter = 0;
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] || 1.0;
     }
@@ -585,8 +587,11 @@ export class Simulation {
   tick(speedMultiplier = 1.0) {
     const dt = 0.01 * speedMultiplier;
 
-    // 1. Solve FBA optimization to get active fluxes
-    this.solveFBA();
+    // 1. Solve FBA optimization to get active fluxes only every 5 ticks
+    if (this.tickCounter % 5 === 0) {
+      this.solveFBA();
+    }
+    this.tickCounter = (this.tickCounter + 1) % 5;
 
     // 2. Accumulate influx and outflux rates for each metabolite
     const influxes = {};
