@@ -304,6 +304,9 @@ function gameLoop(currentTime) {
 
   // Accumulate time for simulation step (fixed timestep)
   accumulatedTime += dt;
+  if (accumulatedTime > simTickRate * 5) {
+    accumulatedTime = simTickRate * 5;
+  }
   while (accumulatedTime >= simTickRate) {
     if (!isPaused) {
       simulation.tick(speedMultiplier);

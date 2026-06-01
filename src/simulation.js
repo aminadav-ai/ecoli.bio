@@ -330,12 +330,12 @@ export class Simulation {
       basis[i] = N + i;
     }
 
-    const maxIterations = 2000;
+    const maxIterations = 200;
     for (let iter = 0; iter < maxIterations; iter++) {
       // 1. Find entering variable (Bland's rule: first column with a negative coefficient)
       let q = -1;
       for (let j = 0; j < N + M; j++) {
-        if (T[M][j] < -1e-9) {
+        if (T[M][j] < -1e-5) {
           q = j;
           break;
         }
@@ -348,12 +348,12 @@ export class Simulation {
       let p = -1;
       let minRatio = Infinity;
       for (let i = 0; i < M; i++) {
-        if (T[i][q] > 1e-9) {
+        if (T[i][q] > 1e-5) {
           const ratio = T[i][N + M] / T[i][q];
-          if (ratio < minRatio - 1e-9) {
+          if (ratio < minRatio - 1e-5) {
             minRatio = ratio;
             p = i;
-          } else if (Math.abs(ratio - minRatio) < 1e-9) {
+          } else if (Math.abs(ratio - minRatio) < 1e-5) {
             if (p === -1 || basis[i] < basis[p]) {
               p = i;
             }
