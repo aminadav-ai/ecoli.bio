@@ -514,7 +514,7 @@ export class Simulation {
       }
       const conc = this.metabolites[metabId].concentration;
       b[row1] = (150.0 - conc) / dt;
-      b[row2] = (conc - 0.1) / dt;
+      b[row2] = Math.min(0.15 * conc, (conc - 0.1) / dt);
     }
 
     // 4. Fill upper bound constraints (v_k <= UB_k)
@@ -529,10 +529,10 @@ export class Simulation {
 
       let UB = vMax;
 
-      // Universal kinetic coupling: Restrict reaction upper bounds by all substrate concentrations
+      // Universal kinetic coupling: Restrict reaction upper bounds by all non-buffered substrate concentrations
       const substratesToUse = (direction === 1) ? rxn.substrates : rxn.products;
       for (const subId of substratesToUse) {
-        if (this.metabolites[subId]) {
+        if (this.metabolites[subId] && !this.metabolites[subId].isBuffered) {
           const conc = this.metabolites[subId].concentration;
           UB = Math.min(UB, vMax * (conc / (km + conc)));
         }
