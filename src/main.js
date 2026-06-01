@@ -1325,6 +1325,23 @@ function setupGeoSearch() {
     });
   }
 
+  const geoStateDetailsBtn = document.getElementById('geo-state-details-btn');
+  const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+
+  if (geoStateDetailsBtn && geoStateDetailsPanel) {
+    geoStateDetailsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = geoStateDetailsPanel.classList.contains('hidden');
+      if (isHidden) {
+        geoStateDetailsPanel.classList.remove('hidden');
+        geoStateDetailsBtn.textContent = 'Hide Details';
+      } else {
+        geoStateDetailsPanel.classList.add('hidden');
+        geoStateDetailsBtn.textContent = 'Show Details';
+      }
+    });
+  }
+
   if (geoStateSelect) {
     geoStateSelect.addEventListener('change', (e) => {
       const selectedIndex = e.target.value;
@@ -1332,6 +1349,7 @@ function setupGeoSearch() {
         const state = geoSelectedDataset.analysisStates[selectedIndex];
         if (geoStateDesc) geoStateDesc.textContent = state.description || '';
         applyMetabolicState(state);
+        renderStateDetails(state);
       }
     });
   }
@@ -1688,6 +1706,7 @@ function selectGeoDataset(dataset) {
   if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
   if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
   if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+  resetStateDetails();
 
   geoSelectedPanel.classList.remove('hidden');
   console.log(`[GEO] Selected active dataset: ${dataset.accession}`);
@@ -1710,6 +1729,7 @@ function deselectGeoDataset() {
   if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
   if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
   if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+  resetStateDetails();
 
   console.log('[GEO] Deselected active dataset.');
 }
@@ -1726,13 +1746,65 @@ async function performGeoAnalysis() {
   const geoAnalysisResults = document.getElementById('geo-analysis-results');
   const geoStateSelect = document.getElementById('geo-state-select');
   const geoStateDesc = document.getElementById('geo-state-desc');
+  const geoStatusText = document.getElementById('geo-analysis-status');
 
   if (geoAnalyzeBtn) geoAnalyzeBtn.classList.add('hidden');
   if (geoAnalysisLoading) geoAnalysisLoading.classList.remove('hidden');
   if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
 
   try {
-    const response = await fetch('/api/analyze-dataset', {
+    // Step 1/3: Fetch metadata & designs from NCBI GEO
+    if (geoStatusText) geoStatusText.textContent = "Step 1/3: Fetching series design from NCBI...";
+    const initResponse = await fetch('/api/analyze-dataset/init', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        accession: geoSelectedDataset.accession
+      })
+    });
+
+    if (!initResponse.ok) {
+      throw new Error(`NCBI metadata query failed: ${initResponse.statusText}`);
+    }
+
+    const initData = await initResponse.json();
+    if (initData.error) {
+      throw new Error(initData.error);
+    }
+
+    const overallDesign = initData.overallDesign || '';
+    const supplementaryUrls = initData.supplementaryUrls || [];
+
+    // Step 2/3: Download and filter expression files
+    if (geoStatusText) geoStatusText.textContent = "Step 2/3: Downloading & filtering supplementary file...";
+    let fileName = '';
+    let fileSnippet = '';
+
+    if (supplementaryUrls.length > 0) {
+      const snippetResponse = await fetch('/api/analyze-dataset/snippet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          supplementaryUrls
+        })
+      });
+
+      if (snippetResponse.ok) {
+        const snippetData = await snippetResponse.json();
+        if (!snippetData.error) {
+          fileName = snippetData.fileName || '';
+          fileSnippet = snippetData.fileSnippet || '';
+        }
+      }
+    }
+
+    // Step 3/3: Run Gemini AI Analysis
+    if (geoStatusText) geoStatusText.textContent = "Step 3/3: Querying Gemini AI model for metabolic states...";
+    const geminiResponse = await fetch('/api/analyze-dataset/gemini', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1740,34 +1812,37 @@ async function performGeoAnalysis() {
       body: JSON.stringify({
         accession: geoSelectedDataset.accession,
         title: geoSelectedDataset.title,
-        summary: geoSelectedDataset.summary
+        summary: geoSelectedDataset.summary,
+        overallDesign,
+        fileName,
+        fileSnippet
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Analysis request failed: ${response.statusText}`);
+    if (!geminiResponse.ok) {
+      throw new Error(`AI model query failed: ${geminiResponse.statusText}`);
     }
 
-    const data = await response.json();
-    if (data.error) {
-      throw new Error(data.error);
+    const geminiData = await geminiResponse.json();
+    if (geminiData.error) {
+      throw new Error(geminiData.error);
     }
 
     if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
 
-    if (!data.canMap || !data.states || data.states.length === 0) {
+    if (!geminiData.canMap || !geminiData.states || geminiData.states.length === 0) {
       alert('Gemini analyzed this dataset but concluded that its conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).');
       if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
       return;
     }
 
     // Store analysis states in active dataset
-    geoSelectedDataset.analysisStates = data.states;
+    geoSelectedDataset.analysisStates = geminiData.states;
 
     // Populate dropdown options
     if (geoStateSelect) {
       geoStateSelect.innerHTML = '';
-      data.states.forEach((state, index) => {
+      geminiData.states.forEach((state, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = state.name;
@@ -1775,9 +1850,10 @@ async function performGeoAnalysis() {
       });
 
       // Display first state and apply it
-      if (data.states.length > 0) {
-        if (geoStateDesc) geoStateDesc.textContent = data.states[0].description || '';
-        applyMetabolicState(data.states[0]);
+      if (geminiData.states.length > 0) {
+        if (geoStateDesc) geoStateDesc.textContent = geminiData.states[0].description || '';
+        applyMetabolicState(geminiData.states[0]);
+        renderStateDetails(geminiData.states[0]);
       }
     }
 
@@ -1830,7 +1906,8 @@ function applyMetabolicState(state) {
     }
   }
 
-  // 3. Zoom/Center and highlight relevant metabolites
+  // 3. Zoom/Center and highlight relevant metabolites (Disabled as per user request to prevent camera jumping)
+  /*
   if (renderer && state.focusMetaboliteIds && state.focusMetaboliteIds.length > 0) {
     const focusSet = new Set(state.focusMetaboliteIds);
     
@@ -1846,6 +1923,86 @@ function applyMetabolicState(state) {
       }
     }
   }
+   */
 }
 
+/**
+ * Renders a structured text checklist of reaction parameters and metabolite concentration modifications
+ * applied by the selected metabolic condition state.
+ */
+function renderStateDetails(state) {
+  const panel = document.getElementById('geo-state-details-panel');
+  if (!panel) return;
 
+  if (!state || !state.data) {
+    panel.innerHTML = '<div style="text-align: center; color: #64748b; padding: 4px 0;">No conditions mapping details available.</div>';
+    return;
+  }
+
+  let html = '';
+
+  // 1. Render reactions modifications
+  if (state.data.reactions && Object.keys(state.data.reactions).length > 0) {
+    html += '<div class="geo-details-section-title">Reactions (Enzymatic Rates)</div>';
+    html += '<ul class="geo-details-list">';
+    for (const [id, params] of Object.entries(state.data.reactions)) {
+      const simRxn = simulation ? simulation.reactions[id] : null;
+      const displayName = simRxn ? `${simRxn.name} (${id})` : id;
+      
+      let valStr = '';
+      if (typeof params === 'object') {
+        const parts = [];
+        if (params.vMax !== undefined) parts.push(`Vmax: ${params.vMax}`);
+        if (params.km !== undefined) parts.push(`Km: ${params.km}`);
+        valStr = parts.join(', ');
+      } else {
+        valStr = `Vmax: ${params}`;
+      }
+      
+      html += `
+        <li class="geo-details-item reaction-item" title="${displayName}">
+          <span class="geo-details-name">${displayName}</span>
+          <span class="geo-details-value">${valStr}</span>
+        </li>
+      `;
+    }
+    html += '</ul>';
+  }
+
+  // 2. Render metabolites modifications
+  if (state.data.metabolites && Object.keys(state.data.metabolites).length > 0) {
+    html += '<div class="geo-details-section-title">Metabolites (Concentrations)</div>';
+    html += '<ul class="geo-details-list">';
+    for (const [id, conc] of Object.entries(state.data.metabolites)) {
+      const simMetab = simulation ? simulation.metabolites[id] : null;
+      const displayName = simMetab ? `${simMetab.name} (${id})` : id;
+      
+      html += `
+        <li class="geo-details-item metabolite-item" title="${displayName}">
+          <span class="geo-details-name">${displayName}</span>
+          <span class="geo-details-value metabolite-val">${conc} mM</span>
+        </li>
+      `;
+    }
+    html += '</ul>';
+  }
+
+  if (!html) {
+    html = '<div style="text-align: center; color: #64748b; padding: 4px 0;">No reactions or metabolites changes specified.</div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+/**
+ * Resets the state details panel and toggle button to initial state.
+ */
+function resetStateDetails() {
+  const geoStateDetailsBtn = document.getElementById('geo-state-details-btn');
+  const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+  if (geoStateDetailsBtn) geoStateDetailsBtn.textContent = 'Show Details';
+  if (geoStateDetailsPanel) {
+    geoStateDetailsPanel.innerHTML = '';
+    geoStateDetailsPanel.classList.add('hidden');
+  }
+}

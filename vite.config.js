@@ -164,41 +164,47 @@ export default defineConfig(({ mode }) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
-    } else if (url.pathname === '/api/analyze-dataset' && req.method === 'POST') {
+    } else if (url.pathname === '/api/analyze-dataset/init' && req.method === 'POST') {
       try {
         const body = await getPostBody(req);
         const accession = body.accession || '';
-        const title = body.title || '';
-        const summary = body.summary || '';
-
         if (!accession) {
           throw new Error('Accession ID is required');
         }
 
-        // 1. Fetch quick text summary from NCBI to find supplementary files and design
         let overallDesign = '';
         let supplementaryUrls = [];
-        try {
-          const gseTextResponse = await fetch(`https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=${accession}&targ=self&form=text&view=quick`);
-          if (gseTextResponse.ok) {
-            const gseText = await gseTextResponse.text();
-            const lines = gseText.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('!Series_overall_design =')) {
-                overallDesign = line.split('=').slice(1).join('=').trim();
-              } else if (line.startsWith('!Series_supplementary_file =')) {
-                const sUrl = line.split('=').slice(1).join('=').trim();
-                if (sUrl) supplementaryUrls.push(sUrl);
-              }
+        const gseTextResponse = await fetch(`https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=${accession}&targ=self&form=text&view=quick`);
+        if (gseTextResponse.ok) {
+          const gseText = await gseTextResponse.text();
+          const lines = gseText.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('!Series_overall_design =')) {
+              overallDesign = line.split('=').slice(1).join('=').trim();
+            } else if (line.startsWith('!Series_supplementary_file =')) {
+              const sUrl = line.split('=').slice(1).join('=').trim();
+              if (sUrl) supplementaryUrls.push(sUrl);
             }
           }
-        } catch (e) {
-          console.warn('Failed to fetch GSE text summary:', e);
+        } else {
+          throw new Error(`NCBI series lookup failed with status ${gseTextResponse.status}`);
         }
 
-        // 2. Fetch and decompress the first supplementary file snippet
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ overallDesign, supplementaryUrls }));
+      } catch (err) {
+        console.error('Error in analyze-dataset/init:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/analyze-dataset/snippet' && req.method === 'POST') {
+      try {
+        const body = await getPostBody(req);
+        const supplementaryUrls = body.supplementaryUrls || [];
+        
         let fileSnippet = '';
         let fileName = '';
+
         if (supplementaryUrls.length > 0) {
           const firstUrl = supplementaryUrls[0];
           if (firstUrl.endsWith('.csv.gz') || firstUrl.endsWith('.tsv.gz') || firstUrl.endsWith('.txt.gz') ||
@@ -223,7 +229,28 @@ export default defineConfig(({ mode }) => {
                     decompressedBuffer = Buffer.from(arrayBuffer);
                   }
                   const textContent = decompressedBuffer.toString('utf-8');
-                  fileSnippet = textContent.split('\n').slice(0, 500).join('\n');
+                  
+                  // Filter lines to keep only E. coli central metabolism genes
+                  const rawLines = textContent.split('\n');
+                  if (rawLines.length > 0) {
+                    const filteredLines = [];
+                    // Keep header row
+                    filteredLines.push(rawLines[0]);
+
+                    // E. coli central metabolic genes regex (matches symbols and b-numbers)
+                    const targetGenesRegex = /\b(pgi|pfk[ab]|fba[ab]|tpiA|gapA|pgk|gpm[am]|eno|pyk[af]|ldhA|pflB|adhE|pta|ackA|ace[efb]|lpd|gltA|acn[ab]|icd|suc[abcd]|sdh[abcd]|fum[abc]|mdh|ppc|pts[ghis]|crr|b4025|b3916|b1723|b2929|b2097|b3919|b1779|b2926|b0755|b3612|b2779|b1676|b1854|b1380|b0903|b1241|b2296|b2297|b0114|b0115|b0116|b0720|b1276|b0118|b1136|b0726|b0727|b0728|b0729|b0721|b0722|b0723|b0724|b1612|b4122|b1611|b3236|b3956|b4000|b4001|b1101|b2417|b2416|b2415)\b/i;
+
+                    for (let i = 1; i < rawLines.length; i++) {
+                      const line = rawLines[i];
+                      if (targetGenesRegex.test(line)) {
+                        filteredLines.push(line);
+                      }
+                      if (filteredLines.length >= 100) {
+                        break; // Clamp to maximum 100 relevant gene lines to keep payload small
+                      }
+                    }
+                    fileSnippet = filteredLines.join('\n');
+                  }
                 }
               }
             } catch (err) {
@@ -232,7 +259,24 @@ export default defineConfig(({ mode }) => {
           }
         }
 
-        // 3. Request Gemini API for structured mapping
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ fileName, fileSnippet }));
+      } catch (err) {
+        console.error('Error in analyze-dataset/snippet:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/analyze-dataset/gemini' && req.method === 'POST') {
+      try {
+        const body = await getPostBody(req);
+        const accession = body.accession || '';
+        const title = body.title || '';
+        const summary = body.summary || '';
+        const overallDesign = body.overallDesign || '';
+        const fileName = body.fileName || '';
+        const fileSnippet = body.fileSnippet || '';
+
+        // Request Gemini API for structured mapping
         const googleApiKey = env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
         if (!googleApiKey) {
           throw new Error('GOOGLE_API_KEY is not defined in the environment (.env)');
@@ -246,7 +290,7 @@ Title: ${title}
 Summary (from GEO): ${summary}
 Overall Design: ${overallDesign || 'N/A'}
 
-${fileSnippet ? `Here is a snippet of the first 500 lines of the supplementary data file (${fileName}):\n${fileSnippet}` : 'No supplementary data files were available or readable.'}
+${fileSnippet ? `Here is a filtered snippet of the supplementary data file (${fileName}) containing expression counts for central metabolic genes:\n${fileSnippet}` : 'No supplementary data files were available or readable.'}
 
 Identify:
 1. Whether this dataset contains information that can be mapped to E. coli central metabolism. Set "canMap" to true if yes, false if no.
@@ -298,6 +342,7 @@ Identify:
    - For anaerobic growth, downregulate respiration/TCA (reduce vMax of SUCDi, AKGDH, PDH to 1.0-3.0) and upregulate fermentation (increase vMax of LDH_D, PFL, ACKr to 15.0-30.0, increase concentrations of ac_c, ac_e, lac__D_c, lac__D_e).
    - For acetate overflow, increase GLCpts vMax (to 30.0) and decrease/saturate citric acid cycle (CS vMax to 5.0), and increase acetate excretion (ACKr and PTAr vMax to 25.0, ac_e concentration to 5.0+).
    - If glucose is limited or starved, set glc__D_e to 0.1 and glc__D_c to 0.1, and reduce GLCpts vMax. If another carbon source is used (e.g. acetate or lactate), increase its extracellular concentration (e.g., set ac_e or lac__D_e to 15.0).
+   - IMPORTANT: DO NOT output floating point numbers with excessive decimal precision. Standard integers or simple decimals are required (e.g. 2, 2.5, 15).
 
 Ensure your response is valid JSON matching the schema requested. The metabolites and reactions objects under data MUST NOT be empty.`;
 
@@ -426,7 +471,7 @@ Ensure your response is valid JSON matching the schema requested. The metabolite
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(geminiOutputText);
       } catch (err) {
-        console.error('Error in analyze-dataset API:', err);
+        console.error('Error in analyze-dataset/gemini:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
