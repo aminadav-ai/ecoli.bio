@@ -1356,10 +1356,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Modal Content Container */
 .geo-modal-content {
-  width: 90%;
-  max-width: 800px;
-  height: 80%;
-  max-height: 650px;
+  width: 96%;
+  max-width: none;
+  height: 92%;
+  max-height: none;
   border-radius: 16px;
   display: flex;
   flex-direction: column;

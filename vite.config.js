@@ -16,10 +16,7 @@ export default defineConfig(({ mode }) => {
         const sanitizedQuery = userQuery.replace(/"/g, '');
         
         const organism = '("Escherichia coli"[Organism])';
-        const metabolicKeywords = '("central metabolism" OR "glycolysis" OR "TCA cycle" OR "phosphotransferase system")';
-        const dataTypes = '("counts"[All Fields] OR "TPM"[All Fields])';
-        
-        const finalQuery = `("${sanitizedQuery}"[All Fields] AND ${organism} AND ${metabolicKeywords} AND ${dataTypes})`;
+        const finalQuery = `("${sanitizedQuery}"[All Fields] AND ${organism})`;
         
         // Set up pagination start (0-indexed)
         const retstart = (page - 1) * 20;
