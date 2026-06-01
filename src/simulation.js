@@ -141,7 +141,6 @@ export class Simulation {
       }
     };
 
-    this.baselineConcentrations = { ...this.initialConcentrations };
     this.initialize();
   }
 
@@ -251,20 +250,12 @@ export class Simulation {
   reset() {
     this.lastBasis = null;
     this.tickCounter = 0;
-    this.baselineConcentrations = { ...this.initialConcentrations };
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] || 1.0;
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
     }
-  }
-
-  /**
-   * Updates the baseline concentration for a specific metabolite.
-   */
-  updateBaselineConcentration(id, value) {
-    this.baselineConcentrations[id] = Math.max(0.1, value);
   }
 
   /**
@@ -478,7 +469,8 @@ export class Simulation {
    * Formulates and solves the Flux Balance Analysis (FBA) problem.
    * Maximizes biomass production rate under current substrate limitations.
    */
-  solveFBA() {
+  solveFBA(dtFBA) {
+    const dt = Math.max(0.001, dtFBA || 0.05);
     const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c') && !this.bufferedIds.has(id));
     const rxnIds = Object.keys(this.reactions);
 
@@ -494,8 +486,9 @@ export class Simulation {
     const N = varMap.length;
 
     // 2. Setup constraints
-    // - For each internal metabolite, we enforce steady state (S * v = 0 -> 2 constraints: <=0 and >=0)
-    // - For each variable, we enforce upper bounds (x_k <= UB_k -> N constraints)
+    // - For each internal metabolite, we allow accumulation/depletion within boundaries:
+    //   S * v <= (150 - C)/dt
+    //   -S * v <= (C - 0.1)/dt
     const M_eq = internalMetabs.length * 2;
     const M = M_eq + N;
 
@@ -506,7 +499,7 @@ export class Simulation {
     const b = new Float64Array(M);
     const c = new Float64Array(N);
 
-    // 3. Fill equality constraints (S * v = 0)
+    // 3. Fill accumulation/depletion bounds
     for (let i = 0; i < internalMetabs.length; i++) {
       const metabId = internalMetabs[i];
       const row1 = i * 2;
@@ -519,8 +512,9 @@ export class Simulation {
         A[row1][k] = val;
         A[row2][k] = -val;
       }
-      b[row1] = 0.0;
-      b[row2] = 0.0;
+      const conc = this.metabolites[metabId].concentration;
+      b[row1] = (150.0 - conc) / dt;
+      b[row2] = (conc - 0.1) / dt;
     }
 
     // 4. Fill upper bound constraints (v_k <= UB_k)
@@ -535,20 +529,12 @@ export class Simulation {
 
       let UB = vMax;
 
-      // Restrict transport upper bounds by substrate/product concentration in medium
-      if (direction === 1) {
-        for (const subId of rxn.substrates) {
-          if (subId.endsWith('_e')) {
-            const conc = this.metabolites[subId].concentration;
-            UB = Math.min(UB, vMax * (conc / (km + conc)));
-          }
-        }
-      } else {
-        for (const prodId of rxn.products) {
-          if (prodId.endsWith('_e')) {
-            const conc = this.metabolites[prodId].concentration;
-            UB = Math.min(UB, vMax * (conc / (km + conc)));
-          }
+      // Universal kinetic coupling: Restrict reaction upper bounds by all substrate concentrations
+      const substratesToUse = (direction === 1) ? rxn.substrates : rxn.products;
+      for (const subId of substratesToUse) {
+        if (this.metabolites[subId]) {
+          const conc = this.metabolites[subId].concentration;
+          UB = Math.min(UB, vMax * (conc / (km + conc)));
         }
       }
 
@@ -598,7 +584,7 @@ export class Simulation {
 
     // 1. Solve FBA optimization to get active fluxes only every 5 ticks
     if (this.tickCounter % 5 === 0) {
-      this.solveFBA();
+      this.solveFBA(0.05 * speedMultiplier);
     }
     this.tickCounter = (this.tickCounter + 1) % 5;
 
@@ -624,24 +610,15 @@ export class Simulation {
       }
     }
 
-    // 3. Integrate concentrations (Euler step)
+    // 3. Integrate concentrations (Euler step: dC/dt = J_in - J_out)
     for (const [id, metab] of Object.entries(this.metabolites)) {
       if (metab.isBuffered) continue;
 
-      const baseline = this.baselineConcentrations[id] || 1.0;
-
-      if (id.endsWith('_e')) {
-        // Extracellular pool decays or grows based on net transport
-        let nextConc = metab.concentration + (influxes[id] - outfluxes[id]) * dt;
-        metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
-      } else {
-        // Intracellular pool adapts to local flux turnover, stabilizing around baseline
-        const J_in = influxes[id];
-        const J_out = outfluxes[id];
-        let dC = J_in - J_out * (metab.concentration / baseline) - 0.02 * metab.concentration;
-        let nextConc = metab.concentration + dC * dt;
-        metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
-      }
+      const J_in = influxes[id];
+      const J_out = outfluxes[id];
+      const dC = J_in - J_out;
+      let nextConc = metab.concentration + dC * dt;
+      metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
     }
   }
 
