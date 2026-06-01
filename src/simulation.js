@@ -141,6 +141,7 @@ export class Simulation {
       }
     };
 
+    this.baselineConcentrations = { ...this.initialConcentrations };
     this.initialize();
   }
 
@@ -250,12 +251,20 @@ export class Simulation {
   reset() {
     this.lastBasis = null;
     this.tickCounter = 0;
+    this.baselineConcentrations = { ...this.initialConcentrations };
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] || 1.0;
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
     }
+  }
+
+  /**
+   * Updates the baseline concentration for a specific metabolite.
+   */
+  updateBaselineConcentration(id, value) {
+    this.baselineConcentrations[id] = Math.max(0.1, value);
   }
 
   /**
@@ -619,7 +628,7 @@ export class Simulation {
     for (const [id, metab] of Object.entries(this.metabolites)) {
       if (metab.isBuffered) continue;
 
-      const baseline = this.initialConcentrations[id] || 1.0;
+      const baseline = this.baselineConcentrations[id] || 1.0;
 
       if (id.endsWith('_e')) {
         // Extracellular pool decays or grows based on net transport

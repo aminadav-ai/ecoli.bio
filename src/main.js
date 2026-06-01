@@ -1994,6 +1994,7 @@ function applyMetabolicState(state) {
     for (const [id, conc] of Object.entries(state.data.metabolites)) {
       if (simulation.metabolites[id]) {
         simulation.metabolites[id].concentration = Number(conc);
+        simulation.updateBaselineConcentration(id, Number(conc));
         console.log(`[GEO AI] Set concentration of ${id} to ${conc} mM`);
       }
     }
