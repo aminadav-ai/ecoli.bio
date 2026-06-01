@@ -752,6 +752,17 @@ export class PixiRenderer {
   }
 
   /**
+   * Helper to get horizontal center offset that sits exactly halfway between
+   * the left overlay panel (420px width including margin) and right inspector panel (400px width including margin if visible).
+   */
+  getUsableCenterX() {
+    const leftSpace = 420;
+    const rightPanel = document.getElementById('inspector-panel');
+    const rightSpace = (rightPanel && !rightPanel.classList.contains('hidden-panel')) ? 400 : 0;
+    return (this.app.renderer.width + leftSpace - rightSpace) / 2;
+  }
+
+  /**
    * Fits the entire metabolic map centered inside the viewport canvas.
    */
   fitMapToScreen(smooth = true, startupAnimation = false) {
@@ -787,12 +798,13 @@ export class PixiRenderer {
       // We clamp it to a maximum of 1.8 to avoid zooming in too far on huge screens.
       this.targetZoom = Math.max(0.15, Math.min(1.8, clampedFitZoom * 3.3));
       
-      this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
+      const usableCenterX = this.getUsableCenterX();
+      this.targetPosition.x = usableCenterX - mapCenterX * this.targetZoom;
       this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
 
       // Start zoomed out (where the whole map fits the screen)
       this.zoom = clampedFitZoom;
-      this.viewport.x = this.app.renderer.width / 2 - mapCenterX * this.zoom;
+      this.viewport.x = usableCenterX - mapCenterX * this.zoom;
       this.viewport.y = this.app.renderer.height / 2 - mapCenterY * this.zoom;
       this.viewport.scale.set(this.zoom);
       
@@ -801,7 +813,7 @@ export class PixiRenderer {
       this.isCameraAnimating = true;
     } else {
       this.targetZoom = clampedFitZoom;
-      this.targetPosition.x = this.app.renderer.width / 2 - mapCenterX * this.targetZoom;
+      this.targetPosition.x = this.getUsableCenterX() - mapCenterX * this.targetZoom;
       this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
       this.cameraLerpSpeed = 0.1; // reset/ensure default speed
 
@@ -854,9 +866,7 @@ export class PixiRenderer {
     const boxCenterX = (minX + maxX) / 2;
     const boxCenterY = (minY + maxY) / 2;
 
-    this.targetPosition.x = this.app.renderer.width / 2 - boxCenterX * this.targetZoom;
-    // Offset slightly to the left to compensate for the right details panel
-    this.targetPosition.x -= 100;
+    this.targetPosition.x = this.getUsableCenterX() - boxCenterX * this.targetZoom;
     this.targetPosition.y = this.app.renderer.height / 2 - boxCenterY * this.targetZoom;
 
     this.isCameraAnimating = true;
@@ -867,9 +877,7 @@ export class PixiRenderer {
    */
   focusOnCoordinates(x, y, targetZoom = 0.85) {
     this.targetZoom = targetZoom;
-    this.targetPosition.x = this.app.renderer.width / 2 - x * this.targetZoom;
-    // Offset slightly to the left to compensate for the right details panel
-    this.targetPosition.x -= 100;
+    this.targetPosition.x = this.getUsableCenterX() - x * this.targetZoom;
     this.targetPosition.y = this.app.renderer.height / 2 - y * this.targetZoom;
 
     this.isCameraAnimating = true;
@@ -882,7 +890,7 @@ export class PixiRenderer {
     const baseZoom = this.isCameraAnimating ? this.targetZoom : this.zoom;
     this.targetZoom = Math.max(0.08, Math.min(4.0, baseZoom * 1.3));
     
-    const screenCenterX = this.app.renderer.width / 2;
+    const screenCenterX = this.getUsableCenterX();
     const screenCenterY = this.app.renderer.height / 2;
     const worldCenterX = (screenCenterX - this.viewport.x) / this.zoom;
     const worldCenterY = (screenCenterY - this.viewport.y) / this.zoom;
@@ -900,7 +908,7 @@ export class PixiRenderer {
     const baseZoom = this.isCameraAnimating ? this.targetZoom : this.zoom;
     this.targetZoom = Math.max(0.08, Math.min(4.0, baseZoom / 1.3));
     
-    const screenCenterX = this.app.renderer.width / 2;
+    const screenCenterX = this.getUsableCenterX();
     const screenCenterY = this.app.renderer.height / 2;
     const worldCenterX = (screenCenterX - this.viewport.x) / this.zoom;
     const worldCenterY = (screenCenterY - this.viewport.y) / this.zoom;
