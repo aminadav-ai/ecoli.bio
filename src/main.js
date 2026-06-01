@@ -1340,6 +1340,30 @@ function setupGeoSearch() {
         geoStateDetailsBtn.textContent = 'Show Details';
       }
     });
+
+    geoStateDetailsPanel.addEventListener('click', (e) => {
+      const item = e.target.closest('.geo-details-item.interactive');
+      if (!item) return;
+
+      const biggId = item.dataset.biggId;
+      const type = item.dataset.type;
+
+      if (type === 'metabolite') {
+        const node = renderer.metabNodes.find(n => n.biggId === biggId);
+        if (node) {
+          renderer.selectMetabolite(node.id);
+          handleMetaboliteSelect(node);
+          renderer.focusOnCoordinates(node.x, node.y, 0.85);
+        }
+      } else if (type === 'reaction') {
+        const rxn = renderer.reactions.find(r => r.biggId === biggId);
+        if (rxn) {
+          renderer.selectReaction(rxn.id);
+          handleReactionSelect(rxn);
+          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85);
+        }
+      }
+    });
   }
 
   if (geoStateSelect) {
@@ -1984,7 +2008,7 @@ function renderStateDetails(state) {
       }
       
       html += `
-        <li class="geo-details-item reaction-item" title="${displayName}">
+        <li class="geo-details-item reaction-item interactive" data-bigg-id="${id}" data-type="reaction" title="Click to view on map: ${displayName}">
           <span class="geo-details-name">${displayName}</span>
           <span class="geo-details-value">${valStr}</span>
         </li>
@@ -2002,7 +2026,7 @@ function renderStateDetails(state) {
       const displayName = simMetab ? `${simMetab.name} (${id})` : id;
       
       html += `
-        <li class="geo-details-item metabolite-item" title="${displayName}">
+        <li class="geo-details-item metabolite-item interactive" data-bigg-id="${id}" data-type="metabolite" title="Click to view on map: ${displayName}">
           <span class="geo-details-name">${displayName}</span>
           <span class="geo-details-value metabolite-val">${conc} mM</span>
         </li>

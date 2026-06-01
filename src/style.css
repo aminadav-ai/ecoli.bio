@@ -1877,3 +1877,22 @@ input[type="range"]::-webkit-slider-thumb:hover {
   padding-top: 6px;
 }
 
+/* Interactive details list items */
+.geo-details-item.interactive {
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, border-left-width 0.15s ease;
+}
+
+.geo-details-item.interactive:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(2px);
+}
+
+.geo-details-item.reaction-item.interactive:hover {
+  border-left-width: 4px;
+}
+
+.geo-details-item.metabolite-item.interactive:hover {
+  border-left-width: 4px;
+}
+
