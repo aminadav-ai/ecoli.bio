@@ -1893,8 +1893,8 @@ async function performGeoAnalysis() {
       }
     }
 
-    // Step 3/3: Run Gemini AI Analysis
-    if (geoStatusText) geoStatusText.textContent = "Step 3/3: Querying Gemini AI model for metabolic states...";
+    // Step 3/3: Run Dataset Analysis
+    if (geoStatusText) geoStatusText.textContent = "Step 3/3: Identifying metabolic states...";
     const geminiResponse = await fetch('/api/analyze-dataset/gemini', {
       method: 'POST',
       headers: {
@@ -1930,7 +1930,7 @@ async function performGeoAnalysis() {
     if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
 
     if (!geminiData.canMap || !geminiData.states || geminiData.states.length === 0) {
-      alert('Gemini analyzed this dataset but concluded that its conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).');
+      alert('Analysis concluded that these conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).');
       if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
       return;
     }
@@ -1971,13 +1971,13 @@ async function performGeoAnalysis() {
     }
 
     if (geoAnalysisResults) geoAnalysisResults.classList.remove('hidden');
-    console.log('[GEO] AI Analysis completed successfully.');
+    console.log('[GEO] Analysis completed successfully.');
 
   } catch (err) {
     console.error('[GEO Analysis Error] ', err);
     if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
     if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
-    alert(`AI Analysis failed: ${err.message || 'Unknown network error'}`);
+    alert(`Analysis failed: ${err.message || 'Unknown network error'}`);
   }
 }
 
