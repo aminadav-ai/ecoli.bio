@@ -142,6 +142,14 @@ export class Simulation {
     };
 
     this.initialize();
+
+    // Calculate normal reference fluxes under default conditions
+    this.solveFBA();
+    this.normalFluxes = {};
+    for (const id of Object.keys(this.metabolites)) {
+      const info = this.getMetaboliteInfo(id);
+      this.normalFluxes[id] = info ? Math.max(0.1, info.influx) : 1.0;
+    }
   }
 
   /**
@@ -255,6 +263,14 @@ export class Simulation {
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
+    }
+
+    // Recalculate normal reference fluxes
+    this.solveFBA();
+    this.normalFluxes = {};
+    for (const id of Object.keys(this.metabolites)) {
+      const info = this.getMetaboliteInfo(id);
+      this.normalFluxes[id] = info ? Math.max(0.1, info.influx) : 1.0;
     }
   }
 
@@ -620,35 +636,35 @@ export class Simulation {
         let nextConc = metab.concentration + (influxes[id] - outfluxes[id]) * dt;
         metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
       } else {
-        // Intracellular pool adapts to local flux turnover, stabilizing around kinetic target
+        // Intracellular pool adapts to local flux turnover, stabilizing around dynamic kinetic target
         const J_in = influxes[id];
         const J_out = outfluxes[id];
         const J = J_in; // Under steady state FBA, J_in = J_out = J
+        const J_normal = this.normalFluxes[id] || 1.0;
 
         let vMaxSum = 0;
-        let kmSum = 0;
-        let count = 0;
-
+        let vMaxDefaultSum = 0;
         for (const rxn of Object.values(this.reactions)) {
           const coeff = rxn.stoichiometry[id];
           if (coeff) {
-            // Reaction consumes it: coeff < 0 and positive flux, or coeff > 0 and negative flux
-            if ((coeff < 0 && rxn.flux >= 0) || (coeff > 0 && rxn.flux < 0)) {
+            // Reaction can consume it (coeff < 0 or reversible coeff > 0)
+            if (coeff < 0 || (coeff > 0 && rxn.reversibility)) {
               const vMax = rxn.vMax * this.fluxMultiplier * (rxn.perturbationMultiplier !== undefined ? rxn.perturbationMultiplier : 1.0);
+              const defaultVmax = rxn.defaultVmax * this.fluxMultiplier;
               vMaxSum += vMax;
-              kmSum += rxn.km * this.kmMultiplier;
-              count++;
+              vMaxDefaultSum += defaultVmax;
             }
           }
         }
 
-        const avgKm = count > 0 ? kmSum / count : 0.8;
-        let target = avgKm;
-        if (count > 0 && vMaxSum > J) {
-          target = avgKm * (J / (vMaxSum - J));
+        let activityRatio = 1.0;
+        if (vMaxSum > 0 && vMaxDefaultSum > 0) {
+          activityRatio = vMaxSum / vMaxDefaultSum;
         }
-        // Clamp target to reasonable physiological range [0.1, 15.0]
-        target = Math.max(0.1, Math.min(target, 15.0));
+
+        const baseline = this.initialConcentrations[id] || 1.0;
+        let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
+        target = Math.max(0.1, Math.min(target, 150.0));
 
         let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
         let nextConc = metab.concentration + dC * dt;
