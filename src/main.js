@@ -281,6 +281,9 @@ async function bootstrap() {
   // Setup GEO Search
   setupGeoSearch();
 
+  // Load and display initial cache stats
+  updateStatsUI();
+
   // 6. Populate Overview list initially
   populateOverviewList();
 
@@ -557,6 +560,54 @@ function setupUIListeners() {
       tooltip.style.top = `${ty}px`;
     }
   });
+
+  // Reset Cache Stats button
+  const resetStatsBtn = document.getElementById('reset-stats-btn');
+  if (resetStatsBtn) {
+    resetStatsBtn.addEventListener('click', resetStats);
+  }
+}
+
+/**
+ * Records hit or miss for NCBI / AI cache, saves in localStorage, and updates UI.
+ */
+function recordStat(category, status) {
+  if (status !== 'hit' && status !== 'miss') return;
+  const storageKey = `${category}_${status === 'hit' ? 'hits' : 'misses'}`;
+  const currentVal = parseInt(localStorage.getItem(storageKey) || '0', 10);
+  localStorage.setItem(storageKey, currentVal + 1);
+  updateStatsUI();
+}
+
+/**
+ * Updates UI with current cache hits/misses from localStorage.
+ */
+function updateStatsUI() {
+  const ncbiHits = localStorage.getItem('ncbi_hits') || '0';
+  const ncbiMisses = localStorage.getItem('ncbi_misses') || '0';
+  const aiHits = localStorage.getItem('ai_hits') || '0';
+  const aiMisses = localStorage.getItem('ai_misses') || '0';
+
+  const docNcbiHits = document.getElementById('stat-ncbi-hits');
+  const docNcbiMisses = document.getElementById('stat-ncbi-misses');
+  const docAiHits = document.getElementById('stat-ai-hits');
+  const docAiMisses = document.getElementById('stat-ai-misses');
+
+  if (docNcbiHits) docNcbiHits.textContent = ncbiHits;
+  if (docNcbiMisses) docNcbiMisses.textContent = ncbiMisses;
+  if (docAiHits) docAiHits.textContent = aiHits;
+  if (docAiMisses) docAiMisses.textContent = aiMisses;
+}
+
+/**
+ * Resets all cache statistics counters.
+ */
+function resetStats() {
+  localStorage.setItem('ncbi_hits', '0');
+  localStorage.setItem('ncbi_misses', '0');
+  localStorage.setItem('ai_hits', '0');
+  localStorage.setItem('ai_misses', '0');
+  updateStatsUI();
 }
 
 /**
@@ -1432,6 +1483,10 @@ async function performGeoSearch(query, page) {
       throw new Error(data.error);
     }
 
+    if (data.cacheStatus) {
+      recordStat('ncbi', data.cacheStatus);
+    }
+
     geoTotalCount = data.totalCount || 0;
     const results = data.results || [];
 
@@ -1803,6 +1858,10 @@ async function performGeoAnalysis() {
       throw new Error(initData.error);
     }
 
+    if (initData.cacheStatus) {
+      recordStat('ncbi', initData.cacheStatus);
+    }
+
     const overallDesign = initData.overallDesign || '';
     const supplementaryUrls = initData.supplementaryUrls || [];
 
@@ -1827,6 +1886,9 @@ async function performGeoAnalysis() {
         if (!snippetData.error) {
           fileName = snippetData.fileName || '';
           fileSnippet = snippetData.fileSnippet || '';
+          if (snippetData.cacheStatus) {
+            recordStat('ncbi', snippetData.cacheStatus);
+          }
         }
       }
     }
@@ -1858,6 +1920,9 @@ async function performGeoAnalysis() {
     }
 
     const geminiData = await geminiResponse.json();
+    if (geminiData.cacheStatus) {
+      recordStat('ai', geminiData.cacheStatus);
+    }
     if (geminiData.error) {
       throw new Error(geminiData.error);
     }

@@ -1,10 +1,66 @@
 import { defineConfig, loadEnv } from 'vite';
 import { XMLParser } from 'fast-xml-parser';
 import zlib from 'zlib';
+import crypto from 'crypto';
 
 export default defineConfig(({ mode }) => {
   // Load env variables from .env files
   const env = loadEnv(mode, process.cwd(), '');
+
+  const supabaseUrl = env.SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = env.SUPABASE_KEY || process.env.SUPABASE_KEY;
+
+  async function getCache(key) {
+    if (!supabaseUrl || !supabaseKey) return null;
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/api_cache?cache_key=eq.${encodeURIComponent(key)}`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data[0] || null;
+      }
+    } catch (err) {
+      console.error(`[Supabase Cache Get Error] Key: ${key}`, err);
+    }
+    return null;
+  }
+
+  async function setCache(key, type, value) {
+    if (!supabaseUrl || !supabaseKey) return;
+    try {
+      const row = {
+        cache_key: key,
+        cache_type: type,
+        cache_value: value,
+        updated_at: new Date().toISOString()
+      };
+      await fetch(`${supabaseUrl}/rest/v1/api_cache`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(row)
+      });
+    } catch (err) {
+      console.error(`[Supabase Cache Set Error] Key: ${key}`, err);
+    }
+  }
+
+  function isCacheExpired(cacheEntry) {
+    if (!cacheEntry || !cacheEntry.updated_at) return true;
+    const updatedAt = new Date(cacheEntry.updated_at).getTime();
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (now - updatedAt) > oneDayMs;
+  }
 
   const getPostBody = (req) => {
     return new Promise((resolve, reject) => {
@@ -33,6 +89,14 @@ export default defineConfig(({ mode }) => {
         // Clean query: remove double quotes to preserve syntax
         const sanitizedQuery = userQuery.replace(/"/g, '');
         
+        const cacheKey = `search:${sanitizedQuery.toLowerCase()}:${page}`;
+        const cached = await getCache(cacheKey);
+        if (cached && !isCacheExpired(cached)) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ...cached.cache_value, cacheStatus: 'hit' }));
+          return;
+        }
+
         const organism = '("Escherichia coli"[Organism])';
         const finalQuery = `("${sanitizedQuery}"[All Fields] AND ${organism})`;
         
@@ -157,8 +221,11 @@ export default defineConfig(({ mode }) => {
           });
         }
         
+        const output = { totalCount, results };
+        await setCache(cacheKey, 'search', output);
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ totalCount, results }));
+        res.end(JSON.stringify({ ...output, cacheStatus: 'miss' }));
       } catch (err) {
         console.error('Error in geo-search API:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -170,6 +237,14 @@ export default defineConfig(({ mode }) => {
         const accession = body.accession || '';
         if (!accession) {
           throw new Error('Accession ID is required');
+        }
+
+        const cacheKey = `metadata:${accession}`;
+        const cached = await getCache(cacheKey);
+        if (cached && !isCacheExpired(cached)) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ...cached.cache_value, cacheStatus: 'hit' }));
+          return;
         }
 
         let overallDesign = '';
@@ -190,8 +265,11 @@ export default defineConfig(({ mode }) => {
           throw new Error(`NCBI series lookup failed with status ${gseTextResponse.status}`);
         }
 
+        const output = { overallDesign, supplementaryUrls };
+        await setCache(cacheKey, 'metadata', output);
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ overallDesign, supplementaryUrls }));
+        res.end(JSON.stringify({ ...output, cacheStatus: 'miss' }));
       } catch (err) {
         console.error('Error in analyze-dataset/init:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -207,6 +285,16 @@ export default defineConfig(({ mode }) => {
 
         if (supplementaryUrls.length > 0) {
           const firstUrl = supplementaryUrls[0];
+          const ftpUrlHash = crypto.createHash('md5').update(firstUrl).digest('hex');
+          const cacheKey = `snippet:${ftpUrlHash}`;
+          
+          const cached = await getCache(cacheKey);
+          if (cached && !isCacheExpired(cached)) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ...cached.cache_value, cacheStatus: 'hit' }));
+            return;
+          }
+
           if (firstUrl.endsWith('.csv.gz') || firstUrl.endsWith('.tsv.gz') || firstUrl.endsWith('.txt.gz') ||
               firstUrl.endsWith('.csv') || firstUrl.endsWith('.tsv') || firstUrl.endsWith('.txt')) {
             try {
@@ -257,10 +345,17 @@ export default defineConfig(({ mode }) => {
               console.warn('Failed to fetch supplementary file snippet:', err);
             }
           }
+          
+          const output = { fileName, fileSnippet };
+          await setCache(cacheKey, 'snippet', output);
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ...output, cacheStatus: 'miss' }));
+          return;
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ fileName, fileSnippet }));
+        res.end(JSON.stringify({ fileName, fileSnippet, cacheStatus: 'miss' }));
       } catch (err) {
         console.error('Error in analyze-dataset/snippet:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -275,6 +370,27 @@ export default defineConfig(({ mode }) => {
         const overallDesign = body.overallDesign || '';
         const fileName = body.fileName || '';
         const fileSnippet = body.fileSnippet || '';
+
+        const cacheKey = `gemini:${accession}`;
+        const cached = await getCache(cacheKey);
+        if (cached) {
+          const cachedVal = cached.cache_value || {};
+          const cachedResponseData = cachedVal.responseData || cachedVal;
+          const cachedOverallDesign = cachedVal.overallDesign;
+          const cachedFileSnippet = cachedVal.fileSnippet;
+
+          if (!isCacheExpired(cached)) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ...cachedResponseData, cacheStatus: 'hit' }));
+            return;
+          } else if (cachedOverallDesign === overallDesign && cachedFileSnippet === fileSnippet) {
+            // Reuse cached response and refresh updated_at
+            await setCache(cacheKey, 'gemini', cachedVal);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ...cachedResponseData, cacheStatus: 'hit' }));
+            return;
+          }
+        }
 
         // Request Gemini API for structured mapping
         const googleApiKey = env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
@@ -484,8 +600,15 @@ Ensure your response is valid JSON matching the schema requested. The metabolite
           totalTokens: geminiJson.usageMetadata?.totalTokenCount || 0
         };
         
+        // Store to cache
+        await setCache(cacheKey, 'gemini', {
+          responseData,
+          overallDesign,
+          fileSnippet
+        });
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(responseData));
+        res.end(JSON.stringify({ ...responseData, cacheStatus: 'miss' }));
       } catch (err) {
         console.error('Error in analyze-dataset/gemini:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

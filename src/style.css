@@ -1896,3 +1896,60 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-left-width: 4px;
 }
 
+/* Cache Statistics Section styling */
+.stats-section {
+  border-top: 1px solid rgba(99, 102, 241, 0.15);
+  background: rgba(99, 102, 241, 0.02);
+  padding: 16px 0 0 0;
+  margin-top: 8px;
+}
+
+.stats-section h2 {
+  color: #a5b4fc !important;
+  text-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stat-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 4px 0;
+}
+
+.text-rose {
+  color: #f87171;
+}
+
+

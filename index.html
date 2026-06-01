@@ -236,6 +236,31 @@
             <!-- Dynamically populated rows -->
           </div>
         </section>
+
+        <!-- Cache Statistics Section -->
+        <section class="stats-section">
+          <h2>Cache & API Statistics</h2>
+          <div class="stats-grid">
+            <div class="stat-row">
+              <span class="stat-label">NCBI Cache Hits</span>
+              <span id="stat-ncbi-hits" class="stat-value text-emerald">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">NCBI Cache Misses</span>
+              <span id="stat-ncbi-misses" class="stat-value text-rose">0</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">Gemini Cache Hits</span>
+              <span id="stat-ai-hits" class="stat-value text-emerald">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Gemini Cache Misses</span>
+              <span id="stat-ai-misses" class="stat-value text-rose">0</span>
+            </div>
+          </div>
+          <button id="reset-stats-btn" class="btn btn-secondary" style="margin-top: 10px; width: 100%; font-size: 11px; height: 28px;">Reset Statistics</button>
+        </section>
       </aside>
 
       <!-- Right Overlay Panel (Metabolite / Reaction Inspector) -->
