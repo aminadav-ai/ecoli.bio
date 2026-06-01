@@ -1171,6 +1171,7 @@ function setupSearch() {
 let geoCurrentQuery = '';
 let geoCurrentPage = 1;
 let geoTotalCount = 0;
+let geoSelectedDataset = null;
 
 /**
  * Setup GEO Search UI, dropdown examples, modal and event handlers.
@@ -1285,6 +1286,33 @@ function setupGeoSearch() {
     }
   });
 
+  // Setup selected dataset UI actions
+  const geoSelectedPanel = document.getElementById('geo-selected-dataset');
+  const geoSelectedSummary = document.getElementById('geo-selected-summary');
+  const geoSelectedReadMore = document.getElementById('geo-selected-read-more');
+  const geoDeselectBtn = document.getElementById('geo-deselect-btn');
+
+  if (geoDeselectBtn) {
+    geoDeselectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deselectGeoDataset();
+    });
+  }
+
+  if (geoSelectedReadMore && geoSelectedSummary) {
+    geoSelectedReadMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isCollapsed = geoSelectedSummary.classList.contains('collapsed');
+      if (isCollapsed) {
+        geoSelectedSummary.classList.remove('collapsed');
+        geoSelectedReadMore.textContent = 'Collapse Description';
+      } else {
+        geoSelectedSummary.classList.add('collapsed');
+        geoSelectedReadMore.textContent = 'Read Description';
+      }
+    });
+  }
+
   function showGeoDropdown() {
     geoDropdown.classList.remove('hidden');
     geoDropdownBtn.classList.add('active');
@@ -1379,10 +1407,21 @@ async function performGeoSearch(query, page) {
         <p class="geo-card-summary collapsed">${item.summary || 'No description available.'}</p>
         <button class="geo-read-more-btn">Read Description</button>
         <div class="geo-card-actions">
+          <button class="btn btn-primary btn-select-dataset" style="height: 30px; font-size: 11px; padding: 0 14px; flex: none;">Select Dataset</button>
           ${ncbiUrl ? `<a href="${ncbiUrl}" target="_blank" class="btn-geo-link">Open in NCBI GEO</a>` : ''}
           ${ftpUrl ? `<a href="${ftpUrl}" target="_blank" class="btn-geo-link">📂 Download Data (FTP)</a>` : ''}
         </div>
       `;
+
+      // Select dataset click handler
+      const selectBtn = card.querySelector('.btn-select-dataset');
+      if (selectBtn) {
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectGeoDataset(item);
+          geoModal.classList.add('hidden');
+        });
+      }
 
       // Read More toggle handler
       const summaryEl = card.querySelector('.geo-card-summary');
@@ -1586,6 +1625,53 @@ function checkMetaboliteDatabaseCompleteness() {
       });
     });
   }
+}
+
+/**
+ * Sets the active atlas GEO dataset and updates the display in the left panel.
+ */
+function selectGeoDataset(dataset) {
+  geoSelectedDataset = dataset;
+  const geoSelectedPanel = document.getElementById('geo-selected-dataset');
+  const geoSelectedAccession = document.getElementById('geo-selected-accession');
+  const geoSelectedTitle = document.getElementById('geo-selected-title');
+  const geoSelectedSummary = document.getElementById('geo-selected-summary');
+  const geoSelectedReadMore = document.getElementById('geo-selected-read-more');
+
+  if (!geoSelectedPanel) return;
+
+  geoSelectedAccession.textContent = dataset.accession || 'N/A';
+  geoSelectedTitle.textContent = dataset.title || 'Untitled Dataset';
+  geoSelectedSummary.textContent = dataset.summary || 'No description available.';
+  
+  // Reset collapsed states
+  geoSelectedSummary.classList.add('collapsed');
+  if (geoSelectedReadMore) {
+    geoSelectedReadMore.textContent = 'Read Description';
+    
+    // Hide toggle button if description is short or empty
+    if (!dataset.summary || dataset.summary.length < 120) {
+      geoSelectedReadMore.style.display = 'none';
+      geoSelectedSummary.classList.remove('collapsed');
+    } else {
+      geoSelectedReadMore.style.display = 'block';
+    }
+  }
+
+  geoSelectedPanel.classList.remove('hidden');
+  console.log(`[GEO] Selected active dataset: ${dataset.accession}`);
+}
+
+/**
+ * Clears the active atlas GEO dataset and hides the details card in the left panel.
+ */
+function deselectGeoDataset() {
+  geoSelectedDataset = null;
+  const geoSelectedPanel = document.getElementById('geo-selected-dataset');
+  if (geoSelectedPanel) {
+    geoSelectedPanel.classList.add('hidden');
+  }
+  console.log('[GEO] Deselected active dataset.');
 }
 
 

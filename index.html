@@ -102,6 +102,20 @@
             </div>
           </div>
           <button id="geo-submit-btn" class="btn btn-primary" style="margin-top: 10px;">Search GEO</button>
+
+          <!-- Selected GEO Dataset Panel -->
+          <div id="geo-selected-dataset" class="geo-selected-dataset hidden glass">
+            <div class="geo-selected-header">
+              <span>Active Atlas Dataset</span>
+              <button id="geo-deselect-btn" class="geo-deselect-btn" title="Deselect dataset">✕</button>
+            </div>
+            <div class="geo-selected-body">
+              <span id="geo-selected-accession" class="geo-accession-badge"></span>
+              <h4 id="geo-selected-title" class="geo-selected-title"></h4>
+              <p id="geo-selected-summary" class="geo-selected-summary collapsed"></p>
+              <button id="geo-selected-read-more" class="geo-read-more-btn">Read Description</button>
+            </div>
+          </div>
         </section>
 
         <section class="control-section">
