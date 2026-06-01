@@ -320,9 +320,8 @@ function gameLoop(currentTime) {
       }
 
       // Update growth rate history dynamically
-      const baseGrowth = getBaseGrowthRate(simulation.activeModel);
       const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
-      const currentGrowth = Math.max(0.0, (biomassFlux / 9.4335e-8) * baseGrowth);
+      const currentGrowth = Math.max(0.0, biomassFlux);
       growthHistory.push(currentGrowth);
       if (growthHistory.length > maxGrowthPoints) {
         growthHistory.shift();
@@ -888,14 +887,13 @@ function updateUIPanelValues() {
   }
 
   // Update growth rate dynamically
-  const baseGrowth = getBaseGrowthRate(simulation.activeModel);
   const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
-  const currentGrowth = Math.max(0.0, (biomassFlux / 9.4335e-8) * baseGrowth);
+  const currentGrowth = Math.max(0.0, biomassFlux);
   document.getElementById('metric-growth').textContent = `${currentGrowth.toFixed(2)} hr⁻¹`;
 
   // Update ATP yield dynamically based on active ATP synthesis rate (ATPS4r flux)
-  const atpsFlux = Math.max(0.0, -1.0 * (simulation.reactions['ATPS4r']?.flux || 0));
-  const currentAtpYield = (atpsFlux / 1.7718) * 12.5;
+  const atpsFlux = Math.max(0.0, Math.abs(simulation.reactions['ATPS4r']?.flux || 0));
+  const currentAtpYield = atpsFlux;
   document.getElementById('metric-atp').textContent = `${currentAtpYield.toFixed(1)} mM/s`;
 
   // Draw growth rate trend line
