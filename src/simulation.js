@@ -15,6 +15,7 @@ export class Simulation {
     this.activeModel = 'e_coli_core';
     this.fluxMultiplier = 1.0;
     this.kmMultiplier = 1.0;
+    this.lastBasis = null;
 
     // Define cofactors and inorganic molecules to buffer (hold at constant physiological concentrations)
     this.bufferedIds = new Set([
@@ -246,6 +247,7 @@ export class Simulation {
    * Reset simulation concentrations and fluxes to initial steady state.
    */
   reset() {
+    this.lastBasis = null;
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] || 1.0;
     }
@@ -299,7 +301,7 @@ export class Simulation {
    * Maximize c^T x subject to A x <= b, x >= 0
    * using the standard Primal Simplex algorithm.
    */
-  solveLP(c, A, b) {
+  solveLP(c, A, b, lastBasis = null) {
     const M = A.length;
     const N = A[0].length;
 
@@ -328,6 +330,69 @@ export class Simulation {
     const basis = new Int32Array(M);
     for (let i = 0; i < M; i++) {
       basis[i] = N + i;
+    }
+
+    // Attempt Warm Start if lastBasis is provided and matches size
+    let warmStartSuccess = false;
+    if (lastBasis && lastBasis.length === M) {
+      let feasible = true;
+      for (let i = 0; i < M; i++) {
+        const q = lastBasis[i];
+        if (q !== N + i) {
+          // Perform pivot on row i, column q
+          if (T[i][q] > 1e-5) {
+            const pivotVal = T[i][q];
+            for (let j = 0; j <= N + M; j++) {
+              T[i][j] /= pivotVal;
+            }
+            for (let r = 0; r <= M; r++) {
+              if (r !== i) {
+                const factor = T[r][q];
+                for (let j = 0; j <= N + M; j++) {
+                  T[r][j] -= factor * T[i][j];
+                }
+              }
+            }
+            basis[i] = q;
+          } else {
+            feasible = false;
+            break;
+          }
+        }
+      }
+
+      // Check if RHS remains primal feasible
+      if (feasible) {
+        for (let i = 0; i < M; i++) {
+          if (T[i][N + M] < -1e-5) {
+            feasible = false;
+            break;
+          }
+        }
+      }
+
+      if (feasible) {
+        warmStartSuccess = true;
+      } else {
+        // Fallback: Revert tableau to initial state
+        for (let i = 0; i < M; i++) {
+          basis[i] = N + i;
+        }
+        for (let i = 0; i <= M; i++) {
+          T[i].fill(0.0);
+        }
+        for (let i = 0; i < M; i++) {
+          for (let j = 0; j < N; j++) {
+            T[i][j] = A[i][j];
+          }
+          T[i][N + i] = 1.0;
+          T[i][N + M] = b[i];
+        }
+        for (let j = 0; j < N; j++) {
+          T[M][j] = -c[j];
+        }
+        T[M][N + M] = 0.0;
+      }
     }
 
     const maxIterations = 200;
@@ -393,7 +458,8 @@ export class Simulation {
 
     return {
       objVal: T[M][N + M],
-      x: x
+      x: x,
+      basis: basis
     };
   }
 
@@ -488,8 +554,14 @@ export class Simulation {
       }
     }
 
-    // 6. Execute LP Simplex solver
-    const res = this.solveLP(c, A, b);
+    // 6. Execute LP Simplex solver with warm start basis
+    const res = this.solveLP(c, A, b, this.lastBasis);
+
+    if (res && res.basis) {
+      this.lastBasis = res.basis;
+    } else {
+      this.lastBasis = null;
+    }
 
     // 7. Extract resulting fluxes
     for (const rxn of Object.values(this.reactions)) {
