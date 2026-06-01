@@ -278,6 +278,9 @@ async function bootstrap() {
   // Setup Map Search Bar
   setupSearch();
 
+  // Setup GEO Search
+  setupGeoSearch();
+
   // 6. Populate Overview list initially
   populateOverviewList();
 
@@ -1162,6 +1165,265 @@ function setupSearch() {
       hideSearchResults();
     }
   });
+}
+
+// State for GEO Dataset Search
+let geoCurrentQuery = '';
+let geoCurrentPage = 1;
+let geoTotalCount = 0;
+
+/**
+ * Setup GEO Search UI, dropdown examples, modal and event handlers.
+ */
+function setupGeoSearch() {
+  const geoInput = document.getElementById('geo-search-input');
+  const geoClearBtn = document.getElementById('geo-clear-btn');
+  const geoDropdownBtn = document.getElementById('geo-dropdown-btn');
+  const geoDropdown = document.getElementById('geo-examples-dropdown');
+  const geoSubmitBtn = document.getElementById('geo-submit-btn');
+  
+  const geoModal = document.getElementById('geo-modal-overlay');
+  const geoModalCloseBtn = document.getElementById('geo-modal-close-btn');
+  const geoModalLoading = document.getElementById('geo-modal-loading');
+  const geoModalError = document.getElementById('geo-modal-error');
+  const geoErrorMsg = document.getElementById('geo-error-message');
+  const geoResultsContainer = document.getElementById('geo-modal-results-container');
+  
+  const geoPagination = document.getElementById('geo-pagination');
+  const geoPrevBtn = document.getElementById('geo-prev-btn');
+  const geoNextBtn = document.getElementById('geo-next-btn');
+  const geoPageInfo = document.getElementById('geo-page-info');
+
+  if (!geoInput || !geoSubmitBtn || !geoModal) return;
+
+  // Toggle dropdown on button click
+  geoDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = geoDropdown.classList.contains('hidden');
+    if (isHidden) {
+      showGeoDropdown();
+    } else {
+      hideGeoDropdown();
+    }
+  });
+
+  // Show dropdown on input focus
+  geoInput.addEventListener('focus', () => {
+    showGeoDropdown();
+  });
+
+  // Input listener for clear button toggle
+  geoInput.addEventListener('input', () => {
+    if (geoInput.value.trim().length > 0) {
+      geoClearBtn.classList.remove('hidden');
+    } else {
+      geoClearBtn.classList.add('hidden');
+    }
+  });
+
+  // Clear button click
+  geoClearBtn.addEventListener('click', () => {
+    geoInput.value = '';
+    geoClearBtn.classList.add('hidden');
+    geoInput.focus();
+  });
+
+  // Close dropdown on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.geo-search-container')) {
+      hideGeoDropdown();
+    }
+  });
+
+  // Handle clicking items in the custom examples dropdown
+  const exampleItems = document.querySelectorAll('#geo-examples-list li');
+  exampleItems.forEach(item => {
+    item.addEventListener('click', () => {
+      geoInput.value = item.textContent;
+      geoClearBtn.classList.remove('hidden');
+      hideGeoDropdown();
+      triggerSearch();
+    });
+  });
+
+  // Submit search on button click
+  geoSubmitBtn.addEventListener('click', () => {
+    triggerSearch();
+  });
+
+  // Submit search on Enter keypress
+  geoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      triggerSearch();
+      geoInput.blur();
+    }
+  });
+
+  // Close modal button
+  geoModalCloseBtn.addEventListener('click', () => {
+    geoModal.classList.add('hidden');
+  });
+
+  // Close modal on click outside content
+  geoModal.addEventListener('click', (e) => {
+    if (e.target === geoModal) {
+      geoModal.classList.add('hidden');
+    }
+  });
+
+  // Pagination triggers
+  geoPrevBtn.addEventListener('click', () => {
+    if (geoCurrentPage > 1) {
+      performGeoSearch(geoCurrentQuery, geoCurrentPage - 1);
+    }
+  });
+
+  // Next page trigger
+  geoNextBtn.addEventListener('click', () => {
+    if (geoCurrentPage * 20 < geoTotalCount) {
+      performGeoSearch(geoCurrentQuery, geoCurrentPage + 1);
+    }
+  });
+
+  function showGeoDropdown() {
+    geoDropdown.classList.remove('hidden');
+    geoDropdownBtn.classList.add('active');
+  }
+
+  function hideGeoDropdown() {
+    geoDropdown.classList.add('hidden');
+    geoDropdownBtn.classList.remove('active');
+  }
+
+  function triggerSearch() {
+    const query = geoInput.value.trim();
+    if (query.length === 0) return;
+    performGeoSearch(query, 1);
+  }
+}
+
+/**
+ * Executes GEO search fetch call, handles loading/error states, and updates results modal layout.
+ */
+async function performGeoSearch(query, page) {
+  const geoModal = document.getElementById('geo-modal-overlay');
+  const geoModalLoading = document.getElementById('geo-modal-loading');
+  const geoModalError = document.getElementById('geo-modal-error');
+  const geoErrorMsg = document.getElementById('geo-error-message');
+  const geoResultsContainer = document.getElementById('geo-modal-results-container');
+  
+  const geoPagination = document.getElementById('geo-pagination');
+  const geoPrevBtn = document.getElementById('geo-prev-btn');
+  const geoNextBtn = document.getElementById('geo-next-btn');
+  const geoPageInfo = document.getElementById('geo-page-info');
+
+  // Open modal and set active query details
+  geoModal.classList.remove('hidden');
+  geoCurrentQuery = query;
+  geoCurrentPage = page;
+
+  // Show loading spinner
+  geoModalLoading.classList.remove('hidden');
+  geoModalError.classList.add('hidden');
+  geoResultsContainer.innerHTML = '';
+  geoPagination.classList.add('hidden');
+
+  try {
+    const res = await fetch(`/api/geo-search?query=${encodeURIComponent(query)}&page=${page}`);
+    if (!res.ok) {
+      throw new Error(`Server returned HTTP ${res.status}`);
+    }
+    
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    geoTotalCount = data.totalCount || 0;
+    const results = data.results || [];
+
+    geoModalLoading.classList.add('hidden');
+
+    if (results.length === 0) {
+      geoResultsContainer.innerHTML = `
+        <div class="geo-empty-state">
+          <span class="geo-empty-icon">❓</span>
+          <p>No GEO datasets found matching "<strong>${query}</strong>" and E. coli central metabolism filters.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Populate results cards
+    results.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'geo-result-card';
+      
+      const ftpUrl = item.ftpLink || '';
+      const ncbiUrl = item.accession ? `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=${item.accession}` : '';
+      
+      // Split date to just show YYYY-MM-DD
+      const pubDate = item.pdat ? item.pdat.split(' ')[0] : 'N/A';
+      
+      card.innerHTML = `
+        <div class="geo-card-header">
+          <span class="geo-accession-badge">${item.accession || 'N/A'}</span>
+          <h3 class="geo-card-title">${item.title || 'Untitled Dataset'}</h3>
+        </div>
+        <div class="geo-card-metadata">
+          <div class="geo-meta-item"><strong>Organism:</strong> ${item.taxon || 'Escherichia coli'}</div>
+          <div class="geo-meta-item"><strong>Samples:</strong> ${item.n_samples || 0}</div>
+          <div class="geo-meta-item"><strong>Release Date:</strong> ${pubDate}</div>
+          <div class="geo-meta-item"><strong>Type:</strong> ${item.gdsType || 'Expression Profiling'}</div>
+        </div>
+        <p class="geo-card-summary collapsed">${item.summary || 'No description available.'}</p>
+        <button class="geo-read-more-btn">Read Description</button>
+        <div class="geo-card-actions">
+          ${ncbiUrl ? `<a href="${ncbiUrl}" target="_blank" class="btn-geo-link">Open in NCBI GEO</a>` : ''}
+          ${ftpUrl ? `<a href="${ftpUrl}" target="_blank" class="btn-geo-link">📂 Download Data (FTP)</a>` : ''}
+        </div>
+      `;
+
+      // Read More toggle handler
+      const summaryEl = card.querySelector('.geo-card-summary');
+      const readMoreBtn = card.querySelector('.geo-read-more-btn');
+      
+      // Hide button if text is short or empty
+      if (!item.summary || item.summary.length < 180) {
+        readMoreBtn.style.display = 'none';
+        summaryEl.classList.remove('collapsed');
+      }
+
+      readMoreBtn.addEventListener('click', () => {
+        const isCollapsed = summaryEl.classList.contains('collapsed');
+        if (isCollapsed) {
+          summaryEl.classList.remove('collapsed');
+          readMoreBtn.textContent = 'Collapse Description';
+        } else {
+          summaryEl.classList.add('collapsed');
+          readMoreBtn.textContent = 'Read Description';
+        }
+      });
+
+      geoResultsContainer.appendChild(card);
+    });
+
+    // Configure Pagination display
+    const totalPages = Math.ceil(geoTotalCount / 20) || 1;
+    geoPageInfo.textContent = `Page ${page} of ${totalPages} (Total: ${geoTotalCount})`;
+    
+    // Enable/disable buttons
+    geoPrevBtn.disabled = page <= 1;
+    geoNextBtn.disabled = page >= totalPages;
+
+    geoPagination.classList.remove('hidden');
+
+  } catch (err) {
+    console.error('[GEO Search Error] ', err);
+    geoModalLoading.classList.add('hidden');
+    geoErrorMsg.textContent = `Search failed: ${err.message || 'Unknown network error'}`;
+    geoModalError.classList.remove('hidden');
+  }
 }
 
 /**

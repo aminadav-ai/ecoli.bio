@@ -66,6 +66,44 @@
 
       <!-- Left Overlay Panel (Global Controls & Overview) -->
       <aside class="left-panel panel glass">
+        <!-- GEO Dataset Search Section -->
+        <section class="geo-search-section">
+          <h2>NCBI GEO Search</h2>
+          <div class="geo-search-container">
+            <div class="geo-search-wrapper">
+              <span class="geo-search-icon">🧬</span>
+              <input type="text" id="geo-search-input" placeholder="Search GEO for E. coli datasets" autocomplete="off" />
+              <button id="geo-dropdown-btn" class="geo-dropdown-arrow-btn" title="Show Examples">▼</button>
+              <button id="geo-clear-btn" class="geo-clear-btn hidden" title="Clear search">✕</button>
+            </div>
+            <!-- Custom Examples Dropdown -->
+            <div id="geo-examples-dropdown" class="geo-examples-dropdown glass hidden">
+              <div class="geo-dropdown-header">Example Searches</div>
+              <ul id="geo-examples-list">
+                <li>glucose limitation</li>
+                <li>acetate overflow</li>
+                <li>glycerol metabolism</li>
+                <li>lactose operon</li>
+                <li>anaerobic vs aerobic growth</li>
+                <li>oxidative stress</li>
+                <li>ph stress</li>
+                <li>nutrient starvation</li>
+                <li>glycolysis flux</li>
+                <li>tca cycle activity</li>
+                <li>pts system</li>
+                <li>stationary phase</li>
+                <li>rpoS gene</li>
+                <li>crp gene</li>
+                <li>pykA gene</li>
+                <li>arcA gene</li>
+                <li>fis gene</li>
+                <li>ppc gene</li>
+              </ul>
+            </div>
+          </div>
+          <button id="geo-submit-btn" class="btn btn-primary" style="margin-top: 10px;">Search GEO</button>
+        </section>
+
         <section class="control-section">
           <h2>Simulation Controls</h2>
           <div class="btn-group">
@@ -271,6 +309,46 @@
           </div>
         </div>
       </aside>
+
+      <!-- GEO Search Results Modal -->
+      <div id="geo-modal-overlay" class="geo-modal-overlay hidden">
+        <div class="geo-modal-content glass">
+          <div class="geo-modal-header">
+            <h2>GEO Dataset Search Results</h2>
+            <button id="geo-modal-close-btn" class="geo-modal-close-btn" title="Close results">✕</button>
+          </div>
+          
+          <div class="geo-modal-body">
+            <!-- Loading Indicator -->
+            <div id="geo-modal-loading" class="geo-modal-loading hidden">
+              <div class="geo-spinner"></div>
+              <p>Searching Gene Expression Omnibus...</p>
+            </div>
+
+            <!-- Error message container -->
+            <div id="geo-modal-error" class="geo-modal-error-box hidden">
+              <span class="error-icon">⚠️</span>
+              <p id="geo-error-message"></p>
+            </div>
+
+            <!-- Results container -->
+            <div id="geo-modal-results-container" class="geo-modal-results-container">
+              <div class="geo-empty-state">
+                <span class="geo-empty-icon">🔍</span>
+                <p>Submit a search query to browse NCBI GEO datasets.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="geo-modal-footer">
+            <div id="geo-pagination" class="geo-pagination hidden">
+              <button id="geo-prev-btn" class="btn btn-secondary btn-pagination" disabled>◀ Previous</button>
+              <span id="geo-page-info" class="geo-page-info">Page 1 of 1</span>
+              <button id="geo-next-btn" class="btn btn-secondary btn-pagination" disabled>Next ▶</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Hover Tooltip -->
       <div id="tooltip" class="tooltip glass hidden">
