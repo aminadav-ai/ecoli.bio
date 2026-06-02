@@ -72,13 +72,22 @@ export class Simulation {
       's7p_c': 0.6,
       'e4p_c': 0.3,
       
-      // Fermentation products
+      // Fermentation products & extracellular carbon sources (0.0 by default for strict glucose growth)
       'ac_c': 1.0,
-      'ac_e': 0.2,
+      'ac_e': 0.0,
       'etoh_c': 0.5,
-      'etoh_e': 0.1,
+      'etoh_e': 0.0,
       'lac__D_c': 0.5,
-      'lac__D_e': 0.1,
+      'lac__D_e': 0.0,
+      'pyr_e': 0.0,
+      'succ_e': 0.0,
+      'akg_e': 0.0,
+      'mal__L_e': 0.0,
+      'fum_e': 0.0,
+      'glu__L_e': 0.0,
+      'gln__L_e': 0.0,
+      'fru_e': 0.0,
+      'acald_e': 0.0,
 
       // Buffered cofactors / small molecules
       'atp_c': 4.0,
@@ -175,8 +184,8 @@ export class Simulation {
           this.metabolites[id] = {
             id: id,
             name: node.name,
-            concentration: this.initialConcentrations[id] || 1.0,
-            targetConcentration: this.initialConcentrations[id] || 1.0,
+            concentration: this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0,
+            targetConcentration: this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0,
             isBuffered: isBuffered,
             type: type
           };
@@ -210,8 +219,8 @@ export class Simulation {
           this.metabolites[id] = {
             id: id,
             name: id,
-            concentration: this.initialConcentrations[id] || 1.0,
-            targetConcentration: this.initialConcentrations[id] || 1.0,
+            concentration: this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0,
+            targetConcentration: this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0,
             isBuffered: this.bufferedIds.has(id),
             type: 'metabolite'
           };
@@ -261,8 +270,8 @@ export class Simulation {
     this.lastBasis = null;
     this.tickCounter = 0;
     for (const [id, metab] of Object.entries(this.metabolites)) {
-      metab.concentration = this.initialConcentrations[id] || 1.0;
-      metab.targetConcentration = this.initialConcentrations[id] || 1.0;
+      metab.concentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
+      metab.targetConcentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
@@ -416,7 +425,7 @@ export class Simulation {
       }
     }
 
-    const maxIterations = 200;
+    const maxIterations = 1000;
     for (let iter = 0; iter < maxIterations; iter++) {
       // 1. Find entering variable (Bland's rule: first column with a negative coefficient)
       let q = -1;
@@ -493,7 +502,7 @@ export class Simulation {
    * Maximizes biomass production rate under current substrate limitations.
    */
   solveFBA() {
-    const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c') && !this.bufferedIds.has(id));
+    const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c'));
     const rxnIds = Object.keys(this.reactions);
 
     // 1. Build variables mapping. Split reversible reactions into forward/backward components.
@@ -549,12 +558,21 @@ export class Simulation {
 
       let UB = vMax;
 
-      // Universal kinetic coupling: Restrict reaction upper bounds by all non-buffered substrate concentrations
+      // Universal kinetic coupling: Restrict reaction upper bounds by non-buffered substrate concentrations.
+      // To prevent deadlocks on minor intermediates, we only couple major regulatory checkpoints 
+      // or reactions consuming extracellular metabolites (transport/exchanges).
+      const coupledCheckpoints = new Set([
+        'GLCpts', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi', 'BIOMASS_Ecoli_core_w_GAM'
+      ]);
       const substratesToUse = (direction === 1) ? rxn.substrates : rxn.products;
-      for (const subId of substratesToUse) {
-        if (this.metabolites[subId] && !this.metabolites[subId].isBuffered) {
-          const conc = this.metabolites[subId].concentration;
-          UB = Math.min(UB, vMax * (conc / (km + conc)));
+      const hasExtracellularSubstrate = substratesToUse.some(subId => subId.endsWith('_e'));
+
+      if (coupledCheckpoints.has(rxnId) || hasExtracellularSubstrate) {
+        for (const subId of substratesToUse) {
+          if (this.metabolites[subId] && !this.metabolites[subId].isBuffered) {
+            const conc = this.metabolites[subId].concentration;
+            UB = Math.min(UB, vMax * (conc / (km + conc)));
+          }
         }
       }
 
@@ -638,9 +656,15 @@ export class Simulation {
       }
 
       if (id.endsWith('_e')) {
-        // Extracellular pool decays or grows based on net transport
+        // Extracellular pool decays or grows based on net transport.
+        // Glucose is supplied continuously (held constant in medium) so it is not depleted,
+        // but remains kinetically coupled so its concentration still dictates uptake bounds.
+        if (id === 'glc__D_e') {
+          metab.targetConcentration = metab.concentration;
+          continue;
+        }
         let nextConc = metab.concentration + (influxes[id] - outfluxes[id]) * dt;
-        metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
+        metab.concentration = Math.max(0.0, Math.min(nextConc, 150.0));
         metab.targetConcentration = metab.concentration;
       } else {
         // Intracellular pool adapts to local flux turnover, stabilizing around dynamic kinetic target
@@ -669,7 +693,7 @@ export class Simulation {
           activityRatio = vMaxSum / vMaxDefaultSum;
         }
 
-        const baseline = this.initialConcentrations[id] || 1.0;
+        const baseline = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
         let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
         target = Math.max(0.1, Math.min(target, 150.0));
         metab.targetConcentration = target;
