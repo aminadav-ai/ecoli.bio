@@ -148,7 +148,7 @@ export class Simulation {
     this.normalFluxes = {};
     for (const id of Object.keys(this.metabolites)) {
       const info = this.getMetaboliteInfo(id);
-      this.normalFluxes[id] = info ? Math.max(0.1, info.influx) : 1.0;
+      this.normalFluxes[id] = info ? Math.max(1.5, info.influx) : 1.0;
     }
   }
 
@@ -273,7 +273,7 @@ export class Simulation {
     this.normalFluxes = {};
     for (const id of Object.keys(this.metabolites)) {
       const info = this.getMetaboliteInfo(id);
-      this.normalFluxes[id] = info ? Math.max(0.1, info.influx) : 1.0;
+      this.normalFluxes[id] = info ? Math.max(1.5, info.influx) : 1.0;
     }
   }
 
