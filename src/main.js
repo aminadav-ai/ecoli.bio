@@ -563,6 +563,54 @@ function setupUIListeners() {
     }
   });
 
+  // Handle hover tooltips for GEO metabolites list items
+  const geoTooltip = document.getElementById('geo-tooltip');
+  const geoTooltipTitle = document.getElementById('geo-tooltip-title');
+  const geoTooltipContent = document.getElementById('geo-tooltip-content');
+  const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+
+  if (geoStateDetailsPanel && geoTooltip) {
+    geoStateDetailsPanel.addEventListener('mouseover', (e) => {
+      const item = e.target.closest('.geo-details-item.metabolite-item');
+      if (!item) return;
+
+      const titleName = item.getAttribute('data-tooltip-title');
+      const titleText = item.getAttribute('data-tooltip-text');
+
+      if (titleName && titleText) {
+        geoTooltipTitle.textContent = titleName;
+        geoTooltipContent.innerHTML = titleText.replace(/\n/g, '<br>');
+        geoTooltip.classList.remove('hidden');
+        geoTooltip.style.opacity = '1';
+      }
+    });
+
+    geoStateDetailsPanel.addEventListener('mouseout', (e) => {
+      const item = e.target.closest('.geo-details-item.metabolite-item');
+      if (!item) return;
+      geoTooltip.classList.add('hidden');
+      geoTooltip.style.opacity = '0';
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!geoTooltip.classList.contains('hidden')) {
+        const padding = 15;
+        let tx = e.clientX + padding;
+        let ty = e.clientY + padding;
+
+        if (tx + geoTooltip.offsetWidth > window.innerWidth) {
+          tx = e.clientX - geoTooltip.offsetWidth - padding;
+        }
+        if (ty + geoTooltip.offsetHeight > window.innerHeight) {
+          ty = e.clientY - geoTooltip.offsetHeight - padding;
+        }
+
+        geoTooltip.style.left = `${tx}px`;
+        geoTooltip.style.top = `${ty}px`;
+      }
+    });
+  }
+
   // Reset Cache Stats button
   const resetStatsBtn = document.getElementById('reset-stats-btn');
   if (resetStatsBtn) {
@@ -908,13 +956,59 @@ function updateUIPanelValues() {
     const simMetab = simulation.metabolites[id];
     if (simMetab) {
       const valEl = el.querySelector('.geo-details-value');
+      const nameEl = el.querySelector('.geo-details-name');
+      
       if (valEl) {
         let expectedConc = el.getAttribute('data-expected-conc');
         if (!expectedConc) {
           expectedConc = valEl.textContent.replace(' mM', '').trim();
           el.setAttribute('data-expected-conc', expectedConc);
         }
-        valEl.innerHTML = `<span style="color: #94a3b8; font-size: 0.85em;">Cur:</span> <span style="font-weight: 600; color: #f8fafc;">${simMetab.concentration.toFixed(2)}</span> <span style="color: #94a3b8; font-size: 0.85em;">/ Exp: ${expectedConc} mM</span>`;
+        const exp = Number(expectedConc);
+        const cur = simMetab.concentration;
+        const diffRatio = Math.abs(cur - exp) / Math.max(0.1, exp);
+
+        const isMismatch = diffRatio > 0.15;
+        const curColor = isMismatch ? '#f87171' : '#34d399'; // red vs green
+        const nameColor = isMismatch ? '#f87171' : '';
+
+        if (nameEl) {
+          nameEl.style.color = nameColor;
+        }
+
+        // Generate dynamic educational advice
+        const displayName = simMetab.name || id;
+        let tooltipText = '';
+        if (!isMismatch) {
+          tooltipText = `Model matches experimental target (deviation: ${(diffRatio * 100).toFixed(0)}%).`;
+        } else {
+          // Find consuming and producing reactions
+          const contributors = [];
+          for (const rxn of Object.values(simulation.reactions)) {
+            const coeff = rxn.stoichiometry[id];
+            if (coeff) {
+              contributors.push({ id: rxn.id, name: rxn.name, coeff: coeff });
+            }
+          }
+          
+          const producers = contributors.filter(c => c.coeff > 0).map(c => `${c.name || c.id} (${c.id})`);
+          const consumers = contributors.filter(c => c.coeff < 0).map(c => `${c.name || c.id} (${c.id})`);
+
+          if (cur > exp) {
+            const consStr = consumers.slice(0, 2).join(', ') || 'consuming pathways';
+            tooltipText = `Model predicts accumulation of ${displayName}.\nCheck the activity of consuming enzymes like: ${consStr}.`;
+          } else {
+            const prodStr = producers.slice(0, 2).join(', ') || 'producing pathways';
+            tooltipText = `Model predicts deficit of ${displayName}.\nCheck the activity of producing enzymes like: ${prodStr}.`;
+          }
+        }
+
+        // Set tooltip data attributes and remove native title
+        el.setAttribute('data-tooltip-title', displayName);
+        el.setAttribute('data-tooltip-text', tooltipText);
+        el.removeAttribute('title');
+
+        valEl.innerHTML = `Cur: <span style="font-weight: 600; color: ${curColor};">${cur.toFixed(2)}</span> <span style="color: #94a3b8; font-size: 0.85em;">/ Exp: ${expectedConc} mM</span>`;
       }
     }
   });
@@ -2106,7 +2200,7 @@ function renderStateDetails(state) {
       const displayName = simMetab ? `${simMetab.name} (${id})` : id;
       
       html += `
-        <li class="geo-details-item metabolite-item interactive" data-bigg-id="${id}" data-type="metabolite" title="Click to view on map: ${displayName}">
+        <li class="geo-details-item metabolite-item interactive" data-bigg-id="${id}" data-type="metabolite">
           <span class="geo-details-name">${displayName}</span>
           <span class="geo-details-value metabolite-val">${conc} mM</span>
         </li>

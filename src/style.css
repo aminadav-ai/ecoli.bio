@@ -1952,4 +1952,33 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: #f87171;
 }
 
+/* Custom GEO tooltip to prevent overflow-y clipping */
+.geo-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: opacity 0.15s ease;
+  width: 280px;
+  max-width: 280px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.geo-tooltip h4 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+}
+
+#geo-tooltip-content {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
 
