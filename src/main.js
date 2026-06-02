@@ -287,6 +287,9 @@ async function bootstrap() {
   // 6. Populate Overview list initially
   populateOverviewList();
 
+  // Restore saved GEO dataset/analysis state from localStorage
+  restoreGeoStateFromLocalStorage();
+
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
@@ -611,6 +614,25 @@ function setupUIListeners() {
     });
   }
 
+  // Delegated click listener for the contributing fluxes list inside the metabolite inspector
+  const metabFluxesList = document.getElementById('metab-fluxes-list');
+  if (metabFluxesList) {
+    metabFluxesList.addEventListener('click', (e) => {
+      const row = e.target.closest('.flux-row');
+      if (!row) return;
+      
+      const rxnId = row.getAttribute('data-rxn-id');
+      if (rxnId) {
+        const rxn = renderer.reactions.find(r => r.biggId === rxnId);
+        if (rxn) {
+          renderer.selectReaction(rxn.id);
+          handleReactionSelect(rxn);
+          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85);
+        }
+      }
+    });
+  }
+
   // Reset Cache Stats button
   const resetStatsBtn = document.getElementById('reset-stats-btn');
   if (resetStatsBtn) {
@@ -729,6 +751,9 @@ function handleMetaboliteSelect(node) {
 
   // Render cross references
   populateCrossReferences(node.biggId);
+
+  // Render fluxes list immediately on select
+  populateConnectedFluxes(node.biggId);
 
   // Sync rows in left panel list
   updateOverviewListHighlight();
@@ -911,8 +936,10 @@ function updateUIPanelValues() {
       // Render rolling chart history
       drawConcentrationChart();
 
-      // Render fluxes contributors list
-      populateConnectedFluxes(selectedMetaboliteId);
+      // Render fluxes contributors list every 10 frames to prevent DOM thrashing and preserve click responsiveness
+      if (animationFrameCount % 10 === 0) {
+        populateConnectedFluxes(selectedMetaboliteId);
+      }
     }
   } else if (selectedReactionId) {
     const rxn = simulation.reactions[selectedReactionId];
@@ -1049,6 +1076,7 @@ function populateConnectedFluxes(metabId) {
 
     const row = document.createElement('div');
     row.className = 'flux-row';
+    row.setAttribute('data-rxn-id', item.id);
     
     let rateClass = 'text-neutral';
     let ratePrefix = '';
@@ -1063,15 +1091,6 @@ function populateConnectedFluxes(metabId) {
       <span class="flux-row-label">${item.id} (${item.coeff > 0 ? 'Prod' : 'Cons'})</span>
       <span class="flux-row-value ${rateClass}">${ratePrefix}${item.rate.toFixed(2)} mM/s</span>
     `;
-
-    // Click on flux contributor row selects and centers that reaction
-    row.addEventListener('click', () => {
-      const rxn = renderer.reactions.find(r => r.biggId === item.id);
-      if (rxn) {
-        renderer.selectReaction(rxn.id);
-        handleReactionSelect(rxn);
-      }
-    });
 
     container.appendChild(row);
   });
@@ -1502,6 +1521,7 @@ function setupGeoSearch() {
         geoStateDetailsPanel.classList.add('hidden');
         geoStateDetailsBtn.textContent = 'Show Details';
       }
+      saveGeoStateToLocalStorage();
     });
 
     geoStateDetailsPanel.addEventListener('click', (e) => {
@@ -1537,6 +1557,7 @@ function setupGeoSearch() {
         if (geoStateDesc) geoStateDesc.textContent = state.description || '';
         applyMetabolicState(state);
         renderStateDetails(state);
+        saveGeoStateToLocalStorage();
       }
     });
   }
@@ -1860,6 +1881,128 @@ function checkMetaboliteDatabaseCompleteness() {
 }
 
 /**
+ * Saves current GEO dataset and condition state to localStorage.
+ */
+function saveGeoStateToLocalStorage() {
+  try {
+    if (!geoSelectedDataset) {
+      localStorage.removeItem('activeGeoState');
+      return;
+    }
+
+    const geoStateSelect = document.getElementById('geo-state-select');
+    const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+
+    const stateToSave = {
+      dataset: {
+        accession: geoSelectedDataset.accession,
+        title: geoSelectedDataset.title,
+        summary: geoSelectedDataset.summary,
+        analysisStates: geoSelectedDataset.analysisStates || null
+      },
+      selectedStateIndex: geoStateSelect ? parseInt(geoStateSelect.value, 10) : 0,
+      showDetails: geoStateDetailsPanel ? !geoStateDetailsPanel.classList.contains('hidden') : false
+    };
+
+    localStorage.setItem('activeGeoState', JSON.stringify(stateToSave));
+    console.log('[GEO] Saved active state to localStorage.');
+  } catch (e) {
+    console.error('[GEO] Failed to save state to localStorage:', e);
+  }
+}
+
+/**
+ * Restores GEO dataset and condition state from localStorage on startup.
+ */
+function restoreGeoStateFromLocalStorage() {
+  try {
+    const savedStr = localStorage.getItem('activeGeoState');
+    if (!savedStr) return;
+
+    const saved = JSON.parse(savedStr);
+    if (!saved || !saved.dataset) return;
+
+    console.log('[GEO] Restoring saved dataset state:', saved.dataset.accession);
+
+    // 1. Select the dataset
+    geoSelectedDataset = saved.dataset;
+    const geoSelectedPanel = document.getElementById('geo-selected-dataset');
+    const geoSelectedAccession = document.getElementById('geo-selected-accession');
+    const geoSelectedTitle = document.getElementById('geo-selected-title');
+    const geoSelectedSummary = document.getElementById('geo-selected-summary');
+    const geoSelectedReadMore = document.getElementById('geo-selected-read-more');
+
+    if (geoSelectedPanel) {
+      geoSelectedAccession.textContent = saved.dataset.accession || 'N/A';
+      geoSelectedTitle.textContent = saved.dataset.title || 'Untitled Dataset';
+      geoSelectedSummary.textContent = saved.dataset.summary || 'No description available.';
+      
+      geoSelectedSummary.classList.add('collapsed');
+      if (geoSelectedReadMore) {
+        geoSelectedReadMore.textContent = 'Read Description';
+        if (!saved.dataset.summary || saved.dataset.summary.length < 120) {
+          geoSelectedReadMore.style.display = 'none';
+          geoSelectedSummary.classList.remove('collapsed');
+        } else {
+          geoSelectedReadMore.style.display = 'block';
+        }
+      }
+
+      // Hide analyze button and show results if already analyzed
+      const geoAnalyzeBtn = document.getElementById('geo-analyze-btn');
+      const geoAnalysisLoading = document.getElementById('geo-analysis-loading');
+      const geoAnalysisResults = document.getElementById('geo-analysis-results');
+      const geoStateSelect = document.getElementById('geo-state-select');
+      const geoStateDesc = document.getElementById('geo-state-desc');
+      const geoStateDetailsPanel = document.getElementById('geo-state-details-panel');
+      const geoStateDetailsBtn = document.getElementById('geo-state-details-btn');
+
+      if (saved.dataset.analysisStates && saved.dataset.analysisStates.length > 0) {
+        if (geoAnalyzeBtn) geoAnalyzeBtn.classList.add('hidden');
+        if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+        if (geoAnalysisResults) geoAnalysisResults.classList.remove('hidden');
+
+        // Populate dropdown
+        if (geoStateSelect) {
+          geoStateSelect.innerHTML = '';
+          saved.dataset.analysisStates.forEach((state, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = state.name;
+            geoStateSelect.appendChild(option);
+          });
+
+          const indexToSelect = Math.min(saved.selectedStateIndex || 0, saved.dataset.analysisStates.length - 1);
+          geoStateSelect.value = indexToSelect;
+
+          const state = saved.dataset.analysisStates[indexToSelect];
+          if (state) {
+            if (geoStateDesc) geoStateDesc.textContent = state.description || '';
+            applyMetabolicState(state);
+            renderStateDetails(state);
+          }
+        }
+
+        // Restore details panel visibility
+        if (saved.showDetails && geoStateDetailsPanel && geoStateDetailsBtn) {
+          geoStateDetailsPanel.classList.remove('hidden');
+          geoStateDetailsBtn.textContent = 'Hide Details';
+        }
+      } else {
+        if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
+        if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
+        if (geoAnalysisResults) geoAnalysisResults.classList.add('hidden');
+        resetStateDetails();
+      }
+
+      geoSelectedPanel.classList.remove('hidden');
+    }
+  } catch (e) {
+    console.error('[GEO] Failed to restore saved state from localStorage:', e);
+  }
+}
+
+/**
  * Sets the active atlas GEO dataset and updates the display in the left panel.
  */
 function selectGeoDataset(dataset) {
@@ -1901,6 +2044,7 @@ function selectGeoDataset(dataset) {
 
   geoSelectedPanel.classList.remove('hidden');
   console.log(`[GEO] Selected active dataset: ${dataset.accession}`);
+  saveGeoStateToLocalStorage();
 }
 
 /**
@@ -1923,6 +2067,7 @@ function deselectGeoDataset() {
   resetStateDetails();
 
   console.log('[GEO] Deselected active dataset.');
+  saveGeoStateToLocalStorage();
 }
 
 /**
@@ -2084,6 +2229,7 @@ async function performGeoAnalysis() {
 
     if (geoAnalysisResults) geoAnalysisResults.classList.remove('hidden');
     console.log('[GEO] Analysis completed successfully.');
+    saveGeoStateToLocalStorage();
 
   } catch (err) {
     console.error('[GEO Analysis Error] ', err);
