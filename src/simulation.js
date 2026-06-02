@@ -176,6 +176,7 @@ export class Simulation {
             id: id,
             name: node.name,
             concentration: this.initialConcentrations[id] || 1.0,
+            targetConcentration: this.initialConcentrations[id] || 1.0,
             isBuffered: isBuffered,
             type: type
           };
@@ -210,6 +211,7 @@ export class Simulation {
             id: id,
             name: id,
             concentration: this.initialConcentrations[id] || 1.0,
+            targetConcentration: this.initialConcentrations[id] || 1.0,
             isBuffered: this.bufferedIds.has(id),
             type: 'metabolite'
           };
@@ -260,6 +262,7 @@ export class Simulation {
     this.tickCounter = 0;
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] || 1.0;
+      metab.targetConcentration = this.initialConcentrations[id] || 1.0;
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
@@ -629,12 +632,16 @@ export class Simulation {
 
     // 3. Integrate concentrations (Euler step)
     for (const [id, metab] of Object.entries(this.metabolites)) {
-      if (metab.isBuffered) continue;
+      if (metab.isBuffered) {
+        metab.targetConcentration = metab.concentration;
+        continue;
+      }
 
       if (id.endsWith('_e')) {
         // Extracellular pool decays or grows based on net transport
         let nextConc = metab.concentration + (influxes[id] - outfluxes[id]) * dt;
         metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
+        metab.targetConcentration = metab.concentration;
       } else {
         // Intracellular pool adapts to local flux turnover, stabilizing around dynamic kinetic target
         const J_in = influxes[id];
@@ -665,6 +672,7 @@ export class Simulation {
         const baseline = this.initialConcentrations[id] || 1.0;
         let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
         target = Math.max(0.1, Math.min(target, 150.0));
+        metab.targetConcentration = target;
 
         let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
         let nextConc = metab.concentration + dC * dt;

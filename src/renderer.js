@@ -1139,11 +1139,34 @@ export class PixiRenderer {
         alpha = 0.55; // cofactors are transparent to avoid layout clutter
       }
 
-      // Draw highlighted ring if selected
+      // Check for deviation from the dynamic kinetic target (targetConcentration)
+      const target = simMetab.targetConcentration || simMetab.concentration;
+      const ratio = simMetab.concentration / target;
+      let isDeviating = false;
+      let deviationColor = 0;
+
+      if (ratio > 1.15) {
+        // Accumulation: Orange warning
+        color = 0xf97316; // orange
+        glowColor = 0xea580c;
+        isDeviating = true;
+        deviationColor = 0xf97316;
+      } else if (ratio < 0.85) {
+        // Deficit: Cyan/Light blue warning
+        color = 0x06b6d4; // cyan
+        glowColor = 0x0891b2;
+        isDeviating = true;
+        deviationColor = 0x06b6d4;
+      }
+
+      // Draw highlighted ring if selected, hovered, or dynamically deviating
       if (this.selectedNodeId === node.id) {
         mg.circle(node.x, node.y, radius + 4).stroke({ width: 3.5, color: 0x818cf8, alpha: 1.0 });
       } else if (this.hoveredNode && this.hoveredNode.id === node.id) {
         mg.circle(node.x, node.y, radius + 3).stroke({ width: 2.0, color: 0xffffff, alpha: 0.8 });
+      } else if (isDeviating) {
+        const pulseAlpha = 0.35 + Math.sin(Date.now() / 180) * 0.15;
+        mg.circle(node.x, node.y, radius + 4.5).stroke({ width: 2.0, color: deviationColor, alpha: pulseAlpha });
       }
 
       // Draw metabolite node fill
