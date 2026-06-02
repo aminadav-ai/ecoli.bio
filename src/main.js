@@ -901,6 +901,23 @@ function updateUIPanelValues() {
 
   // Draw growth rate trend line
   drawGrowthSparkline();
+
+  // Update scenario expected concentrations list if displayed
+  document.querySelectorAll('.geo-details-item.metabolite-item').forEach(el => {
+    const id = el.getAttribute('data-bigg-id');
+    const simMetab = simulation.metabolites[id];
+    if (simMetab) {
+      const valEl = el.querySelector('.geo-details-value');
+      if (valEl) {
+        let expectedConc = el.getAttribute('data-expected-conc');
+        if (!expectedConc) {
+          expectedConc = valEl.textContent.replace(' mM', '').trim();
+          el.setAttribute('data-expected-conc', expectedConc);
+        }
+        valEl.innerHTML = `<span style="color: #94a3b8; font-size: 0.85em;">Cur:</span> <span style="font-weight: 600; color: #f8fafc;">${simMetab.concentration.toFixed(2)}</span> <span style="color: #94a3b8; font-size: 0.85em;">/ Exp: ${expectedConc} mM</span>`;
+      }
+    }
+  });
 }
 
 /**
@@ -1989,13 +2006,10 @@ async function performGeoAnalysis() {
 function applyMetabolicState(state) {
   if (!simulation || !state || !state.data) return;
 
-  // 1. Apply metabolite concentrations
+  // 1. Apply metabolite concentrations (Skipped: concentrations evolve dynamically based on reaction parameters)
   if (state.data.metabolites) {
     for (const [id, conc] of Object.entries(state.data.metabolites)) {
-      if (simulation.metabolites[id]) {
-        simulation.metabolites[id].concentration = Number(conc);
-        console.log(`[GEO AI] Set concentration of ${id} to ${conc} mM`);
-      }
+      console.log(`[GEO AI] Expected scenario concentration of ${id} is ${conc} mM (calculating dynamically)`);
     }
   }
 
