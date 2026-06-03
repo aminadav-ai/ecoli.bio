@@ -485,6 +485,16 @@ body, html {
   width: 100%;
 }
 
+.slider-with-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-with-btn-row input[type="range"] {
+  flex: 1;
+}
+
 .code-font {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
