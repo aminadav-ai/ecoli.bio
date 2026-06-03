@@ -143,6 +143,17 @@ let animationFrameCount = 0;
 let selectedMetaboliteId = null;
 let selectedReactionId = null;
 
+// Pinned Reactions state
+let pinnedReactions = [];
+try {
+  const saved = localStorage.getItem('pinnedReactions');
+  if (saved) {
+    pinnedReactions = JSON.parse(saved);
+  }
+} catch (e) {
+  console.error('[App] Failed to load pinnedReactions: ', e);
+}
+
 // Concentration chart variables
 const maxChartPoints = 120;
 let chartHistory = [];
@@ -286,6 +297,7 @@ async function bootstrap() {
 
   // 6. Populate Overview list initially
   populateOverviewList();
+  renderPinnedReactions();
 
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
@@ -600,6 +612,28 @@ function setupUIListeners() {
     });
   }
 
+  // Pin Reaction button click
+  const pinBtn = document.getElementById('pin-rxn-btn');
+  if (pinBtn) {
+    pinBtn.addEventListener('click', () => {
+      if (!selectedReactionId) return;
+      
+      const idx = pinnedReactions.indexOf(selectedReactionId);
+      if (idx > -1) {
+        pinnedReactions.splice(idx, 1);
+        pinBtn.classList.remove('pinned');
+        pinBtn.title = 'Pin reaction to sidebar';
+      } else {
+        pinnedReactions.push(selectedReactionId);
+        pinBtn.classList.add('pinned');
+        pinBtn.title = 'Unpin reaction';
+      }
+      
+      localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+      renderPinnedReactions();
+    });
+  }
+
   // Reaction Parameter Tweaks
   const vmaxSlider = document.getElementById('vmax-slider');
   const vmaxVal = document.getElementById('vmax-val');
@@ -608,6 +642,12 @@ function setupUIListeners() {
     vmaxVal.textContent = val.toFixed(1);
     if (selectedReactionId) {
       simulation.updateParameter(selectedReactionId, 'vMax', val);
+      
+      // Update pinned reaction slider if it exists
+      const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${selectedReactionId}"]`);
+      const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
+      if (pinnedSlider) pinnedSlider.value = val;
+      if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
     }
   });
 
@@ -888,6 +928,18 @@ function handleReactionSelect(rxn) {
   document.getElementById('rxn-name').textContent = rxn.name;
   document.getElementById('rxn-bigg-id').textContent = rxn.biggId;
 
+  // Update pin button state
+  const pinBtn = document.getElementById('pin-rxn-btn');
+  if (pinBtn) {
+    if (pinnedReactions.includes(rxn.biggId)) {
+      pinBtn.classList.add('pinned');
+      pinBtn.title = 'Unpin reaction';
+    } else {
+      pinBtn.classList.remove('pinned');
+      pinBtn.title = 'Pin reaction to sidebar';
+    }
+  }
+
   // Fill equation and set sliders
   const simRxn = simulation.reactions[rxn.biggId];
   if (simRxn) {
@@ -1018,9 +1070,132 @@ function updateOverviewListHighlight() {
 }
 
 /**
+ * Renders the list of pinned reactions in the left sidebar.
+ */
+function renderPinnedReactions() {
+  const container = document.getElementById('pinned-reactions-container');
+  if (!container) return;
+  
+  if (pinnedReactions.length === 0) {
+    container.innerHTML = `
+      <div class="pinned-placeholder">
+        No pinned reactions. Click the 📌 icon in the reaction inspector to pin.
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = '';
+  
+  pinnedReactions.forEach(rxnId => {
+    const rxn = simulation.reactions[rxnId];
+    if (!rxn) return;
+    
+    const row = document.createElement('div');
+    row.className = 'pinned-row';
+    row.id = `pinned-row-${rxnId}`;
+    
+    const vmaxVal = rxn.vMax !== undefined ? rxn.vMax : 15.0;
+    const fluxVal = rxn.flux !== undefined ? rxn.flux.toFixed(2) : '0.00';
+    
+    row.innerHTML = `
+      <div class="pinned-row-header">
+        <div class="pinned-row-title-container">
+          <span class="pinned-rxn-name" title="${rxn.name}">${rxn.name}</span>
+          <span class="pinned-rxn-id code-font">${rxnId}</span>
+        </div>
+        <div class="pinned-row-actions">
+          <button class="btn-focus-pinned" data-id="${rxnId}" title="Focus on map">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+          <button class="btn-unpin-pinned" data-id="${rxnId}" title="Unpin reaction">✕</button>
+        </div>
+      </div>
+      <div class="pinned-row-body">
+        <div class="pinned-flux-container">
+          <span class="pinned-flux-label">Flux:</span>
+          <span class="pinned-flux-val code-font" id="pinned-flux-${rxnId}">${fluxVal} mM/s</span>
+        </div>
+        <div class="pinned-slider-container">
+          <span class="pinned-slider-label">
+            <span>Vmax:</span>
+            <span id="pinned-vmax-val-${rxnId}" class="code-font">${vmaxVal.toFixed(1)}</span>
+          </span>
+          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="100.0" step="0.5" value="${vmaxVal}" />
+        </div>
+      </div>
+    `;
+    
+    // Setup focus button event
+    row.querySelector('.btn-focus-pinned').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = rxnId;
+      const rBadge = renderer.rxnBadges[id];
+      if (rBadge) {
+        const fakeRxn = { biggId: id, name: rxn.name };
+        handleReactionSelect(fakeRxn);
+        if (renderer.focusOnCoordinates) {
+          renderer.focusOnCoordinates(rBadge.x, rBadge.y);
+        }
+      }
+    });
+    
+    // Setup unpin button event
+    row.querySelector('.btn-unpin-pinned').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = rxnId;
+      const idx = pinnedReactions.indexOf(id);
+      if (idx > -1) {
+        pinnedReactions.splice(idx, 1);
+        localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+        renderPinnedReactions();
+        
+        if (selectedReactionId === id) {
+          const mainPinBtn = document.getElementById('pin-rxn-btn');
+          if (mainPinBtn) {
+            mainPinBtn.classList.remove('pinned');
+            mainPinBtn.title = 'Pin reaction to sidebar';
+          }
+        }
+      }
+    });
+    
+    // Setup Vmax slider event
+    const slider = row.querySelector('.pinned-vmax-slider');
+    const label = row.querySelector(`#pinned-vmax-val-${rxnId}`);
+    slider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      label.textContent = val.toFixed(1);
+      simulation.updateParameter(rxnId, 'vMax', val);
+      
+      if (selectedReactionId === rxnId) {
+        const vmaxSlider = document.getElementById('vmax-slider');
+        const vmaxValText = document.getElementById('vmax-val');
+        if (vmaxSlider) vmaxSlider.value = val;
+        if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
+      }
+    });
+    
+    container.appendChild(row);
+  });
+}
+
+/**
  * Per-frame update of UI texts, progress bars, charts, and inspector dials.
  */
 function updateUIPanelValues() {
+  // Update live fluxes of pinned reactions
+  pinnedReactions.forEach(rxnId => {
+    const rxn = simulation.reactions[rxnId];
+    const fluxEl = document.getElementById(`pinned-flux-${rxnId}`);
+    if (rxn && fluxEl) {
+      fluxEl.textContent = `${rxn.flux.toFixed(2)} mM/s`;
+    }
+  });
+
   // Update left sidebar values and progress bars
   Object.values(simulation.metabolites).forEach(m => {
     if (m.isBuffered) return;

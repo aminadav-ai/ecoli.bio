@@ -230,6 +230,15 @@
           </div>
         </section>
 
+        <section class="pinned-reactions-section">
+          <h2>Pinned Reactions</h2>
+          <div id="pinned-reactions-container" class="pinned-reactions-list">
+            <div class="pinned-placeholder">
+              No pinned reactions. Click the 📌 icon in the reaction inspector to pin.
+            </div>
+          </div>
+        </section>
+
         <section class="metabolite-list-section">
           <h2>Metabolite Overview</h2>
           <div id="metabolite-rows-container" class="metabolite-list">
@@ -335,7 +344,15 @@
         <!-- Reaction Inspector State -->
         <div id="inspector-reaction" class="inspector-content hidden">
           <div class="inspector-header">
-            <span class="category-badge badge-reaction">Reaction</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="category-badge badge-reaction">Reaction</span>
+              <button id="pin-rxn-btn" class="pin-btn" title="Pin reaction to sidebar">
+                <svg class="pin-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="17" x2="12" y2="22"></line>
+                  <path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.47A2 2 0 0 1 15 9.3V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4.3a2 2 0 0 1-.78 1.23l-2.78 3.5a2 2 0 0 0-.44 1.24z"></path>
+                </svg>
+              </button>
+            </div>
             <button class="close-inspector-btn">✕</button>
           </div>
           <h2 id="rxn-name" class="inspector-title">Phosphofructokinase</h2>
