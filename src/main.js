@@ -489,6 +489,64 @@ function setupUIListeners() {
     }
   });
 
+  // Copy to clipboard helper
+  function setupCopyButton(btnId, spanId) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    
+    const originalHTML = btn.innerHTML;
+    const checkmarkHTML = `
+      <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    
+    btn.addEventListener('click', async () => {
+      const textToCopy = document.getElementById(spanId).textContent;
+      if (!textToCopy) return;
+      
+      let success = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          success = true;
+        } catch (err) {
+          console.error('Failed to copy via navigator.clipboard: ', err);
+        }
+      }
+      
+      if (!success) {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = textToCopy;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (successful) {
+            success = true;
+          }
+        } catch (err) {
+          console.error('Fallback copy failed: ', err);
+        }
+      }
+      
+      if (success) {
+        btn.classList.add('copied');
+        btn.innerHTML = checkmarkHTML;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = originalHTML;
+        }, 1500);
+      }
+    });
+  }
+
+  setupCopyButton('copy-metab-bigg-btn', 'metab-bigg-id');
+  setupCopyButton('copy-rxn-bigg-btn', 'rxn-bigg-id');
+
   // Reaction Parameter Tweaks
   const vmaxSlider = document.getElementById('vmax-slider');
   const vmaxVal = document.getElementById('vmax-val');

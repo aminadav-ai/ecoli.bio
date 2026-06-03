@@ -738,6 +738,58 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 600;
 }
 
+.meta-value-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-id-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.copy-id-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  transform: scale(1.08);
+}
+
+.copy-id-btn:active {
+  transform: scale(0.92);
+}
+
+.copy-id-btn.copied {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.copy-id-btn.copied svg {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Rolling Line Chart */
 .chart-container {
   display: flex;
