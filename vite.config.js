@@ -635,6 +635,7 @@ Ensure your response is valid JSON matching the schema requested. The metabolite
     preview: {
       port: parseInt(process.env.PORT || '8080', 10),
       host: '0.0.0.0',
+      allowedHosts: true,
       proxy: {
         '/ws': {
           target: 'ws://127.0.0.1:8000',
