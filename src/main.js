@@ -2772,11 +2772,10 @@ function resetStateDetails() {
  */
 function connectWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.hostname || 'localhost';
-  const port = 8000;
+  const host = window.location.host;
   
-  console.log(`[WebSocket] Connecting to ${protocol}//${host}:${port}...`);
-  socket = new WebSocket(`${protocol}//${host}:${port}`);
+  console.log(`[WebSocket] Connecting to ${protocol}//${host}/ws...`);
+  socket = new WebSocket(`${protocol}//${host}/ws`);
   socket.binaryType = 'arraybuffer';
   
   socket.onopen = () => {

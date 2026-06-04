@@ -1,0 +1,4 @@
+cobra==0.31.1
+websockets==16.0
+python-libsbml==5.21.1
+swiglpk==5.0.13

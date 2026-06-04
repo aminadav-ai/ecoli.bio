@@ -623,6 +623,26 @@ Ensure your response is valid JSON matching the schema requested. The metabolite
     build: {
       chunkSizeWarningLimit: 1000
     },
+    server: {
+      proxy: {
+        '/ws': {
+          target: 'ws://127.0.0.1:8000',
+          ws: true,
+          changeOrigin: true
+        }
+      }
+    },
+    preview: {
+      port: parseInt(process.env.PORT || '8080', 10),
+      host: '0.0.0.0',
+      proxy: {
+        '/ws': {
+          target: 'ws://127.0.0.1:8000',
+          ws: true,
+          changeOrigin: true
+        }
+      }
+    },
     plugins: [
       {
         name: 'ncbi-api-middleware',
