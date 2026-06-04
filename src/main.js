@@ -139,6 +139,10 @@ let isPaused = false;
 let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
+// WebSocket state
+let socket = null;
+let isConnected = false;
+
 // Inspection Selection State
 let selectedMetaboliteId = null;
 let selectedReactionId = null;
@@ -250,11 +254,11 @@ async function bootstrap() {
   // 1. Fetch official Escher JSON map local asset
   let mapData;
   try {
-    const res = await fetch('/escher_core.json');
+    const res = await fetch('/iJO1366.Central metabolism.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     mapData = await res.json();
   } catch (error) {
-    console.error('[App] Failed to load escher_core.json local asset:', error);
+    console.error('[App] Failed to load iJO1366.Central metabolism.json local asset:', error);
     alert('Failed to load local metabolic map asset.');
     return;
   }
@@ -301,6 +305,9 @@ async function bootstrap() {
 
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
+
+  // 6. Connect to WebSocket simulation server
+  connectWebSocket();
 
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
@@ -372,6 +379,9 @@ function setupUIListeners() {
     isPaused = !isPaused;
     playPauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
+    if (isConnected && socket) {
+      socket.send(JSON.stringify({ type: 'pause', value: isPaused }));
+    }
   });
 
   // Reset button
@@ -379,6 +389,9 @@ function setupUIListeners() {
     simulation.reset();
     chartHistory = [];
     console.log('[App] Simulation state reset.');
+    if (isConnected && socket) {
+      socket.send(JSON.stringify({ type: 'reset' }));
+    }
   });
 
   // Speed slider
@@ -387,6 +400,9 @@ function setupUIListeners() {
   speedSlider.addEventListener('input', (e) => {
     speedMultiplier = parseFloat(e.target.value);
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
+    if (isConnected && socket) {
+      socket.send(JSON.stringify({ type: 'speed', value: speedMultiplier }));
+    }
   });
 
   // Label font size slider
@@ -437,42 +453,8 @@ function setupUIListeners() {
     });
   }
 
-  // Strain selector
-  const strainSelect = document.getElementById('strain-select');
-  const strainDesc = document.getElementById('strain-description');
-  const metricGrowth = document.getElementById('metric-growth');
-  const metricAtp = document.getElementById('metric-atp');
-
-  strainSelect.addEventListener('change', (e) => {
-    const strainId = e.target.value;
-    simulation.selectStrain(strainId);
-    chartHistory = [];
-    initializeGrowthHistory();
-
-    // Update strain metadata texts and placeholder yields
-    const metadata = simulation.strains[strainId];
-    if (metadata) {
-      strainDesc.textContent = metadata.description;
-      
-      // Predefined illustrative metrics reflecting model behaviors
-      if (strainId === 'iJO1366') {
-        metricGrowth.textContent = '0.41 hr⁻¹';
-        metricAtp.textContent = '15.6 mM/s';
-      } else if (strainId === 'iML1515') {
-        metricGrowth.textContent = '0.48 hr⁻¹';
-        metricAtp.textContent = '18.2 mM/s';
-      } else if (strainId === 'iAF1260') {
-        metricGrowth.textContent = '0.28 hr⁻¹';
-        metricAtp.textContent = '11.0 mM/s';
-      } else if (strainId === 'iJR904') {
-        metricGrowth.textContent = '0.22 hr⁻¹';
-        metricAtp.textContent = '8.9 mM/s';
-      } else {
-        metricGrowth.textContent = '0.32 hr⁻¹';
-        metricAtp.textContent = '12.5 mM/s';
-      }
-    }
-  });
+  // Strain selector (Removed from UI, keeping placeholder metrics variables if needed)
+  console.log('[App] Active model is fixed to iJO1366 server simulation.');
 
   // Close inspector panels
   document.querySelectorAll('.close-inspector-btn').forEach(btn => {
@@ -489,6 +471,9 @@ function setupUIListeners() {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
         console.log(`[App] Spiked ${selectedMetaboliteId} by +${amount} mM`);
+        if (isConnected && socket) {
+          socket.send(JSON.stringify({ type: 'inject', metab_id: selectedMetaboliteId, amount: amount }));
+        }
       }
     });
   });
@@ -498,6 +483,9 @@ function setupUIListeners() {
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
       simulation.metabolites[selectedMetaboliteId].concentration = 0.1;
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
+      if (isConnected && socket) {
+        socket.send(JSON.stringify({ type: 'deplete', metab_id: selectedMetaboliteId }));
+      }
     }
   });
 
@@ -648,6 +636,10 @@ function setupUIListeners() {
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
       if (pinnedSlider) pinnedSlider.value = val;
       if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
+      
+      if (isConnected && socket) {
+        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'vMax', value: val }));
+      }
     }
   });
 
@@ -658,6 +650,10 @@ function setupUIListeners() {
     kmVal.textContent = val.toFixed(2);
     if (selectedReactionId) {
       simulation.updateParameter(selectedReactionId, 'km', val);
+      
+      if (isConnected && socket) {
+        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'km', value: val }));
+      }
     }
   });
 
@@ -1176,6 +1172,10 @@ function renderPinnedReactions() {
         const vmaxValText = document.getElementById('vmax-val');
         if (vmaxSlider) vmaxSlider.value = val;
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
+      }
+      
+      if (isConnected && socket) {
+        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: rxnId, param: 'vMax', value: val }));
       }
     });
     
@@ -2541,22 +2541,30 @@ function applyMetabolicState(state) {
 
   // 2. Apply reaction parameters (vMax, km)
   if (state.data.reactions) {
+    const updates = [];
     for (const [id, params] of Object.entries(state.data.reactions)) {
       if (simulation.reactions[id]) {
         if (typeof params === 'object') {
           if (params.vMax !== undefined) {
             simulation.updateParameter(id, 'vMax', Number(params.vMax));
+            updates.push({ rxn_id: id, param: 'vMax', value: Number(params.vMax) });
             console.log(`[GEO AI] Set vMax of ${id} to ${params.vMax}`);
           }
           if (params.km !== undefined) {
             simulation.updateParameter(id, 'km', Number(params.km));
+            updates.push({ rxn_id: id, param: 'km', value: Number(params.km) });
             console.log(`[GEO AI] Set km of ${id} to ${params.km}`);
           }
         } else {
           simulation.updateParameter(id, 'vMax', Number(params));
+          updates.push({ rxn_id: id, param: 'vMax', value: Number(params) });
           console.log(`[GEO AI] Set vMax of ${id} to ${params}`);
         }
       }
+    }
+    
+    if (isConnected && socket) {
+      socket.send(JSON.stringify({ type: 'bulk_update_parameters', updates }));
     }
   }
 
@@ -2664,4 +2672,124 @@ function resetStateDetails() {
     geoAnalysisUsage.textContent = '';
     geoAnalysisUsage.classList.add('hidden');
   }
+}
+
+/**
+ * Connects to the server-side simulation WebSocket server.
+ */
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.hostname || 'localhost';
+  const port = 8000;
+  
+  console.log(`[WebSocket] Connecting to ${protocol}//${host}:${port}...`);
+  socket = new WebSocket(`${protocol}//${host}:${port}`);
+  socket.binaryType = 'arraybuffer';
+  
+  socket.onopen = () => {
+    isConnected = true;
+    console.log('[WebSocket] Connected to simulation server.');
+    updateConnectionStatusUI(true);
+    syncParametersToServer();
+  };
+  
+  socket.onclose = () => {
+    isConnected = false;
+    console.log('[WebSocket] Disconnected. Reconnecting in 2 seconds...');
+    updateConnectionStatusUI(false);
+    setTimeout(connectWebSocket, 2000);
+  };
+  
+  socket.onerror = (err) => {
+    console.error('[WebSocket] Error:', err);
+  };
+  
+  socket.onmessage = async (event) => {
+    try {
+      if (event.data instanceof ArrayBuffer) {
+        // Decompress Gzip binary payload
+        const ds = new DecompressionStream('gzip');
+        const writer = ds.writable.getWriter();
+        writer.write(event.data);
+        writer.close();
+        
+        const response = new Response(ds.readable);
+        const text = await response.text();
+        const state = JSON.parse(text);
+        
+        handleServerState(state);
+      }
+    } catch (error) {
+      console.error('[WebSocket] Error parsing message:', error);
+    }
+  };
+}
+
+/**
+ * Updates the top-right connection status badge.
+ */
+function updateConnectionStatusUI(connected) {
+  const indicator = document.querySelector('.status-indicator');
+  const statusText = document.querySelector('.status-text');
+  if (indicator && statusText) {
+    if (connected) {
+      indicator.style.backgroundColor = '#34d399';
+      indicator.style.boxShadow = '0 0 8px #34d399';
+      indicator.classList.add('connected');
+      statusText.textContent = 'iJO1366 Server';
+      statusText.style.color = '#34d399';
+    } else {
+      indicator.style.backgroundColor = '#ef4444';
+      indicator.style.boxShadow = '0 0 8px #ef4444';
+      indicator.classList.remove('connected');
+      statusText.textContent = 'Connecting...';
+      statusText.style.color = '#ef4444';
+    }
+  }
+}
+
+/**
+ * Updates local Simulation variables using simulation state received from the server.
+ */
+function handleServerState(state) {
+  if (!simulation) return;
+  
+  // 1. Update metabolite concentrations
+  for (const [m_id, data] of Object.entries(state.metabolites)) {
+    if (simulation.metabolites[m_id]) {
+      simulation.metabolites[m_id].concentration = data.concentration;
+    }
+  }
+  
+  // 2. Update reaction fluxes
+  for (const [r_id, data] of Object.entries(state.reactions)) {
+    if (simulation.reactions[r_id]) {
+      simulation.reactions[r_id].flux = data.flux;
+    }
+  }
+  
+  // 3. Fallback compatibility mapping for growth rate and ATP yield UI widgets
+  if (simulation.reactions['BIOMASS_Ecoli_core_w_GAM']) {
+    simulation.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = state.biomass_flux;
+  }
+  if (simulation.reactions['ATPS4r']) {
+    simulation.reactions['ATPS4r'].flux = state.reactions['ATPS4rpp']?.flux || 0.0;
+  }
+}
+
+/**
+ * Synchronizes client-side settings to the server upon connection.
+ */
+function syncParametersToServer() {
+  if (!isConnected || !socket || !simulation) return;
+  
+  const updates = [];
+  for (const rxn of Object.values(simulation.reactions)) {
+    updates.push({ rxn_id: rxn.id, param: 'vMax', value: rxn.vMax });
+    updates.push({ rxn_id: rxn.id, param: 'km', value: rxn.km });
+  }
+  
+  socket.send(JSON.stringify({ type: 'bulk_update_parameters', updates }));
+  socket.send(JSON.stringify({ type: 'pause', value: isPaused }));
+  socket.send(JSON.stringify({ type: 'speed', value: speedMultiplier }));
 }

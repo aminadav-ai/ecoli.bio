@@ -152,13 +152,6 @@ export class Simulation {
 
     this.initialize();
 
-    // Calculate normal reference fluxes under default conditions
-    this.solveFBA();
-    this.normalFluxes = {};
-    for (const id of Object.keys(this.metabolites)) {
-      const info = this.getMetaboliteInfo(id);
-      this.normalFluxes[id] = info ? Math.max(1.5, info.influx) : 1.0;
-    }
   }
 
   /**
@@ -261,13 +254,20 @@ export class Simulation {
         flux: 0.0
       };
     }
+    
+    // Ensure placeholder reactions exist for UI metrics widgets compatibility
+    if (!this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
+      this.reactions['BIOMASS_Ecoli_core_w_GAM'] = { id: 'BIOMASS_Ecoli_core_w_GAM', flux: 0.0 };
+    }
+    if (!this.reactions['ATPS4r']) {
+      this.reactions['ATPS4r'] = { id: 'ATPS4r', flux: 0.0 };
+    }
   }
 
   /**
    * Reset simulation concentrations and fluxes to initial steady state.
    */
   reset() {
-    this.lastBasis = null;
     this.tickCounter = 0;
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
@@ -275,14 +275,8 @@ export class Simulation {
     }
     for (const rxn of Object.values(this.reactions)) {
       rxn.flux = 0.0;
-    }
-
-    // Recalculate normal reference fluxes
-    this.solveFBA();
-    this.normalFluxes = {};
-    for (const id of Object.keys(this.metabolites)) {
-      const info = this.getMetaboliteInfo(id);
-      this.normalFluxes[id] = info ? Math.max(1.5, info.influx) : 1.0;
+      rxn.vMax = rxn.defaultVmax;
+      rxn.km = rxn.defaultKm;
     }
   }
 
@@ -292,7 +286,6 @@ export class Simulation {
   inject(metabId, amount) {
     if (this.metabolites[metabId]) {
       this.metabolites[metabId].concentration += amount;
-      // Clamp to prevent overflow
       if (this.metabolites[metabId].concentration > 150.0) {
         this.metabolites[metabId].concentration = 150.0;
       }
@@ -313,396 +306,11 @@ export class Simulation {
   }
 
   /**
-   * Applies the strain parameter scaling factors.
-   */
-  selectStrain(strainId) {
-    const strain = this.strains[strainId];
-    if (strain) {
-      this.activeModel = strainId;
-      this.fluxMultiplier = strain.fluxMultiplier;
-      this.kmMultiplier = strain.kmMultiplier;
-      this.reset();
-      console.log(`[Simulation] Switched to strain: ${strain.name}`);
-    }
-  }
-
-  /**
-   * Solves a Linear Programming problem of the form:
-   * Maximize c^T x subject to A x <= b, x >= 0
-   * using the standard Primal Simplex algorithm.
-   */
-  solveLP(c, A, b, lastBasis = null) {
-    const M = A.length;
-    const N = A[0].length;
-
-    // Create tableau of size (M+1) x (N+M+1)
-    const T = [];
-    for (let i = 0; i <= M; i++) {
-      T.push(new Float64Array(N + M + 1));
-    }
-
-    // Fill constraints matrix and RHS
-    for (let i = 0; i < M; i++) {
-      for (let j = 0; j < N; j++) {
-        T[i][j] = A[i][j];
-      }
-      T[i][N + i] = 1.0; // Slack variable
-      T[i][N + M] = b[i];
-    }
-
-    // Fill objective row (c coefficients are negated in standard form)
-    for (let j = 0; j < N; j++) {
-      T[M][j] = -c[j];
-    }
-    T[M][N + M] = 0.0;
-
-    // Track basic variables corresponding to each constraint row
-    const basis = new Int32Array(M);
-    for (let i = 0; i < M; i++) {
-      basis[i] = N + i;
-    }
-
-    // Attempt Warm Start if lastBasis is provided and matches size
-    let warmStartSuccess = false;
-    if (lastBasis && lastBasis.length === M) {
-      let feasible = true;
-      for (let i = 0; i < M; i++) {
-        const q = lastBasis[i];
-        if (q !== N + i) {
-          // Perform pivot on row i, column q
-          if (T[i][q] > 1e-5) {
-            const pivotVal = T[i][q];
-            for (let j = 0; j <= N + M; j++) {
-              T[i][j] /= pivotVal;
-            }
-            for (let r = 0; r <= M; r++) {
-              if (r !== i) {
-                const factor = T[r][q];
-                for (let j = 0; j <= N + M; j++) {
-                  T[r][j] -= factor * T[i][j];
-                }
-              }
-            }
-            basis[i] = q;
-          } else {
-            feasible = false;
-            break;
-          }
-        }
-      }
-
-      // Check if RHS remains primal feasible
-      if (feasible) {
-        for (let i = 0; i < M; i++) {
-          if (T[i][N + M] < -1e-5) {
-            feasible = false;
-            break;
-          }
-        }
-      }
-
-      if (feasible) {
-        warmStartSuccess = true;
-      } else {
-        // Fallback: Revert tableau to initial state
-        for (let i = 0; i < M; i++) {
-          basis[i] = N + i;
-        }
-        for (let i = 0; i <= M; i++) {
-          T[i].fill(0.0);
-        }
-        for (let i = 0; i < M; i++) {
-          for (let j = 0; j < N; j++) {
-            T[i][j] = A[i][j];
-          }
-          T[i][N + i] = 1.0;
-          T[i][N + M] = b[i];
-        }
-        for (let j = 0; j < N; j++) {
-          T[M][j] = -c[j];
-        }
-        T[M][N + M] = 0.0;
-      }
-    }
-
-    const maxIterations = 1000;
-    for (let iter = 0; iter < maxIterations; iter++) {
-      // 1. Find entering variable (Bland's rule: first column with a negative coefficient)
-      let q = -1;
-      for (let j = 0; j < N + M; j++) {
-        if (T[M][j] < -1e-5) {
-          q = j;
-          break;
-        }
-      }
-      if (q === -1) {
-        break; // Optimal found
-      }
-
-      // 2. Find leaving variable (Minimum ratio test)
-      let p = -1;
-      let minRatio = Infinity;
-      for (let i = 0; i < M; i++) {
-        if (T[i][q] > 1e-5) {
-          const ratio = T[i][N + M] / T[i][q];
-          if (ratio < minRatio - 1e-5) {
-            minRatio = ratio;
-            p = i;
-          } else if (Math.abs(ratio - minRatio) < 1e-5) {
-            if (p === -1 || basis[i] < basis[p]) {
-              p = i;
-            }
-          }
-        }
-      }
-
-      if (p === -1) {
-        return null; // Unbounded solution (not possible with standard vMax boundaries)
-      }
-
-      // 3. Pivot operation
-      const pivotVal = T[p][q];
-      for (let j = 0; j <= N + M; j++) {
-        T[p][j] /= pivotVal;
-      }
-
-      for (let i = 0; i <= M; i++) {
-        if (i !== p) {
-          const factor = T[i][q];
-          for (let j = 0; j <= N + M; j++) {
-            T[i][j] -= factor * T[p][j];
-          }
-        }
-      }
-
-      basis[p] = q;
-    }
-
-    // Extract values
-    const x = new Float64Array(N);
-    for (let i = 0; i < M; i++) {
-      if (basis[i] < N) {
-        x[basis[i]] = T[i][N + M];
-      }
-    }
-
-    return {
-      objVal: T[M][N + M],
-      x: x,
-      basis: basis
-    };
-  }
-
-  /**
-   * Formulates and solves the Flux Balance Analysis (FBA) problem.
-   * Maximizes biomass production rate under current substrate limitations.
-   */
-  /**
-   * Formulates and solves the Flux Balance Analysis (FBA) problem.
-   * Maximizes biomass production rate under current substrate limitations.
-   */
-  solveFBA() {
-    const internalMetabs = Object.keys(this.metabolites).filter(id => id.endsWith('_c'));
-    const rxnIds = Object.keys(this.reactions);
-
-    // 1. Build variables mapping. Split reversible reactions into forward/backward components.
-    const varMap = [];
-    for (const rxnId of rxnIds) {
-      const rxn = this.reactions[rxnId];
-      varMap.push({ rxnId, direction: 1 });
-      if (rxn.reversibility) {
-        varMap.push({ rxnId, direction: -1 });
-      }
-    }
-    const N = varMap.length;
-
-    // 2. Setup constraints
-    // - For each internal metabolite, we enforce steady state (S * v = 0 -> 2 constraints: <=0 and >=0)
-    // - For each variable, we enforce upper bounds (x_k <= UB_k -> N constraints)
-    const M_eq = internalMetabs.length * 2;
-    const M = M_eq + N;
-
-    const A = [];
-    for (let i = 0; i < M; i++) {
-      A.push(new Float64Array(N));
-    }
-    const b = new Float64Array(M);
-    const c = new Float64Array(N);
-
-    // 3. Fill equality constraints (S * v = 0)
-    for (let i = 0; i < internalMetabs.length; i++) {
-      const metabId = internalMetabs[i];
-      const row1 = i * 2;
-      const row2 = i * 2 + 1;
-
-      for (let k = 0; k < N; k++) {
-        const { rxnId, direction } = varMap[k];
-        const coeff = this.reactions[rxnId].stoichiometry[metabId] || 0;
-        const val = coeff * direction;
-        A[row1][k] = val;
-        A[row2][k] = -val;
-      }
-      b[row1] = 0.0;
-      b[row2] = 0.0;
-    }
-
-    // 4. Fill upper bound constraints (v_k <= UB_k)
-    for (let k = 0; k < N; k++) {
-      const row = M_eq + k;
-      A[row][k] = 1.0;
-
-      const { rxnId, direction } = varMap[k];
-      const rxn = this.reactions[rxnId];
-      const vMax = rxn.vMax * this.fluxMultiplier * (rxn.perturbationMultiplier !== undefined ? rxn.perturbationMultiplier : 1.0);
-      const km = rxn.km * this.kmMultiplier;
-
-      let UB = vMax;
-
-      // Universal kinetic coupling: Restrict reaction upper bounds by non-buffered substrate concentrations.
-      // To prevent deadlocks on minor intermediates, we only couple major regulatory checkpoints 
-      // or reactions consuming extracellular metabolites (transport/exchanges).
-      const coupledCheckpoints = new Set([
-        'GLCpts', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi', 'BIOMASS_Ecoli_core_w_GAM'
-      ]);
-      const substratesToUse = (direction === 1) ? rxn.substrates : rxn.products;
-      const hasExtracellularSubstrate = substratesToUse.some(subId => subId.endsWith('_e'));
-
-      if (coupledCheckpoints.has(rxnId) || hasExtracellularSubstrate) {
-        for (const subId of substratesToUse) {
-          if (this.metabolites[subId] && !this.metabolites[subId].isBuffered) {
-            const conc = this.metabolites[subId].concentration;
-            UB = Math.min(UB, vMax * (conc / (km + conc)));
-          }
-        }
-      }
-
-      b[row] = UB;
-    }
-
-    // 5. Setup objective vector: maximize biomass yield
-    let biomassRxnId = rxnIds.find(id => id.toUpperCase().includes('BIOMASS'));
-    if (!biomassRxnId) biomassRxnId = 'BIOMASS_Ecoli_core_w_GAM';
-
-    for (let k = 0; k < N; k++) {
-      if (varMap[k].rxnId === biomassRxnId && varMap[k].direction === 1) {
-        c[k] = 1.0;
-      }
-    }
-
-    // 6. Execute LP Simplex solver with warm start basis
-    const res = this.solveLP(c, A, b, this.lastBasis);
-
-    if (res && res.basis) {
-      this.lastBasis = res.basis;
-    } else {
-      this.lastBasis = null;
-    }
-
-    // 7. Extract resulting fluxes
-    for (const rxn of Object.values(this.reactions)) {
-      rxn.flux = 0.0;
-    }
-
-    if (res && res.x) {
-      for (let k = 0; k < N; k++) {
-        const { rxnId, direction } = varMap[k];
-        this.reactions[rxnId].flux += res.x[k] * direction;
-      }
-    }
-
-    return res;
-  }
-
-  /**
-   * Refactored simulation step: Executes dynamic FBA (dFBA)
-   * and dynamically updates metabolite pools using FBA flux turnover.
+   * Refactored simulation step: handled entirely on the server side now.
+   * This tick is a no-op on the client side.
    */
   tick(speedMultiplier = 1.0) {
-    const dt = 0.01 * speedMultiplier;
-
-    // 1. Solve FBA optimization to get active fluxes only every 5 ticks
-    if (this.tickCounter % 5 === 0) {
-      this.solveFBA();
-    }
-    this.tickCounter = (this.tickCounter + 1) % 5;
-
-    // 2. Accumulate influx and outflux rates for each metabolite
-    const influxes = {};
-    const outfluxes = {};
-    for (const id of Object.keys(this.metabolites)) {
-      influxes[id] = 0.0;
-      outfluxes[id] = 0.0;
-    }
-
-    for (const rxn of Object.values(this.reactions)) {
-      const flux = rxn.flux;
-      for (const [metabId, coeff] of Object.entries(rxn.stoichiometry)) {
-        if (this.metabolites[metabId]) {
-          const rate = coeff * flux;
-          if (rate > 0) {
-            influxes[metabId] += rate;
-          } else {
-            outfluxes[metabId] += Math.abs(rate);
-          }
-        }
-      }
-    }
-
-    // 3. Integrate concentrations (Euler step)
-    for (const [id, metab] of Object.entries(this.metabolites)) {
-      if (metab.isBuffered) {
-        metab.targetConcentration = metab.concentration;
-        continue;
-      }
-
-      if (id.endsWith('_e')) {
-        // Extracellular pool decays or grows based on net transport.
-        // Glucose is supplied continuously (held constant in medium) so it is not depleted,
-        // but remains kinetically coupled so its concentration still dictates uptake bounds.
-        if (id === 'glc__D_e') {
-          metab.targetConcentration = metab.concentration;
-          continue;
-        }
-        let nextConc = metab.concentration + (influxes[id] - outfluxes[id]) * dt;
-        metab.concentration = Math.max(0.0, Math.min(nextConc, 150.0));
-        metab.targetConcentration = metab.concentration;
-      } else {
-        // Intracellular pool adapts to local flux turnover, stabilizing around dynamic kinetic target
-        const J_in = influxes[id];
-        const J_out = outfluxes[id];
-        const J = J_in; // Under steady state FBA, J_in = J_out = J
-        const J_normal = this.normalFluxes[id] || 1.0;
-
-        let vMaxSum = 0;
-        let vMaxDefaultSum = 0;
-        for (const rxn of Object.values(this.reactions)) {
-          const coeff = rxn.stoichiometry[id];
-          if (coeff) {
-            // Reaction can consume it (coeff < 0 or reversible coeff > 0)
-            if (coeff < 0 || (coeff > 0 && rxn.reversibility)) {
-              const vMax = rxn.vMax * this.fluxMultiplier * (rxn.perturbationMultiplier !== undefined ? rxn.perturbationMultiplier : 1.0);
-              const defaultVmax = rxn.defaultVmax * this.fluxMultiplier;
-              vMaxSum += vMax;
-              vMaxDefaultSum += defaultVmax;
-            }
-          }
-        }
-
-        let activityRatio = 1.0;
-        if (vMaxSum > 0 && vMaxDefaultSum > 0) {
-          activityRatio = vMaxSum / vMaxDefaultSum;
-        }
-
-        const baseline = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
-        let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
-        target = Math.max(0.1, Math.min(target, 150.0));
-        metab.targetConcentration = target;
-
-        let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
-        let nextConc = metab.concentration + dC * dt;
-        metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
-      }
-    }
+    // No-op: Simulation calculations are executed on the Python server
   }
 
   /**
