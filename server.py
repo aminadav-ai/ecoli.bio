@@ -30,7 +30,7 @@ async def handler(websocket):
                 
                 # Fetch biomass flux (growth rate) from the model objective
                 try:
-                    biomass_flux = sim.model.reactions.get_by_id(sim.biomass_id).flux
+                    biomass_flux = float(sim.model.reactions.get_by_id(sim.biomass_id).flux)
                 except Exception:
                     biomass_flux = 0.0
                 
@@ -38,15 +38,15 @@ async def handler(websocket):
                 state = {
                     'metabolites': {
                         m_id: {
-                            'concentration': m['concentration']
+                            'concentration': float(m['concentration'])
                         } for m_id, m in sim.metabolites.items()
                     },
                     'reactions': {
                         r_id: {
-                            'flux': r['flux']
+                            'flux': float(r['flux'])
                         } for r_id, r in sim.reactions.items()
                     },
-                    'biomass_flux': max(0.0, biomass_flux)
+                    'biomass_flux': float(max(0.0, biomass_flux))
                 }
                 
                 # Serialize to JSON and compress using Gzip
