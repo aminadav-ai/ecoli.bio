@@ -2709,12 +2709,8 @@ function connectWebSocket() {
       if (event.data instanceof ArrayBuffer) {
         // Decompress Gzip binary payload
         const ds = new DecompressionStream('gzip');
-        const writer = ds.writable.getWriter();
-        writer.write(event.data);
-        writer.close();
-        
-        const response = new Response(ds.readable);
-        const text = await response.text();
+        const decompressedStream = new Response(event.data).body.pipeThrough(ds);
+        const text = await new Response(decompressedStream).text();
         const state = JSON.parse(text);
         
         handleServerState(state);
