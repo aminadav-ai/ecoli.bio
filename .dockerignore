@@ -1,0 +1,11 @@
+node_modules
+venv
+.venv
+__pycache__
+*.pyc
+dist
+.git
+.gitignore
+.env
+Dockerfile
+.dockerignore

@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN NODE_ENV=development npm ci
 COPY . .
 RUN npm run build
 
@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy package.json to install node dependencies (needed for Vite preview)
 COPY package*.json ./
-RUN npm ci
+RUN NODE_ENV=development npm ci
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /app/dist ./dist
