@@ -232,8 +232,8 @@ let isPaused = false;
 let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
-// WebSocket state
-let socket = null;
+// Web Worker state
+let worker = null;
 let isConnected = false;
 
 // Inspection Selection State
@@ -399,8 +399,8 @@ async function bootstrap() {
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
 
-  // 6. Connect to WebSocket simulation server
-  connectWebSocket();
+  // 6. Initialize local simulation worker
+  initWorker();
 
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
@@ -472,8 +472,8 @@ function setupUIListeners() {
     isPaused = !isPaused;
     playPauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
-    if (isConnected && socket) {
-      socket.send(JSON.stringify({ type: 'pause', value: isPaused }));
+    if (isConnected && worker) {
+      worker.postMessage({ type: 'pause', value: isPaused });
     }
   });
 
@@ -482,8 +482,8 @@ function setupUIListeners() {
     simulation.reset();
     chartHistory = [];
     console.log('[App] Simulation state reset.');
-    if (isConnected && socket) {
-      socket.send(JSON.stringify({ type: 'reset' }));
+    if (isConnected && worker) {
+      worker.postMessage({ type: 'reset' });
     }
   });
 
@@ -493,8 +493,8 @@ function setupUIListeners() {
   speedSlider.addEventListener('input', (e) => {
     speedMultiplier = parseFloat(e.target.value);
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
-    if (isConnected && socket) {
-      socket.send(JSON.stringify({ type: 'speed', value: speedMultiplier }));
+    if (isConnected && worker) {
+      worker.postMessage({ type: 'speed', value: speedMultiplier });
     }
   });
 
@@ -564,8 +564,8 @@ function setupUIListeners() {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
         console.log(`[App] Spiked ${selectedMetaboliteId} by +${amount} mM`);
-        if (isConnected && socket) {
-          socket.send(JSON.stringify({ type: 'inject', metab_id: selectedMetaboliteId, amount: amount }));
+        if (isConnected && worker) {
+          worker.postMessage({ type: 'inject', metab_id: selectedMetaboliteId, amount: amount });
         }
       }
     });
@@ -576,8 +576,8 @@ function setupUIListeners() {
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
       simulation.metabolites[selectedMetaboliteId].concentration = 0.1;
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
-      if (isConnected && socket) {
-        socket.send(JSON.stringify({ type: 'deplete', metab_id: selectedMetaboliteId }));
+      if (isConnected && worker) {
+        worker.postMessage({ type: 'deplete', metab_id: selectedMetaboliteId });
       }
     }
   });
@@ -730,8 +730,8 @@ function setupUIListeners() {
       if (pinnedSlider) pinnedSlider.value = val;
       if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
       
-      if (isConnected && socket) {
-        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'vMax', value: val }));
+      if (isConnected && worker) {
+        worker.postMessage({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'vMax', value: val });
       }
     }
   });
@@ -744,8 +744,8 @@ function setupUIListeners() {
     if (selectedReactionId) {
       simulation.updateParameter(selectedReactionId, 'km', val);
       
-      if (isConnected && socket) {
-        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'km', value: val }));
+      if (isConnected && worker) {
+        worker.postMessage({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'km', value: val });
       }
     }
   });
@@ -1267,8 +1267,8 @@ function renderPinnedReactions() {
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
       }
       
-      if (isConnected && socket) {
-        socket.send(JSON.stringify({ type: 'update_parameter', rxn_id: rxnId, param: 'vMax', value: val }));
+      if (isConnected && worker) {
+        worker.postMessage({ type: 'update_parameter', rxn_id: rxnId, param: 'vMax', value: val });
       }
     });
     
@@ -2656,8 +2656,8 @@ function applyMetabolicState(state) {
       }
     }
     
-    if (isConnected && socket) {
-      socket.send(JSON.stringify({ type: 'bulk_update_parameters', updates }));
+    if (isConnected && worker) {
+      worker.postMessage({ type: 'bulk_update_parameters', updates });
     }
   }
 
@@ -2768,49 +2768,41 @@ function resetStateDetails() {
 }
 
 /**
- * Connects to the server-side simulation WebSocket server.
+ * Initializes the client-side simulation Web Worker.
  */
-function connectWebSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  
-  console.log(`[WebSocket] Connecting to ${protocol}//${host}/ws...`);
-  socket = new WebSocket(`${protocol}//${host}/ws`);
-  socket.binaryType = 'arraybuffer';
-  
-  socket.onopen = () => {
-    isConnected = true;
-    console.log('[WebSocket] Connected to simulation server.');
-    updateConnectionStatusUI(true);
-    syncParametersToServer();
-  };
-  
-  socket.onclose = () => {
-    isConnected = false;
-    console.log('[WebSocket] Disconnected. Reconnecting in 2 seconds...');
-    updateConnectionStatusUI(false);
-    setTimeout(connectWebSocket, 2000);
-  };
-  
-  socket.onerror = (err) => {
-    console.error('[WebSocket] Error:', err);
-  };
-  
-  socket.onmessage = async (event) => {
-    try {
-      if (event.data instanceof ArrayBuffer) {
-        // Decompress Gzip binary payload
-        const ds = new DecompressionStream('gzip');
-        const decompressedStream = new Response(event.data).body.pipeThrough(ds);
-        const text = await new Response(decompressedStream).text();
-        const state = JSON.parse(text);
-        
-        handleServerState(state);
-      }
-    } catch (error) {
-      console.error('[WebSocket] Error parsing message:', error);
+function initWorker() {
+  updateConnectionStatusUI(false);
+
+  worker = new Worker(new URL('./fba.worker.js', import.meta.url), { type: 'module' });
+
+  worker.onmessage = (event) => {
+    const data = event.data;
+    if (data.type === 'ready') {
+      isConnected = true;
+      updateConnectionStatusUI(true);
+      syncParametersToWorker();
+    } else if (data.type === 'tick') {
+      handleServerState(data.state);
     }
   };
+
+  worker.onerror = (err) => {
+    console.error('[Worker] Error:', err);
+    isConnected = false;
+    updateConnectionStatusUI(false);
+  };
+
+  // Trigger initialization immediately
+  const modelUrl = new URL('/iJO1366.json', window.location.href).href;
+  const mapUrl = new URL('/iJO1366.Central metabolism.json', window.location.href).href;
+  const wasmUrl = new URL('/highs.wasm', window.location.href).href;
+
+  worker.postMessage({
+    type: 'init',
+    modelUrl,
+    mapUrl,
+    wasmUrl
+  });
 }
 
 /**
@@ -2824,38 +2816,38 @@ function updateConnectionStatusUI(connected) {
       indicator.style.backgroundColor = '#34d399';
       indicator.style.boxShadow = '0 0 8px #34d399';
       indicator.classList.add('connected');
-      statusText.textContent = 'iJO1366 Server';
+      statusText.textContent = 'iJO1366 WASM';
       statusText.style.color = '#34d399';
     } else {
       indicator.style.backgroundColor = '#ef4444';
       indicator.style.boxShadow = '0 0 8px #ef4444';
       indicator.classList.remove('connected');
-      statusText.textContent = 'Connecting...';
+      statusText.textContent = 'Initializing...';
       statusText.style.color = '#ef4444';
     }
   }
 }
 
 /**
- * Updates local Simulation variables using simulation state received from the server.
+ * Updates local Simulation variables using simulation state received from the worker.
  */
 function handleServerState(state) {
   if (!simulation) return;
-  
+
   // 1. Update metabolite concentrations
   for (const [m_id, data] of Object.entries(state.metabolites)) {
     if (simulation.metabolites[m_id]) {
       simulation.metabolites[m_id].concentration = data.concentration;
     }
   }
-  
+
   // 2. Update reaction fluxes
   for (const [r_id, data] of Object.entries(state.reactions)) {
     if (simulation.reactions[r_id]) {
       simulation.reactions[r_id].flux = data.flux;
     }
   }
-  
+
   // 3. Fallback compatibility mapping for growth rate and ATP yield UI widgets
   if (simulation.reactions['BIOMASS_Ecoli_core_w_GAM']) {
     simulation.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = state.biomass_flux;
@@ -2866,18 +2858,18 @@ function handleServerState(state) {
 }
 
 /**
- * Synchronizes client-side settings to the server upon connection.
+ * Synchronizes client-side settings to the worker upon connection.
  */
-function syncParametersToServer() {
-  if (!isConnected || !socket || !simulation) return;
-  
+function syncParametersToWorker() {
+  if (!isConnected || !worker || !simulation) return;
+
   const updates = [];
   for (const rxn of Object.values(simulation.reactions)) {
     updates.push({ rxn_id: rxn.id, param: 'vMax', value: rxn.vMax });
     updates.push({ rxn_id: rxn.id, param: 'km', value: rxn.km });
   }
-  
-  socket.send(JSON.stringify({ type: 'bulk_update_parameters', updates }));
-  socket.send(JSON.stringify({ type: 'pause', value: isPaused }));
-  socket.send(JSON.stringify({ type: 'speed', value: speedMultiplier }));
+
+  worker.postMessage({ type: 'bulk_update_parameters', updates });
+  worker.postMessage({ type: 'pause', value: isPaused });
+  worker.postMessage({ type: 'speed', value: speedMultiplier });
 }
