@@ -121,6 +121,8 @@ async def handler(websocket):
         print("[Server] Client disconnected.")
     finally:
         updater_task.cancel()
+        import gc
+        gc.collect()
 
 async def main():
     print("[Server] Starting WebSocket server on port 8000...")

@@ -2,12 +2,17 @@
 import cobra
 import json
 
+# Pre-load E. coli iJO1366 model globally once on module import
+print("[Simulation] Pre-loading E. coli iJO1366 model globally...")
+_global_model = cobra.io.load_model("iJO1366")
+print("[Simulation] Model loaded successfully.")
+
 class Simulation:
     def __init__(self, map_data):
         self.map_data = map_data
-        print("[Simulation] Loading E. coli iJO1366 model...")
-        self.model = cobra.io.load_model("iJO1366")
-        print("[Simulation] Model loaded successfully.")
+        print("[Simulation] Cloning pre-loaded model...")
+        self.model = _global_model.copy()
+        print("[Simulation] Model cloned successfully.")
         
         # Set biomass objective explicitly
         self.biomass_id = "BIOMASS_Ec_iJO1366_core_53p95M"
