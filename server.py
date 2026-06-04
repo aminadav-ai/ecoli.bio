@@ -6,19 +6,20 @@ import gzip
 import traceback
 from simulation import Simulation
 
+# Load map JSON and instantiate Simulation globally once at server startup
+print("[Server] Initializing shared global simulation...")
+try:
+    with open("public/iJO1366.Central metabolism.json", "r", encoding="utf-8") as f:
+        map_data = json.load(f)
+    global_sim = Simulation(map_data)
+    print("[Server] Shared global simulation initialized successfully.")
+except Exception as e:
+    print(f"[Server] Failed to initialize global simulation: {e}")
+    traceback.print_exc()
+
 async def handler(websocket):
     print("[Server] New client connected.")
-    try:
-        # Load map JSON
-        with open("public/iJO1366.Central metabolism.json", "r", encoding="utf-8") as f:
-            map_data = json.load(f)
-            
-        sim = Simulation(map_data)
-        
-    except Exception as e:
-        print(f"[Server] Failed to initialize simulation: {e}")
-        traceback.print_exc()
-        return
+    sim = global_sim
 
     # Task to periodically push simulation state updates to the client
     async def send_updates():

@@ -10,9 +10,9 @@ print("[Simulation] Model loaded successfully.")
 class Simulation:
     def __init__(self, map_data):
         self.map_data = map_data
-        print("[Simulation] Cloning pre-loaded model...")
-        self.model = _global_model.copy()
-        print("[Simulation] Model cloned successfully.")
+        print("[Simulation] Using shared global model...")
+        self.model = _global_model
+        print("[Simulation] Model bound successfully.")
         
         # Set biomass objective explicitly
         self.biomass_id = "BIOMASS_Ec_iJO1366_core_53p95M"
