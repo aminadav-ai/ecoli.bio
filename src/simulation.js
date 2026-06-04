@@ -257,10 +257,10 @@ export class Simulation {
     
     // Ensure placeholder reactions exist for UI metrics widgets compatibility
     if (!this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
-      this.reactions['BIOMASS_Ecoli_core_w_GAM'] = { id: 'BIOMASS_Ecoli_core_w_GAM', flux: 0.0 };
+      this.reactions['BIOMASS_Ecoli_core_w_GAM'] = { id: 'BIOMASS_Ecoli_core_w_GAM', flux: 0.0, stoichiometry: {} };
     }
     if (!this.reactions['ATPS4r']) {
-      this.reactions['ATPS4r'] = { id: 'ATPS4r', flux: 0.0 };
+      this.reactions['ATPS4r'] = { id: 'ATPS4r', flux: 0.0, stoichiometry: {} };
     }
   }
 
@@ -325,7 +325,7 @@ export class Simulation {
     let outflux = 0;
 
     for (const rxn of Object.values(this.reactions)) {
-      const coeff = rxn.stoichiometry[id];
+      const coeff = rxn.stoichiometry ? rxn.stoichiometry[id] : undefined;
       if (coeff) {
         const rate = rxn.flux * coeff;
         if (rate > 0) influx += rate;

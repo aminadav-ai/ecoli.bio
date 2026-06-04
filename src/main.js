@@ -1298,7 +1298,7 @@ function updateUIPanelValues() {
           // Find consuming and producing reactions
           const contributors = [];
           for (const rxn of Object.values(simulation.reactions)) {
-            const coeff = rxn.stoichiometry[id];
+            const coeff = rxn.stoichiometry ? rxn.stoichiometry[id] : undefined;
             if (coeff) {
               contributors.push({ id: rxn.id, name: rxn.name, coeff: coeff });
             }
@@ -1337,7 +1337,7 @@ function populateConnectedFluxes(metabId) {
   const contributors = [];
 
   for (const rxn of Object.values(simulation.reactions)) {
-    const coeff = rxn.stoichiometry[metabId];
+    const coeff = rxn.stoichiometry ? rxn.stoichiometry[metabId] : undefined;
     if (coeff) {
       const rate = rxn.flux * coeff;
       contributors.push({
