@@ -69,7 +69,7 @@ function logVisitToFile(visit) {
 }
 
 // Periodic cleanup of active sessions older than 24 hours to prevent memory leaks
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, timestamp] of activeSessions.entries()) {
     if (now - timestamp > 24 * 60 * 60 * 1000) {
@@ -77,6 +77,9 @@ setInterval(() => {
     }
   }
 }, 60 * 60 * 1000);
+if (cleanupTimer && typeof cleanupTimer.unref === 'function') {
+  cleanupTimer.unref();
+}
 
 // Function to send accumulated statistics
 async function sendStatsSummary() {
@@ -184,6 +187,9 @@ export async function trackVisit(req) {
 
       if (!statsInterval) {
         statsInterval = setInterval(sendStatsSummary, STATS_WINDOW_MS);
+        if (statsInterval && typeof statsInterval.unref === 'function') {
+          statsInterval.unref();
+        }
       }
     } else {
       const text = `🔔 <b>Новый посетитель на сайте!</b>\n\n` +

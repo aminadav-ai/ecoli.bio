@@ -17,14 +17,24 @@ if (fs.existsSync(lpHeaderPath)) {
   staticLpHeader = fs.readFileSync(lpHeaderPath, 'utf8');
 }
 
-// Initialize HiGHS solver
+// Initialize HiGHS solver lazily
 let highs = null;
-highsLoader().then(h => {
-  highs = h;
-  console.log('[Vite Dev Server] HiGHS solver loaded successfully.');
-}).catch(err => {
-  console.error('[Vite Dev Server] Failed to load HiGHS solver:', err);
-});
+let highsPromise = null;
+
+function getHighs() {
+  if (!highsPromise) {
+    highsPromise = highsLoader().then(h => {
+      highs = h;
+      console.log('[Vite Dev Server] HiGHS solver loaded successfully.');
+      return h;
+    }).catch(err => {
+      console.error('[Vite Dev Server] Failed to load HiGHS solver:', err);
+      highsPromise = null; // reset to try again
+      throw err;
+    });
+  }
+  return highsPromise;
+}
 
 function calculateBounds(concentrations, parameters) {
   const bounds = {};
@@ -159,9 +169,13 @@ export default defineConfig(({ mode }) => {
     if (url.pathname === '/api/solve-fba' && req.method === 'POST') {
       try {
         if (!highs) {
-          res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Solver is still initializing' }));
-          return;
+          try {
+            await getHighs();
+          } catch (e) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Solver failed to initialize: ' + e.message }));
+            return;
+          }
         }
 
         const body = await getPostBody(req);
@@ -239,10 +253,12 @@ export default defineConfig(({ mode }) => {
       {
         name: 'fba-solver-middleware',
         configureServer(server) {
+          getHighs().catch(() => {}); // start loading solver in the background on dev server startup
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
         },
         configurePreviewServer(server) {
+          getHighs().catch(() => {});
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
         }
