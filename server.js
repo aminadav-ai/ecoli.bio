@@ -76,16 +76,8 @@ function calculateBounds(concentrations, parameters) {
     'SUCDi': ['fum_c']
   };
 
-  // We only calculate bounds for reactions that are blocked, coupled, or modified
-  const reactionsToProcess = new Set([
-    ...defaultBlocked,
-    ...coupledCheckpoints,
-    ...Object.keys(parameters)
-  ]);
-
-  for (const rxnId of reactionsToProcess) {
+  for (const rxnId of Object.keys(staticBounds)) {
     const orig = staticBounds[rxnId];
-    if (!orig) continue;
 
     // Apply default blocked bypasses
     if (defaultBlocked.includes(rxnId)) {
@@ -116,14 +108,14 @@ function calculateBounds(concentrations, parameters) {
     const vMax = param.vMax !== undefined ? param.vMax : defaultVmax;
     const km = param.km !== undefined ? param.km : defaultKm;
 
-    // Check reversibility
-    const isReversible = (orig.lb < -1e-5);
+    if (coupledCheckpoints.has(rxnId)) {
+      // Check reversibility
+      const isReversible = (orig.lb < -1e-5);
 
-    if (isReversible) {
-      let ubForward = vMax;
-      let ubBackward = vMax;
+      if (isReversible) {
+        let ubForward = vMax;
+        let ubBackward = vMax;
 
-      if (coupledCheckpoints.has(rxnId)) {
         const subs = reactionSubstrates[rxnId] || [];
         for (const sId of subs) {
           const conc = concentrations[sId] !== undefined ? concentrations[sId] : 1.0;
@@ -134,24 +126,20 @@ function calculateBounds(concentrations, parameters) {
           const conc = concentrations[pId] !== undefined ? concentrations[pId] : 1.0;
           ubBackward = Math.min(ubBackward, vMax * (conc / (km + conc)));
         }
-      }
 
-      const lb = -ubBackward;
-      const ub = ubForward;
-      bounds[rxnId] = { lowerBound: lb, upperBound: ub };
-    } else {
-      let ubForward = vMax;
-      if (coupledCheckpoints.has(rxnId)) {
+        bounds[rxnId] = { lowerBound: -ubBackward, upperBound: ubForward };
+      } else {
+        let ubForward = vMax;
         const subs = reactionSubstrates[rxnId] || [];
         for (const sId of subs) {
           const conc = concentrations[sId] !== undefined ? concentrations[sId] : 1.0;
           ubForward = Math.min(ubForward, vMax * (conc / (km + conc)));
         }
-      }
 
-      const lb = 0.0;
-      const ub = ubForward;
-      bounds[rxnId] = { lowerBound: lb, upperBound: ub };
+        bounds[rxnId] = { lowerBound: 0.0, upperBound: ubForward };
+      }
+    } else {
+      bounds[rxnId] = { lowerBound: orig.lb, upperBound: orig.ub };
     }
   }
 
