@@ -6,6 +6,7 @@
  */
 
 import highsLoader from 'highs';
+import defaultBounds from './static_bounds.json';
 
 let highs = null;
 let simulation = null;
@@ -14,9 +15,10 @@ let speedMultiplier = 1.0;
 let loopInterval = null;
 
 class WorkerSimulation {
-  constructor(escherMapData, modelData) {
+  constructor(escherMapData, staticLpHeader) {
     this.mapData = escherMapData;
-    this.modelData = modelData;
+    this.staticLpHeader = staticLpHeader;
+    this.serverBounds = {};
 
     this.metabolites = {};
     this.reactions = {};
@@ -113,16 +115,7 @@ class WorkerSimulation {
       'for_e': 0.1
     };
 
-    // Precompile model structures for high performance
-    this.modelReactionsMap = {};
-    this.originalBounds = {};
-    for (const rxn of this.modelData.reactions) {
-      this.modelReactionsMap[rxn.id] = rxn;
-      this.originalBounds[rxn.id] = [rxn.lower_bound, rxn.upper_bound];
-    }
-
     this.initialize();
-    this.buildStaticLpHeader();
 
     // Calculate normal reference fluxes under default conditions
     this.solveFba();
@@ -253,6 +246,7 @@ class WorkerSimulation {
 
   reset() {
     this.tickCounter = 0;
+    this.serverBounds = {};
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
       metab.targetConcentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
@@ -296,60 +290,6 @@ class WorkerSimulation {
     }
   }
 
-  buildStaticLpHeader() {
-    const lines = [];
-
-    // 1. Objective function
-    lines.push('Maximize');
-    const objTerms = [];
-    for (const rxn of this.modelData.reactions) {
-      const objCoeff = parseFloat(rxn.objective_coefficient || 0);
-      if (objCoeff !== 0) {
-        objTerms.push(`${objCoeff} R_${rxn.id}`);
-      }
-    }
-    if (objTerms.length === 0) {
-      objTerms.push('1 R_BIOMASS_Ec_iJO1366_core_53p95M');
-    }
-    lines.push(`  obj: ${objTerms.join(' + ')}`);
-
-    // 2. Constraints (Subject To)
-    lines.push('Subject To');
-
-    // Prebuild stoichiometry map
-    const stoichiometryMap = {};
-    for (const rxn of this.modelData.reactions) {
-      for (const [metId, coeff] of Object.entries(rxn.metabolites)) {
-        if (!stoichiometryMap[metId]) {
-          stoichiometryMap[metId] = [];
-        }
-        stoichiometryMap[metId].push({
-          reactionId: rxn.id,
-          coefficient: coeff
-        });
-      }
-    }
-
-    // Write row for each metabolite
-    for (const met of this.modelData.metabolites) {
-      const metId = met.id;
-      const terms = stoichiometryMap[metId];
-      if (!terms || terms.length === 0) continue;
-
-      const termStrings = terms.map(t => {
-        const sign = t.coefficient >= 0 ? '+' : '-';
-        const absVal = Math.abs(t.coefficient);
-        return `${sign} ${absVal} R_${t.reactionId}`;
-      });
-
-      const constraintName = 'c_' + metId.replace(/[^a-zA-Z0-9_]/g, '_');
-      lines.push(`  ${constraintName}: ${termStrings.join(' ')} = 0`);
-    }
-
-    lines.push('Bounds');
-    this.staticLpHeader = lines.join('\n') + '\n';
-  }
-
   formatBound(val, isUpper) {
     if (val === null || val === undefined) {
       return isUpper ? 'inf' : '-inf';
@@ -364,91 +304,24 @@ class WorkerSimulation {
   }
 
   solveFba() {
-    // 1. Get original bounds
-    const bounds = {};
-    for (const rxn of this.modelData.reactions) {
-      const orig = this.originalBounds[rxn.id];
-      bounds[rxn.id] = {
-        lowerBound: orig[0],
-        upperBound: orig[1]
-      };
-    }
-    // 2. Apply kinetic bounds on checkpoints
-    const coupledCheckpoints = new Set(['GLCptspp', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi']);
-
-    for (const [coreRxnId, coreRxn] of Object.entries(this.reactions)) {
-      const modelRxnId = this.reactionMapping[coreRxnId] || coreRxnId;
-      const modelRxn = this.modelReactionsMap[modelRxnId];
-      if (!modelRxn) continue;
-
-      const vMax = coreRxn.vMax;
-      const km = coreRxn.km;
-      const orig = this.originalBounds[modelRxnId];
-
-      const hasExtracellularSubstrate = coreRxn.substrates.some(sId => sId.endsWith('_e'));
-
-      if (coreRxn.reversibility) {
-        let ubForward = vMax;
-        let ubBackward = vMax;
-
-        if (coupledCheckpoints.has(modelRxnId) || hasExtracellularSubstrate) {
-          for (const sId of coreRxn.substrates) {
-            if (this.metabolites[sId] && !this.metabolites[sId].isBuffered) {
-              const conc = this.metabolites[sId].concentration;
-              ubForward = Math.min(ubForward, vMax * (conc / (km + conc)));
-            }
-          }
-          for (const pId of coreRxn.products) {
-            if (this.metabolites[pId] && !this.metabolites[pId].isBuffered) {
-              const conc = this.metabolites[pId].concentration;
-              ubBackward = Math.min(ubBackward, vMax * (conc / (km + conc)));
-            }
-          }
-        }
-
-        const lb = (orig[0] < -1e-5) ? -ubBackward : 0.0;
-        const ub = (orig[1] > 1e-5) ? ubForward : 0.0;
-
-        bounds[modelRxnId] = { lowerBound: lb, upperBound: ub };
-      } else {
-        let ubForward = vMax;
-        if (coupledCheckpoints.has(modelRxnId) || hasExtracellularSubstrate) {
-          for (const sId of coreRxn.substrates) {
-            if (this.metabolites[sId] && !this.metabolites[sId].isBuffered) {
-              const conc = this.metabolites[sId].concentration;
-              ubForward = Math.min(ubForward, vMax * (conc / (km + conc)));
-            }
-          }
-        }
-
-        const lb = 0.0;
-        const ub = (orig[1] > 1e-5) ? ubForward : 0.0;
-
-        bounds[modelRxnId] = { lowerBound: lb, upperBound: ub };
-      }
-    }
-
-    // Block non-physiological bypasses (after kinetic bounds loop) to force flux through map-visible pathways
-    const defaultBlocked = ['PFK_3', 'FBA3', 'F6PA', 'GLCDpp', 'XYLI2'];
-    for (const bId of defaultBlocked) {
-      if (bounds[bId]) {
-        bounds[bId] = { lowerBound: 0.0, upperBound: 0.0 };
-      }
-    }
-
-    // 3. Write bounds section
     const boundsLines = [];
-    for (const rxn of this.modelData.reactions) {
-      const rxnId = rxn.id;
-      const b = bounds[rxnId];
-      const lbStr = this.formatBound(b.lowerBound, false);
-      const ubStr = this.formatBound(b.upperBound, true);
+    
+    for (const [rxnId, b] of Object.entries(defaultBounds)) {
+      const serverB = this.serverBounds[rxnId];
+      let lb = b.lb;
+      let ub = b.ub;
+      if (serverB) {
+        lb = serverB.lowerBound;
+        ub = serverB.upperBound;
+      }
+      
+      const lbStr = this.formatBound(lb, false);
+      const ubStr = this.formatBound(ub, true);
       boundsLines.push(`  ${lbStr} <= R_${rxnId} <= ${ubStr}`);
     }
 
     const lpString = this.staticLpHeader + boundsLines.join('\n') + '\nEnd';
 
-    // 4. Solve LP using HiGHS Wasm
     try {
       const sol = highs.solve(lpString, {
         "log_to_console": false,
@@ -495,11 +368,6 @@ class WorkerSimulation {
 
   tick(speedMultiplier = 1.0) {
     const dt = 0.01 * speedMultiplier;
-
-    if (this.tickCounter % 5 === 0) {
-      this.solveFba();
-    }
-    this.tickCounter = (this.tickCounter + 1) % 5;
 
     // Calculate Influxes and Outfluxes
     const influxes = {};
@@ -613,17 +481,17 @@ self.onmessage = async (event) => {
       });
       console.log('[Worker] HiGHS WASM loaded successfully.');
 
-      console.log('[Worker] Fetching model and map JSON files...');
-      const [modelRes, mapRes] = await Promise.all([
-        fetch(msg.modelUrl),
+      console.log('[Worker] Fetching static LP header and map JSON files...');
+      const [lpRes, mapRes] = await Promise.all([
+        fetch(msg.lpUrl),
         fetch(msg.mapUrl)
       ]);
-      const modelData = await modelRes.json();
+      const lpHeader = await lpRes.text();
       const mapData = await mapRes.json();
-      console.log('[Worker] JSON files fetched successfully.');
+      console.log('[Worker] Files fetched successfully.');
 
       console.log('[Worker] Initializing simulation state...');
-      simulation = new WorkerSimulation(mapData, modelData);
+      simulation = new WorkerSimulation(mapData, lpHeader);
       console.log('[Worker] Simulation state initialized.');
 
       self.postMessage({ type: 'ready' });
@@ -631,6 +499,12 @@ self.onmessage = async (event) => {
       startSimulationLoop();
     } catch (err) {
       console.error('[Worker] Failed to initialize worker:', err);
+    }
+  } else if (msg.type === 'solve_with_bounds') {
+    if (simulation) {
+      simulation.serverBounds = msg.bounds;
+      simulation.solveFba();
+      sendState();
     }
   } else if (msg.type === 'pause') {
     isPaused = msg.value;

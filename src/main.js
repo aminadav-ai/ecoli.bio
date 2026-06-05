@@ -236,6 +236,7 @@ let animationFrameCount = 0;
 // Web Worker state
 let worker = null;
 let isConnected = false;
+let lastBoundsFetchTime = 0;
 
 // Inspection Selection State
 let selectedMetaboliteId = null;
@@ -411,6 +412,56 @@ async function bootstrap() {
 /**
  * High-precision Game Loop matching 60fps rendering with a semi-fixed 20Hz simulation step.
  */
+let isFetchingBounds = false;
+async function updateFbaBounds(currentTime) {
+  if (isFetchingBounds || !isConnected || !worker || !simulation) return;
+  isFetchingBounds = true;
+
+  try {
+    // Collect current concentrations
+    const concentrations = {};
+    for (const [mId, metab] of Object.entries(simulation.metabolites)) {
+      concentrations[mId] = metab.concentration;
+    }
+
+    // Collect customized reaction parameters (Vmax/Km)
+    const parameters = {};
+    for (const [rId, rxn] of Object.entries(simulation.reactions)) {
+      if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
+        parameters[rId] = {
+          vMax: rxn.vMax,
+          km: rxn.km
+        };
+      }
+    }
+
+    const res = await fetch('/api/get-bounds', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ concentrations, parameters })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.bounds && worker) {
+        worker.postMessage({
+          type: 'solve_with_bounds',
+          bounds: data.bounds
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[App] Failed to fetch bounds from server:', err);
+  } finally {
+    isFetchingBounds = false;
+  }
+}
+
+/**
+ * High-precision Game Loop matching 60fps rendering with a semi-fixed 20Hz simulation step.
+ */
 let lastTime = performance.now();
 function gameLoop(currentTime) {
   const dt = currentTime - lastTime;
@@ -447,6 +498,14 @@ function gameLoop(currentTime) {
       }
     }
     accumulatedTime -= simTickRate;
+  }
+
+  // Trigger server bounds update and FBA solve every 250ms (or 5 sim ticks)
+  if (!isPaused && !isDead) {
+    if (currentTime - lastBoundsFetchTime >= 250) {
+      lastBoundsFetchTime = currentTime;
+      updateFbaBounds(currentTime);
+    }
   }
 
   // Render Visual Updates (radii pulsation, moving particles, highlighted states)
@@ -2814,13 +2873,13 @@ function initWorker() {
   };
 
   // Trigger initialization immediately
-  const modelUrl = new URL('/iJO1366.json', window.location.href).href;
+  const lpUrl = new URL('/static_lp_header.txt', window.location.href).href;
   const mapUrl = new URL('/iJO1366.Central metabolism.json', window.location.href).href;
   const wasmUrl = new URL('/highs.wasm', window.location.href).href;
 
   worker.postMessage({
     type: 'init',
-    modelUrl,
+    lpUrl,
     mapUrl,
     wasmUrl
   });
