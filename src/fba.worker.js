@@ -342,6 +342,14 @@ class WorkerSimulation {
       };
     }
 
+    // Block non-physiological bypasses to force flux through map-visible pathways
+    const defaultBlocked = ['PFK_3', 'FBA3', 'F6PA'];
+    for (const bId of defaultBlocked) {
+      if (bounds[bId]) {
+        bounds[bId] = { lowerBound: 0.0, upperBound: 0.0 };
+      }
+    }
+
     // 2. Apply kinetic bounds on checkpoints
     const coupledCheckpoints = new Set(['GLCptspp', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi']);
 
