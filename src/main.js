@@ -1211,6 +1211,7 @@ function populateCrossReferences(biggId) {
  */
 function populateOverviewList() {
   const container = document.getElementById('metabolite-rows-container');
+  if (!container) return;
   container.innerHTML = '';
 
   // Sort metabolites alphabetically for cleaner visual listing, omitting cofactors
