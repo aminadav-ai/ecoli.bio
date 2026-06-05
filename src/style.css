@@ -2424,4 +2424,78 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 }
 
+/* Mobile Metabolite Popup */
+.mobile-metab-popup {
+  position: absolute;
+  z-index: 1000;
+  width: 170px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.mobile-metab-popup.hidden {
+  display: none !important;
+}
+
+.mobile-metab-popup canvas {
+  width: 100%;
+  height: 60px;
+  display: block;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+
+.mobile-metab-popup .mobile-metab-conc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #34d399;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+.mobile-metab-popup .mobile-metab-conc .unit {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.mobile-metab-popup .mobile-popup-close-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.955);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease;
+}
+
+.mobile-metab-popup .mobile-popup-close-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 

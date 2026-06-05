@@ -566,6 +566,18 @@ function setupUIListeners() {
     deathResetBtn.addEventListener('click', resetHandler);
   }
 
+  // Mobile popup close button
+  const mobileCloseBtn = document.getElementById('mobile-metab-popup-close');
+  if (mobileCloseBtn) {
+    mobileCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideInspector();
+      if (renderer) {
+        renderer.clearSelection();
+      }
+    });
+  }
+
   // Speed slider
   const speedSlider = document.getElementById('speed-slider');
   const speedVal = document.getElementById('speed-val');
@@ -1044,6 +1056,18 @@ function handleMetaboliteSelect(node) {
   document.getElementById('inspector-metabolite').classList.remove('hidden');
   document.getElementById('inspector-panel').classList.remove('hidden-panel');
 
+  // Show/Hide mobile popup depending on viewport width
+  const isMobile = window.innerWidth <= 768;
+  const mobilePopup = document.getElementById('mobile-metabolite-popup');
+  if (mobilePopup) {
+    if (isMobile) {
+      mobilePopup.classList.remove('hidden');
+      setTimeout(updateMobilePopupPosition, 0);
+    } else {
+      mobilePopup.classList.add('hidden');
+    }
+  }
+
   // Fill in static metadata
   document.getElementById('metab-name').textContent = node.name;
   document.getElementById('metab-bigg-id').textContent = node.biggId;
@@ -1086,6 +1110,12 @@ function handleReactionSelect(rxn) {
   selectedReactionId = rxn.biggId;
   selectedMetaboliteId = null;
   chartHistory = [];
+
+  // Hide mobile popup if visible
+  const mobilePopup = document.getElementById('mobile-metabolite-popup');
+  if (mobilePopup) {
+    mobilePopup.classList.add('hidden');
+  }
 
   // Swap inspector states
   document.getElementById('inspector-empty').classList.add('hidden');
@@ -1141,6 +1171,13 @@ function hideInspector() {
   selectedReactionId = null;
   chartHistory = [];
   document.getElementById('inspector-panel').classList.add('hidden-panel');
+  
+  // Hide mobile popup if visible
+  const mobilePopup = document.getElementById('mobile-metabolite-popup');
+  if (mobilePopup) {
+    mobilePopup.classList.add('hidden');
+  }
+
   updateOverviewListHighlight();
 }
 
@@ -1391,6 +1428,22 @@ function updateUIPanelValues() {
       
       // Render rolling chart history
       drawConcentrationChart();
+
+      // Update mobile popup values/chart if popup is visible
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        const mobilePopup = document.getElementById('mobile-metabolite-popup');
+        if (mobilePopup && !mobilePopup.classList.contains('hidden')) {
+          updateMobilePopupPosition();
+          
+          const mobileValEl = document.getElementById('mobile-metab-conc-val');
+          if (mobileValEl) {
+            mobileValEl.textContent = info.concentration.toFixed(2);
+          }
+          
+          drawMobileChart();
+        }
+      }
 
       // Render fluxes contributors list every 10 frames to prevent DOM thrashing and preserve click responsiveness
       if (animationFrameCount % 10 === 0) {
@@ -1661,6 +1714,160 @@ function drawConcentrationChart() {
   chartCtx.fillText(`${maxVal.toFixed(1)} mM`, w - 5, paddingY - 10);
   chartCtx.textBaseline = 'bottom';
   chartCtx.fillText(`${minVal.toFixed(1)} mM`, w - 5, h - paddingY + 10);
+}
+
+/**
+ * Dynamically positions the mobile metabolite popup next to the selected metabolite.
+ */
+function updateMobilePopupPosition() {
+  if (!selectedMetaboliteId || !renderer) return;
+
+  const node = renderer.metabNodes.find(n => n.biggId === selectedMetaboliteId);
+  if (!node) return;
+
+  const mobilePopup = document.getElementById('mobile-metabolite-popup');
+  if (!mobilePopup) return;
+
+  const canvas = renderer.canvas;
+  const rect = canvas.getBoundingClientRect();
+
+  // Convert metabolite's world coordinates to screen/canvas coordinates
+  const screenX = node.x * renderer.zoom + renderer.viewport.x;
+  const screenY = node.y * renderer.zoom + renderer.viewport.y;
+
+  // Absolute positioning relative to document body/viewport wrapper
+  const tx = screenX + rect.left;
+  const ty = screenY + rect.top;
+
+  const popupW = 170;
+  const popupH = 100; // estimated height
+  const padding = 8;
+
+  let left = tx - popupW / 2;
+  let top = ty - popupH - 25; // 25px above metabolite center
+
+  // Clamp horizontal coordinate to stay within screen boundaries
+  if (left < padding) left = padding;
+  if (left + popupW > window.innerWidth - padding) {
+    left = window.innerWidth - popupW - padding;
+  }
+
+  // Vertical position check: flip below metabolite if it goes above top screen edge
+  if (top < padding) {
+    top = ty + 25; // position below
+  }
+  
+  // Check if it goes off bottom screen edge
+  if (top + popupH > window.innerHeight - padding) {
+    top = window.innerHeight - popupH - padding;
+  }
+
+  mobilePopup.style.left = `${left}px`;
+  mobilePopup.style.top = `${top}px`;
+}
+
+/**
+ * Renders a compact concentration history line chart in the mobile popup.
+ */
+function drawMobileChart() {
+  const canvas = document.getElementById('mobile-metab-chart');
+  if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  
+  // Skip drawing if container is hidden/has 0 width
+  if (rect.width === 0) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = 60 * dpr; // hardcoded canvas height
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = 60;
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (chartHistory.length < 2) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Loading history...', w / 2, h / 2);
+    return;
+  }
+
+  // Find min/max values in history for fitting
+  let maxVal = Math.max(...chartHistory);
+  let minVal = Math.min(...chartHistory);
+
+  // Clamp limits to prevent visual flattening on constant lines
+  if (maxVal - minVal < 0.2) {
+    maxVal = minVal + 1.0;
+    minVal = Math.max(0.0, minVal - 0.5);
+  }
+  maxVal = Math.max(1.0, maxVal);
+
+  const paddingY = 8;
+  const plotH = h - paddingY * 2;
+  const plotW = w - 6;
+
+  // 1. Draw grid background lines (2 horizontal lines)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i <= 2; i++) {
+    const yGrid = paddingY + (plotH / 2) * i;
+    ctx.moveTo(0, yGrid);
+    ctx.lineTo(w, yGrid);
+  }
+  ctx.stroke();
+
+  // 2. Plot concentration curve line
+  ctx.strokeStyle = '#34d399'; // Minty green
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  chartHistory.forEach((val, i) => {
+    const x = (i / (maxChartPoints - 1)) * plotW;
+    const y = paddingY + plotH - ((val - minVal) / (maxVal - minVal)) * plotH;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // 3. Draw gradient filled area under the line
+  const lastIdx = chartHistory.length - 1;
+  const grad = ctx.createLinearGradient(0, paddingY, 0, h - paddingY);
+  grad.addColorStop(0, 'rgba(52, 211, 153, 0.15)');
+  grad.addColorStop(1, 'rgba(52, 211, 153, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.lineTo((lastIdx / (maxChartPoints - 1)) * plotW, h - paddingY);
+  ctx.lineTo(0, h - paddingY);
+  ctx.closePath();
+  ctx.fill();
+
+  // 4. Draw glowing current value dot at the tip
+  const lastVal = chartHistory[lastIdx];
+  const lastX = (lastIdx / (maxChartPoints - 1)) * plotW;
+  const lastY = paddingY + plotH - ((lastVal - minVal) / (maxVal - minVal)) * plotH;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = '#34d399';
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Reset shadow
+  ctx.shadowBlur = 0;
 }
 
 // Boot on window load
