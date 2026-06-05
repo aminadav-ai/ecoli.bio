@@ -38,6 +38,14 @@ export class PixiRenderer {
     this.dragStart = { x: 0, y: 0 };
     this.viewportStart = { x: 0, y: 0 };
     
+    // Pinch to zoom state
+    this.activePointers = new Map();
+    this.isPinching = false;
+    this.pinchStartDist = 0;
+    this.pinchStartCenter = { x: 0, y: 0 };
+    this.pinchStartZoom = 1.0;
+    this.pinchStartViewport = { x: 0, y: 0 };
+
     // Animation/camera targets for smooth lerp transitions
     this.targetZoom = 1.0;
     this.targetPosition = { x: 0, y: 0 };
@@ -960,33 +968,91 @@ export class PixiRenderer {
   setupInteractivity() {
     const el = this.canvas;
 
-    // Drag-to-pan implementation
-    el.addEventListener('pointerdown', (e) => {
-      // Check if we clicked on a metabolite node (hit test)
-      const canvasX = e.clientX;
-      const canvasY = e.clientY;
-      const node = this.hitTestMetabolite(canvasX, canvasY);
 
-      if (node) {
-        this.selectMetabolite(node.id);
-        this.onSelectMetabolite(node);
-        return;
+    // Drag-to-pan & pinch implementation
+    el.addEventListener('pointerdown', (e) => {
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (this.activePointers.size === 1) {
+        // Check if we clicked on a metabolite node (hit test)
+        const canvasX = e.clientX;
+        const canvasY = e.clientY;
+        const node = this.hitTestMetabolite(canvasX, canvasY);
+
+        if (node) {
+          this.selectMetabolite(node.id);
+          this.onSelectMetabolite(node);
+          return;
+        }
+
+        // If we clicked background, start drag panning
+        this.isDragging = true;
+        this.isCameraAnimating = false; // Interrupt any camera fly-to
+        this.dragStart.x = canvasX;
+        this.dragStart.y = canvasY;
+        this.viewportStart.x = this.viewport.x;
+        this.viewportStart.y = this.viewport.y;
+        el.style.cursor = 'grabbing';
+      } else if (this.activePointers.size === 2) {
+        // Transition from panning to pinching
+        this.isDragging = false;
+        this.isPinching = true;
+        this.isCameraAnimating = false;
+
+        const pointers = Array.from(this.activePointers.values());
+        this.pinchStartDist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+        this.pinchStartCenter = {
+          x: (pointers[0].x + pointers[1].x) / 2,
+          y: (pointers[0].y + pointers[1].y) / 2
+        };
+        this.pinchStartZoom = this.zoom;
+        this.pinchStartViewport = { x: this.viewport.x, y: this.viewport.y };
       }
 
-      // If we clicked background, start drag panning
-      this.isDragging = true;
-      this.isCameraAnimating = false; // Interrupt any camera fly-to
-      this.dragStart.x = canvasX;
-      this.dragStart.y = canvasY;
-      this.viewportStart.x = this.viewport.x;
-      this.viewportStart.y = this.viewport.y;
-      el.setPointerCapture(e.pointerId);
-      el.style.cursor = 'grabbing';
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (err) {}
     });
 
     el.addEventListener('pointermove', (e) => {
+      if (!this.activePointers.has(e.pointerId)) return;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
       const canvasX = e.clientX;
       const canvasY = e.clientY;
+
+      if (this.isPinching && this.activePointers.size === 2) {
+        const pointers = Array.from(this.activePointers.values());
+        const dist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+        const center = {
+          x: (pointers[0].x + pointers[1].x) / 2,
+          y: (pointers[0].y + pointers[1].y) / 2
+        };
+
+        if (this.pinchStartDist > 5) {
+          const ratio = dist / this.pinchStartDist;
+          let newZoom = this.pinchStartZoom * ratio;
+          
+          // Clamp zoom between 0.08x (far) and 4.0x (close)
+          newZoom = Math.max(0.08, Math.min(4.0, newZoom));
+
+          const actualRatio = newZoom / this.pinchStartZoom;
+
+          // Scale and translate viewport centered on the pinch point
+          const nextX = center.x - (this.pinchStartCenter.x - this.pinchStartViewport.x) * actualRatio;
+          const nextY = center.y - (this.pinchStartCenter.y - this.pinchStartViewport.y) * actualRatio;
+
+          this.zoom = newZoom;
+          this.viewport.scale.set(this.zoom);
+          this.viewport.x = nextX;
+          this.viewport.y = nextY;
+
+          this.targetZoom = this.zoom;
+          this.targetPosition.x = this.viewport.x;
+          this.targetPosition.y = this.viewport.y;
+        }
+        return;
+      }
 
       if (this.isDragging) {
         const dx = canvasX - this.dragStart.x;
@@ -1014,25 +1080,42 @@ export class PixiRenderer {
     });
 
     const endDrag = (e) => {
-      if (this.isDragging) {
-        this.isDragging = false;
-        try {
-          el.releasePointerCapture(e.pointerId);
-        } catch (err) {}
-        
-        // Restore cursor based on hover state
-        const canvasX = e.clientX;
-        const canvasY = e.clientY;
-        const node = this.hitTestMetabolite(canvasX, canvasY);
-        el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
+      this.activePointers.delete(e.pointerId);
 
-        // Clear hover/tooltip on mobile/desktop if we drag and finish on empty space
-        if (!node) {
-          this.hoveredNode = null;
-          const event = new CustomEvent('metabolite-hover', { detail: null });
-          el.dispatchEvent(event);
+      if (this.isPinching) {
+        if (this.activePointers.size < 2) {
+          this.isPinching = false;
+          // If 1 pointer is still down, transition back to dragging
+          if (this.activePointers.size === 1) {
+            this.isDragging = true;
+            this.isCameraAnimating = false;
+            const remainingPointer = Array.from(this.activePointers.values())[0];
+            this.dragStart.x = remainingPointer.x;
+            this.dragStart.y = remainingPointer.y;
+            this.viewportStart.x = this.viewport.x;
+            this.viewportStart.y = this.viewport.y;
+          }
+        }
+      } else if (this.isDragging) {
+        if (this.activePointers.size === 0) {
+          this.isDragging = false;
+          el.style.cursor = 'grab';
+          
+          // Clear hover/tooltip on mobile/desktop if we drag and finish on empty space
+          const canvasX = e.clientX;
+          const canvasY = e.clientY;
+          const node = this.hitTestMetabolite(canvasX, canvasY);
+          if (!node) {
+            this.hoveredNode = null;
+            const event = new CustomEvent('metabolite-hover', { detail: null });
+            el.dispatchEvent(event);
+          }
         }
       }
+
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch (err) {}
     };
 
     el.addEventListener('pointerup', endDrag);
@@ -1084,6 +1167,7 @@ export class PixiRenderer {
         el.dispatchEvent(event);
       }
     });
+
 
   }
 
