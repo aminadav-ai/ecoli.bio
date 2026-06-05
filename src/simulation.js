@@ -20,8 +20,8 @@ export class Simulation {
 
     // Define cofactors and inorganic molecules to buffer (hold at constant physiological concentrations)
     this.bufferedIds = new Set([
-      'atp_c', 'adp_c', 'amp_c',
-      'nad_c', 'nadh_c',
+      'adp_c', 'amp_c',
+      'nad_c',
       'nadp_c', 'nadph_c',
       'pi_c', 'pi_e',
       'coa_c',
