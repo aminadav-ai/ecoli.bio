@@ -225,6 +225,8 @@ Your goal is to guide the student, explain how pathways work, answer their quest
 
 IMPORTANT: Respond in Russian (на русском языке), keeping your answers concise, scientifically accurate, and encouraging.
 
+NOTE: The active model and map are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map), NOT the simplified e_coli_core model. The primary growth rate / biomass reaction is BIOMASS_Ec_iJO1366_core_53p95M. Keep this in mind when discussing pathways, connections, and reactions on the screen.
+
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
 
