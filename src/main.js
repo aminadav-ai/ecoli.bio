@@ -398,6 +398,9 @@ async function bootstrap() {
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
 
+  // Initialize Scenarios and AI Chat
+  setupScenariosAndChat();
+
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
@@ -520,6 +523,9 @@ function gameLoop(currentTime) {
 
   // Update UI panel values (concentrations in lists, sliders, labels, active chart)
   updateUIPanelValues();
+
+  // Check active scenario objectives
+  checkScenarioObjectives();
 
   requestAnimationFrame(gameLoop);
 }
@@ -3045,6 +3051,603 @@ function resetStateDetails() {
     geoAnalysisUsage.textContent = '';
     geoAnalysisUsage.classList.add('hidden');
   }
+}
+
+// ============================================================================
+// SCENARIOS & AI CHAT INTEGRATION
+// ============================================================================
+
+// Active scenario state variables
+let activeScenarioId = null;
+let scenarioObjectivesStatus = {}; // objectiveId -> completed (bool)
+
+const SCENARIOS = {
+  oxygen_switch: {
+    id: 'oxygen_switch',
+    title: '1. Кислородное переключение',
+    desc: 'Цель: Показать, что клетка переключает пути метаболизма в зависимости от доступности кислорода. Аэробное дыхание через PDH энергетически гораздо выгоднее, чем анаэробное брожение через PFL.',
+    objectives: [
+      { id: 'set_o2_0', text: 'Установить кислород (o2_e) на 0 (анаэробные условия)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration < 0.01 },
+      { id: 'observe_pfl', text: 'Убедиться, что пошел поток через PFL (поток > 2.0)', check: () => simulation.reactions['PFL'] && Math.abs(simulation.reactions['PFL'].flux) > 2.0 },
+      { id: 'increase_o2', text: 'Плавно увеличить подачу кислорода (o2_e >= 0.5)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration >= 0.49 },
+      { id: 'observe_pdh', text: 'Наблюдать, как PDH включается (> 2.0), а PFL затухает (< 0.5)', check: () => {
+        const pdhVal = simulation.reactions['PDH'] ? Math.abs(simulation.reactions['PDH'].flux) : 0;
+        const pflVal = simulation.reactions['PFL'] ? Math.abs(simulation.reactions['PFL'].flux) : 999;
+        return pdhVal > 2.0 && pflVal < 0.5;
+      }}
+    ],
+    reflection: 'Почему при подаче кислорода уровень atp_c (или выход ATP) растет, даже если количество входящей глюкозы не изменилось?',
+    controls: [
+      { id: 'o2_e', name: 'Подача Кислорода (o2_e)', min: 0.0, max: 1.0, step: 0.05, value: 0.0 }
+    ]
+  },
+  metabolic_jam: {
+    id: 'metabolic_jam',
+    title: '2. Метаболическая пробка',
+    desc: 'Цель: Показать ограничение пропускной способности путей (Vmax). Если ферменты (например, PDH) работают на пределе, приток лишней глюкозы ведет к критическому накоплению промежуточных продуктов (пирувата).',
+    objectives: [
+      { id: 'increase_glc', text: 'Увеличить концентрацию глюкозы (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
+      { id: 'reduce_pdh_vmax', text: 'Снизить Vmax фермента PDH до 2.0 или ниже', check: () => simulation.reactions['PDH'] && simulation.reactions['PDH'].vMax <= 2.01 },
+      { id: 'observe_pyr_accum', text: 'Зафиксировать накопление пирувата (pyr_c > 8.0 mM)', check: () => simulation.metabolites['pyr_c'] && simulation.metabolites['pyr_c'].concentration > 8.0 }
+    ],
+    reflection: 'Почему при избытке глюкозы скорость роста (biomass_flux) перестает увеличиваться и упирается в предел?',
+    controls: [
+      { id: 'glc__D_e', name: 'Концентрация Глюкозы (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 2.0 }
+    ]
+  },
+  warburg_effect: {
+    id: 'warburg_effect',
+    title: '3. Эффект Варбурга',
+    desc: 'Цель: Продемонстрировать явление overflow-метаболизма (эффект Варбурга в раковых клетках). Когда скорость гликолиза превышает пропускную способность дыхания, избыток углерода сбрасывается в лактат даже при наличии кислорода.',
+    objectives: [
+      { id: 'reduce_resp', text: 'Ограничить Vmax дыхания (CYTBO3_4pp) до 5.0 или ниже', check: () => simulation.reactions['CYTBO3_4pp'] && simulation.reactions['CYTBO3_4pp'].vMax <= 5.01 },
+      { id: 'increase_glc', text: 'Увеличить концентрацию глюкозы (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
+      { id: 'observe_lac_flux', text: 'Наблюдать выделение лактата в среду (поток EX_lac__D_e > 1.0)', check: () => simulation.reactions['EX_lac__D_e'] && simulation.reactions['EX_lac__D_e'].flux > 1.0 }
+    ],
+    reflection: 'Почему раковые клетки переходят на лактатное брожение даже в аэробных условиях? В чем преимущество такой адаптации для их деления?',
+    controls: [
+      { id: 'glc__D_e', name: 'Концентрация Глюкозы (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 10.0 }
+    ]
+  }
+};
+
+let aiChatHistory = [];
+
+function setupScenariosAndChat() {
+  // 1. Setup Tab Switching in Left Sidebar
+  const btnMetrics = document.getElementById('tab-metrics');
+  const btnScenarios = document.getElementById('tab-scenarios');
+  const contentMetrics = document.getElementById('tab-content-metrics');
+  const contentScenarios = document.getElementById('tab-content-scenarios');
+
+  if (btnMetrics && btnScenarios && contentMetrics && contentScenarios) {
+    btnMetrics.addEventListener('click', () => {
+      btnMetrics.classList.add('active');
+      btnScenarios.classList.remove('active');
+      contentMetrics.classList.remove('hidden');
+      contentScenarios.classList.add('hidden');
+    });
+
+    btnScenarios.addEventListener('click', () => {
+      btnScenarios.classList.add('active');
+      btnMetrics.classList.remove('active');
+      contentScenarios.classList.remove('hidden');
+      contentMetrics.classList.add('hidden');
+    });
+  }
+
+  // 2. Setup Scenario Cards Clicks
+  const cards = document.querySelectorAll('.scenario-card');
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      const scenarioId = card.getAttribute('data-scenario');
+      selectScenario(scenarioId);
+    });
+  });
+
+  // Exit scenario button
+  const btnExit = document.getElementById('btn-exit-scenario');
+  if (btnExit) {
+    btnExit.addEventListener('click', () => {
+      exitActiveScenario();
+    });
+  }
+
+  // Start/Reset scenario button
+  const btnStart = document.getElementById('btn-start-scenario');
+  if (btnStart) {
+    btnStart.addEventListener('click', () => {
+      if (activeScenarioId) {
+        startScenario(activeScenarioId);
+      }
+    });
+  }
+
+  // Submit reflection answer to AI
+  const btnSubmitReflection = document.getElementById('btn-submit-reflection');
+  if (btnSubmitReflection) {
+    btnSubmitReflection.addEventListener('click', () => {
+      submitReflectionAnswer();
+    });
+  }
+
+  // 3. Setup AI Chatbot Widget Event Listeners
+  const chatTrigger = document.getElementById('ai-chat-trigger');
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  const chatClose = document.getElementById('ai-chat-close');
+  const chatInput = document.getElementById('ai-chat-input');
+  const chatSendBtn = document.getElementById('ai-chat-send-btn');
+  const contextBtn = document.getElementById('ai-chat-context-btn');
+  const contextPanel = document.getElementById('ai-chat-context-panel');
+
+  if (chatTrigger && chatDrawer) {
+    chatTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chatDrawer.classList.toggle('hidden');
+      // Remove bounce animation once user opens chat
+      chatTrigger.classList.remove('animate-bounce');
+      // Scroll to bottom of chat
+      const chatMessages = document.getElementById('ai-chat-messages');
+      if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    });
+
+    chatClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chatDrawer.classList.add('hidden');
+    });
+
+    // Send on button click
+    chatSendBtn.addEventListener('click', () => {
+      sendChatMessage();
+    });
+
+    // Send on enter key
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+
+    // Prevent click inside drawer from closing it
+    chatDrawer.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Context Panel Toggle
+    if (contextBtn && contextPanel) {
+      contextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        contextPanel.classList.toggle('hidden');
+        if (!contextPanel.classList.contains('hidden')) {
+          const jsonDisplay = document.getElementById('ai-chat-context-json');
+          if (jsonDisplay) {
+            const contextData = getSimulationContext();
+            jsonDisplay.textContent = JSON.stringify(contextData, null, 2);
+          }
+        }
+      });
+    }
+  }
+
+  // Global click outside closes chat
+  document.addEventListener('click', () => {
+    if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
+      chatDrawer.classList.add('hidden');
+    }
+  });
+}
+
+function selectScenario(scenarioId) {
+  const scenario = SCENARIOS[scenarioId];
+  if (!scenario) return;
+
+  activeScenarioId = scenarioId;
+  scenarioObjectivesStatus = {};
+  
+  // Update UI headers/desc
+  document.getElementById('scenarios-list-container').classList.add('hidden');
+  const activeDetail = document.getElementById('active-scenario-detail');
+  activeDetail.classList.remove('hidden');
+  
+  document.getElementById('active-scenario-title').textContent = scenario.title;
+  document.getElementById('active-scenario-desc').textContent = scenario.desc;
+  document.getElementById('scenario-reflection-question').textContent = scenario.reflection;
+  document.getElementById('scenario-reflection-answer').value = '';
+
+  // Setup Objectives checklist markup
+  const listEl = document.getElementById('scenario-objectives-list');
+  listEl.innerHTML = '';
+  scenario.objectives.forEach(obj => {
+    const li = document.createElement('li');
+    li.id = `objective-${obj.id}`;
+    li.textContent = obj.text;
+    listEl.appendChild(li);
+    scenarioObjectivesStatus[obj.id] = false;
+  });
+
+  // Apply scenario simulation parameters
+  startScenario(scenarioId);
+}
+
+function startScenario(scenarioId) {
+  const scenario = SCENARIOS[scenarioId];
+  if (!scenario || !simulation) return;
+
+  // Clear flashing sets
+  if (renderer) {
+    if (!renderer.flashingMetaboliteIds) renderer.flashingMetaboliteIds = new Set();
+    renderer.flashingMetaboliteIds.clear();
+  }
+
+  // 1. Reset and apply scenario constraints on simulation
+  simulation.applyScenario(scenarioId);
+
+  // 2. Set up dynamic slider controls
+  const controlsContainer = document.getElementById('scenario-controls-container');
+  const sliderGroup = document.getElementById('scenario-dynamic-slider-group');
+  sliderGroup.innerHTML = '';
+
+  if (scenario.controls && scenario.controls.length > 0) {
+    controlsContainer.classList.remove('hidden');
+    
+    scenario.controls.forEach(ctrl => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'param-slider';
+      
+      const labelRow = document.createElement('div');
+      labelRow.className = 'param-label-row';
+      
+      const label = document.createElement('label');
+      label.setAttribute('for', `scenario-slider-${ctrl.id}`);
+      label.textContent = ctrl.name;
+      
+      const valSpan = document.createElement('span');
+      valSpan.id = `scenario-slider-val-${ctrl.id}`;
+      valSpan.className = 'code-font';
+      valSpan.textContent = ctrl.value;
+      
+      labelRow.appendChild(label);
+      labelRow.appendChild(valSpan);
+      
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.id = `scenario-slider-${ctrl.id}`;
+      input.min = ctrl.min;
+      input.max = ctrl.max;
+      input.step = ctrl.step;
+      input.value = ctrl.value;
+      
+      // Update simulation concentration on slider change
+      input.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        valSpan.textContent = val;
+        
+        if (simulation.metabolites[ctrl.id]) {
+          simulation.metabolites[ctrl.id].concentration = val;
+          simulation.metabolites[ctrl.id].targetConcentration = val;
+          // Trigger FBA solver bounds immediately
+          updateFbaBounds(performance.now());
+        }
+      });
+      
+      wrapper.appendChild(labelRow);
+      wrapper.appendChild(input);
+      sliderGroup.appendChild(wrapper);
+
+      // Force initial value in simulation
+      if (simulation.metabolites[ctrl.id]) {
+        simulation.metabolites[ctrl.id].concentration = ctrl.value;
+        simulation.metabolites[ctrl.id].targetConcentration = ctrl.value;
+      }
+    });
+  } else {
+    controlsContainer.classList.add('hidden');
+  }
+
+  // 3. Reset checklist checks in UI
+  scenario.objectives.forEach(obj => {
+    const li = document.getElementById(`objective-${obj.id}`);
+    if (li) {
+      li.classList.remove('completed');
+    }
+    scenarioObjectivesStatus[obj.id] = false;
+  });
+
+  // Focus map camera on relevant pathway of the scenario
+  if (renderer) {
+    if (scenarioId === 'oxygen_switch' || scenarioId === 'metabolic_jam') {
+      // Focus on lower glycolysis and TCA entry
+      renderer.fitMapToScreen(true);
+    } else if (scenarioId === 'warburg_effect') {
+      renderer.fitMapToScreen(true);
+    }
+  }
+
+  // Trigger initial solver run
+  updateFbaBounds(performance.now());
+}
+
+function exitActiveScenario() {
+  activeScenarioId = null;
+  scenarioObjectivesStatus = {};
+  
+  document.getElementById('scenarios-list-container').classList.remove('hidden');
+  document.getElementById('active-scenario-detail').classList.add('hidden');
+
+  if (renderer && renderer.flashingMetaboliteIds) {
+    renderer.flashingMetaboliteIds.clear();
+  }
+
+  // Restore wildtype FBA model state
+  if (simulation) {
+    simulation.reset();
+    updateFbaBounds(performance.now());
+  }
+}
+
+function checkScenarioObjectives() {
+  if (!activeScenarioId || !simulation) return;
+
+  const scenario = SCENARIOS[activeScenarioId];
+  if (!scenario) return;
+
+  let allCompletedBefore = Object.values(scenarioObjectivesStatus).every(v => v === true);
+
+  scenario.objectives.forEach(obj => {
+    // If objective not completed yet, run checker
+    if (!scenarioObjectivesStatus[obj.id]) {
+      const ok = obj.check();
+      if (ok) {
+        scenarioObjectivesStatus[obj.id] = true;
+        const li = document.getElementById(`objective-${obj.id}`);
+        if (li) {
+          li.classList.add('completed');
+        }
+      }
+    }
+  });
+
+  // Handle Scenario 2 specific visual effect (pyruvate bottleneck jam)
+  if (activeScenarioId === 'metabolic_jam' && renderer) {
+    const pyrConc = simulation.metabolites['pyr_c'] ? simulation.metabolites['pyr_c'].concentration : 0;
+    if (pyrConc > 8.0) {
+      if (!renderer.flashingMetaboliteIds.has('pyr_c')) {
+        renderer.flashingMetaboliteIds.add('pyr_c');
+      }
+    } else {
+      if (renderer.flashingMetaboliteIds.has('pyr_c')) {
+        renderer.flashingMetaboliteIds.delete('pyr_c');
+      }
+    }
+  }
+
+  let allCompletedAfter = Object.values(scenarioObjectivesStatus).every(v => v === true);
+
+  // If student just finished all objectives, show a small hint & open chat to evaluate answer
+  if (!allCompletedBefore && allCompletedAfter) {
+    appendModelMessage("🎉 Вы выполнили все практические задачи сценария! Теперь запишите ваш ответ на вопрос рефлексии в текстовое поле слева и нажмите «Проверить ответ с ИИ», чтобы обсудить результат с преподавателем.");
+    // Open chat automatically
+    const chatDrawer = document.getElementById('ai-chat-drawer');
+    const chatTrigger = document.getElementById('ai-chat-trigger');
+    if (chatDrawer && chatDrawer.classList.contains('hidden')) {
+      chatDrawer.classList.remove('hidden');
+      if (chatTrigger) chatTrigger.classList.remove('animate-bounce');
+    }
+  }
+}
+
+function getSimulationContext() {
+  if (!simulation) return {};
+
+  const concentrations = {};
+  const highConcentrations = {};
+  for (const [id, metab] of Object.entries(simulation.metabolites)) {
+    if (metab.concentration !== (simulation.initialConcentrations[id] || 1.0)) {
+      concentrations[id] = parseFloat(metab.concentration.toFixed(3));
+    }
+    // Track high accumulation
+    if (metab.concentration > 6.0 && !metab.isBuffered) {
+      highConcentrations[id] = parseFloat(metab.concentration.toFixed(3));
+    }
+  }
+
+  const tweaked = {};
+  for (const [id, rxn] of Object.entries(simulation.reactions)) {
+    if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
+      tweaked[id] = { vMax: rxn.vMax, km: rxn.km };
+    }
+  }
+
+  // Key gateway fluxes
+  const keyFluxes = {};
+  const gatewayRxns = ['GLCptspp', 'PGI', 'PFK', 'PYK', 'PDH', 'PFL', 'G6PDH2r', 'CS', 'AKGDH', 'SUCDi', 'CYTBO3_4pp', 'EX_lac__D_e'];
+  gatewayRxns.forEach(rxnId => {
+    if (simulation.reactions[rxnId]) {
+      keyFluxes[rxnId] = parseFloat(simulation.reactions[rxnId].flux.toFixed(4));
+    }
+  });
+
+  const objectiveStatus = {};
+  if (activeScenarioId) {
+    const scenario = SCENARIOS[activeScenarioId];
+    if (scenario) {
+      scenario.objectives.forEach(obj => {
+        objectiveStatus[obj.id] = scenarioObjectivesStatus[obj.id] || false;
+      });
+    }
+  }
+
+  return {
+    activeScenario: activeScenarioId,
+    scenarioObjectives: objectiveStatus,
+    growthRate: simulation.reactions['BIOMASS_Ecoli_core_w_GAM'] ? parseFloat(simulation.reactions['BIOMASS_Ecoli_core_w_GAM'].flux.toFixed(4)) : 0.0,
+    atpYield: simulation.reactions['ATPS4r'] ? parseFloat(simulation.reactions['ATPS4r'].flux.toFixed(4)) : 0.0,
+    accumulatedMetabolites: highConcentrations,
+    tweakedParameters: tweaked,
+    keyGatewayFluxes: keyFluxes
+  };
+}
+
+async function sendChatMessage() {
+  const chatInput = document.getElementById('ai-chat-input');
+  if (!chatInput) return;
+  const message = chatInput.value.trim();
+  if (!message) return;
+
+  // Append user message in UI
+  appendUserMessage(message);
+  chatInput.value = '';
+
+  // Show typing loader
+  const chatMessages = document.getElementById('ai-chat-messages');
+  const loaderDiv = document.createElement('div');
+  loaderDiv.id = 'ai-chat-typing-loader';
+  loaderDiv.className = 'message message-model';
+  loaderDiv.innerHTML = `
+    <div class="typing-loader">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  chatMessages.appendChild(loaderDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const context = getSimulationContext();
+    const history = aiChatHistory.slice(-10); // Keep last 10 messages context to prevent tokens overflow
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message, history, context })
+    });
+
+    // Remove typing loader
+    const loader = document.getElementById('ai-chat-typing-loader');
+    if (loader) loader.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+      appendModelMessage(data.reply);
+      // Save in history
+      aiChatHistory.push({ role: 'user', text: message });
+      aiChatHistory.push({ role: 'model', text: data.reply });
+    } else {
+      const err = await res.json();
+      appendModelMessage(`Ошибка: ${err.error || 'Не удалось отправить запрос к ИИ.'}`);
+    }
+  } catch (err) {
+    const loader = document.getElementById('ai-chat-typing-loader');
+    if (loader) loader.remove();
+    console.error('Failed to chat:', err);
+    appendModelMessage('Ошибка: отсутствует соединение с сервером чата.');
+  }
+}
+
+async function submitReflectionAnswer() {
+  const answerInput = document.getElementById('scenario-reflection-answer');
+  if (!answerInput) return;
+  const answer = answerInput.value.trim();
+  if (!answer) {
+    alert('Пожалуйста, запишите ответ на вопрос перед проверкой.');
+    return;
+  }
+
+  const promptMessage = `Я выполняю учебный сценарий "${SCENARIOS[activeScenarioId].title}".
+Мой ответ на вопрос рефлексии: "${SCENARIOS[activeScenarioId].reflection}"
+Ответ: "${answer}"
+Пожалуйста, оцени мой ответ с точки зрения биологической правильности на основе текущих показателей на карте, поправь меня, если я ошибся, и подробно объясни суть процесса.`;
+
+  // Focus on AI chat and open drawer
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  const chatTrigger = document.getElementById('ai-chat-trigger');
+  if (chatDrawer && chatDrawer.classList.contains('hidden')) {
+    chatDrawer.classList.remove('hidden');
+    if (chatTrigger) chatTrigger.classList.remove('animate-bounce');
+  }
+
+  // Clear input
+  answerInput.value = '';
+
+  // Append user message in UI
+  appendUserMessage(`[Проверка рефлексии]: ${answer}`);
+
+  // Show typing loader
+  const chatMessages = document.getElementById('ai-chat-messages');
+  const loaderDiv = document.createElement('div');
+  loaderDiv.id = 'ai-chat-typing-loader';
+  loaderDiv.className = 'message message-model';
+  loaderDiv.innerHTML = `
+    <div class="typing-loader">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  chatMessages.appendChild(loaderDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const context = getSimulationContext();
+    const history = aiChatHistory.slice(-10);
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message: promptMessage, history, context })
+    });
+
+    const loader = document.getElementById('ai-chat-typing-loader');
+    if (loader) loader.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+      appendModelMessage(data.reply);
+      aiChatHistory.push({ role: 'user', text: `[Проверка ответа]: ${answer}` });
+      aiChatHistory.push({ role: 'model', text: data.reply });
+    } else {
+      const err = await res.json();
+      appendModelMessage(`Ошибка: ${err.error || 'Не удалось отправить ответ на оценку.'}`);
+    }
+  } catch (err) {
+    const loader = document.getElementById('ai-chat-typing-loader');
+    if (loader) loader.remove();
+    console.error('Failed to submit reflection:', err);
+    appendModelMessage('Ошибка: нет соединения с сервером для оценки ответа.');
+  }
+}
+
+function appendUserMessage(text) {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (!chatMessages) return;
+
+  const div = document.createElement('div');
+  div.className = 'message message-user';
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendModelMessage(text) {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (!chatMessages) return;
+
+  const div = document.createElement('div');
+  div.className = 'message message-model';
+  // Use simple markdown links/bold parse if needed, but textContent is safest for safety.
+  // We can do a basic replacement for newlines to keep text readable.
+  div.style.whiteSpace = 'pre-wrap';
+  div.textContent = text;
+  
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 

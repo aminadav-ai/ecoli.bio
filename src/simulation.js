@@ -287,6 +287,34 @@ export class Simulation {
     }
   }
 
+  applyScenario(scenarioId) {
+    this.reset();
+    if (scenarioId === 'oxygen_switch') {
+      if (this.metabolites['o2_e']) {
+        this.metabolites['o2_e'].concentration = 0.0;
+        this.metabolites['o2_e'].targetConcentration = 0.0;
+      }
+      if (this.metabolites['glc__D_e']) {
+        this.metabolites['glc__D_e'].concentration = 10.0;
+        this.metabolites['glc__D_e'].targetConcentration = 10.0;
+      }
+    } else if (scenarioId === 'metabolic_jam') {
+      if (this.metabolites['glc__D_e']) {
+        this.metabolites['glc__D_e'].concentration = 2.0;
+        this.metabolites['glc__D_e'].targetConcentration = 2.0;
+      }
+    } else if (scenarioId === 'warburg_effect') {
+      if (this.metabolites['glc__D_e']) {
+        this.metabolites['glc__D_e'].concentration = 10.0;
+        this.metabolites['glc__D_e'].targetConcentration = 10.0;
+      }
+      if (this.metabolites['o2_e']) {
+        this.metabolites['o2_e'].concentration = 0.2;
+        this.metabolites['o2_e'].targetConcentration = 0.2;
+      }
+    }
+  }
+
   /**
    * Injects a specified amount of metabolite (mM).
    */

@@ -1216,11 +1216,8 @@ export class PixiRenderer {
       // Visual concentration cap for water (55M is too massive for visual scaling)
       const concentration = node.biggId.includes('h2o') ? 1.0 : simMetab.concentration;
 
-      // Radius changes dynamically: base + scale based on square root of concentration
       const baseRadius = node.biggId.includes('glc__D') ? 22 : 15;
       const scaleFactor = 0.5 + Math.sqrt(concentration) * 0.6;
-      const radius = baseRadius * Math.max(0.4, Math.min(3.5, scaleFactor));
-      node.renderedRadius = radius;
 
       // Choose styling based on type and status
       let color = 0xf472b6; // pink
@@ -1236,26 +1233,44 @@ export class PixiRenderer {
         alpha = 0.55; // cofactors are transparent to avoid layout clutter
       }
 
-      // Check for deviation from the dynamic kinetic target (targetConcentration)
-      const target = simMetab.targetConcentration || simMetab.concentration;
-      const ratio = simMetab.concentration / target;
-      let isDeviating = false;
-      let deviationColor = 0;
-
-      if (ratio > 1.15) {
-        // Accumulation: Orange warning
-        color = 0xf97316; // orange
-        glowColor = 0xea580c;
-        isDeviating = true;
-        deviationColor = 0xf97316;
-      } else if (ratio < 0.85) {
-        // Deficit: Cyan/Light blue warning
-        color = 0x06b6d4; // cyan
-        glowColor = 0x0891b2;
-        isDeviating = true;
-        deviationColor = 0x06b6d4;
+      if (!this.flashingMetaboliteIds) {
+        this.flashingMetaboliteIds = new Set();
       }
 
+      const isFlashing = this.flashingMetaboliteIds.has(node.biggId);
+      let isDeviating = false;
+      let deviationColor = 0;
+      let radius = baseRadius * Math.max(0.4, Math.min(3.5, scaleFactor));
+
+      if (isFlashing) {
+        const pulse = 1.0 + Math.sin(animationFrameCount * 0.18) * 0.22;
+        radius = radius * pulse;
+        color = 0xef4444; // vibrant warning red
+        glowColor = 0xfc8181;
+        alpha = 0.95;
+        isDeviating = true;
+        deviationColor = 0xef4444;
+      } else {
+        // Check for deviation from the dynamic kinetic target (targetConcentration)
+        const target = simMetab.targetConcentration || simMetab.concentration;
+        const ratio = simMetab.concentration / target;
+
+        if (ratio > 1.15) {
+          // Accumulation: Orange warning
+          color = 0xf97316; // orange
+          glowColor = 0xea580c;
+          isDeviating = true;
+          deviationColor = 0xf97316;
+        } else if (ratio < 0.85) {
+          // Deficit: Cyan/Light blue warning
+          color = 0x06b6d4; // cyan
+          glowColor = 0x0891b2;
+          isDeviating = true;
+          deviationColor = 0x06b6d4;
+        }
+      }
+
+      node.renderedRadius = radius;
       if (isDead) {
         // Black and white grayscale conversion for dead cells
         color = 0x475569; // slate gray

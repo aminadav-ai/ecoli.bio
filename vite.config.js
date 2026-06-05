@@ -243,6 +243,81 @@ export default defineConfig(({ mode }) => {
     }
   };
 
+  const handleChat = async (req, res, next) => {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    if (url.pathname === '/api/chat' && req.method === 'POST') {
+      try {
+        const body = await getPostBody(req);
+        const { message, history, context } = body;
+        const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'GOOGLE_API_KEY is not configured on the server.' }));
+          return;
+        }
+
+        const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
+Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
+
+IMPORTANT: Respond in Russian (на русском языке), keeping your answers concise, scientifically accurate, and encouraging.
+
+Here is the current state of the metabolic simulation on the student's screen:
+${JSON.stringify(context, null, 2)}
+
+Instructions:
+1. Explain metabolism in simple, clear terms (undergraduate biology level).
+2. Use BiGG IDs (e.g. GLCptspp, PFK, PGI, PDH, PFL) when discussing specific reactions, but also mention their common names.
+3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
+4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
+`;
+
+        const contents = [];
+        if (history && history.length > 0) {
+          for (const msg of history) {
+            contents.push({
+              role: msg.role === 'model' ? 'model' : 'user',
+              parts: [{ text: msg.text }]
+            });
+          }
+        }
+        contents.push({
+          role: 'user',
+          parts: [{ text: message }]
+        });
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: systemPrompt }]
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Gemini API returned ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Извините, не удалось получить ответ от ИИ.';
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ reply }));
+      } catch (err) {
+        console.error('Error in chat API (Vite Dev):', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else {
+      next();
+    }
+  };
+
   return {
     build: {
       chunkSizeWarningLimit: 1000
@@ -259,11 +334,13 @@ export default defineConfig(({ mode }) => {
           getHighs().catch(() => {}); // start loading solver in the background on dev server startup
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
+          server.middlewares.use(handleChat);
         },
         configurePreviewServer(server) {
           getHighs().catch(() => {});
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
+          server.middlewares.use(handleChat);
         }
       }
     ]
