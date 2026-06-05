@@ -1101,7 +1101,7 @@ export class PixiRenderer {
    * Main rendering update loop called by the controller.
    * Updates metabolites pulsation and draws animated flow particles.
    */
-  renderUpdate(simMetabolites, simReactions, animationFrameCount) {
+  renderUpdate(simMetabolites, simReactions, animationFrameCount, isDead = false) {
     if (!this.viewport) return;
 
     this.lastSimReactions = simReactions;
@@ -1159,6 +1159,14 @@ export class PixiRenderer {
         deviationColor = 0x06b6d4;
       }
 
+      if (isDead) {
+        // Black and white grayscale conversion for dead cells
+        color = 0x475569; // slate gray
+        glowColor = 0x334155;
+        alpha = 0.45;
+        isDeviating = false; // Disable deviation warnings visually when dead
+      }
+
       // Draw highlighted ring if selected, hovered, or dynamically deviating
       if (this.selectedNodeId === node.id) {
         mg.circle(node.x, node.y, radius + 4).stroke({ width: 3.5, color: 0x818cf8, alpha: 1.0 });
@@ -1187,8 +1195,8 @@ export class PixiRenderer {
       const flux = simRxn.flux;
       const absFlux = Math.abs(flux);
 
-      // No flow for inactive reactions
-      if (absFlux < 0.02) return;
+      // No flow for inactive reactions or if the cell is dead
+      if (absFlux < 0.02 || isDead) return;
 
       // Color coding: blue for substrate uptake, green for cofactors, magenta/indigo for pathways
       let color = 0x818cf8; // indigo

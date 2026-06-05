@@ -217,6 +217,38 @@ class WorkerSimulation {
         flux: 0.0
       };
     }
+
+    // Ensure placeholder reactions exist for compatibility and metrics
+    if (!this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
+      this.reactions['BIOMASS_Ecoli_core_w_GAM'] = {
+        id: 'BIOMASS_Ecoli_core_w_GAM',
+        name: 'Biomass Objective Function',
+        reversibility: false,
+        substrates: [],
+        products: [],
+        stoichiometry: {},
+        vMax: 8.0,
+        km: 1.0,
+        defaultVmax: 8.0,
+        defaultKm: 1.0,
+        flux: 0.0
+      };
+    }
+    if (!this.reactions['ATPS4r']) {
+      this.reactions['ATPS4r'] = {
+        id: 'ATPS4r',
+        name: 'ATP Synthase',
+        reversibility: true,
+        substrates: [],
+        products: [],
+        stoichiometry: {},
+        vMax: 100.0,
+        km: 1.0,
+        defaultVmax: 100.0,
+        defaultKm: 1.0,
+        flux: 0.0
+      };
+    }
   }
 
   reset() {
@@ -397,7 +429,7 @@ class WorkerSimulation {
     }
 
     // Block non-physiological bypasses (after kinetic bounds loop) to force flux through map-visible pathways
-    const defaultBlocked = ['PFK_3', 'FBA3', 'F6PA'];
+    const defaultBlocked = ['PFK_3', 'FBA3', 'F6PA', 'GLCDpp', 'XYLI2'];
     for (const bId of defaultBlocked) {
       if (bounds[bId]) {
         bounds[bId] = { lowerBound: 0.0, upperBound: 0.0 };
@@ -638,11 +670,13 @@ function sendState() {
   if (!simulation) return;
 
   const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0.0;
+  const isDead = biomassFlux < 0.005; // Growth rate less than 0.005 is practically dead
 
   const state = {
     metabolites: {},
     reactions: {},
-    biomass_flux: Math.max(0.0, biomassFlux)
+    biomass_flux: Math.max(0.0, biomassFlux),
+    is_dead: isDead
   };
 
   for (const [m_id, m] of Object.entries(simulation.metabolites)) {

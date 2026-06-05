@@ -229,6 +229,7 @@ const PATHWAY_FOCUS_IDS = {
 let simulation = null;
 let renderer = null;
 let isPaused = false;
+let isDead = false;
 let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
@@ -423,7 +424,7 @@ function gameLoop(currentTime) {
     accumulatedTime = simTickRate * 5;
   }
   while (accumulatedTime >= simTickRate) {
-    if (!isPaused) {
+    if (!isPaused && !isDead) {
       simulation.tick(speedMultiplier);
       
       // Update historical data for concentration chart if inspecting a metabolite
@@ -452,7 +453,8 @@ function gameLoop(currentTime) {
   renderer.renderUpdate(
     simulation.metabolites,
     simulation.reactions,
-    animationFrameCount
+    animationFrameCount,
+    isDead
   );
 
   // Update UI panel values (concentrations in lists, sliders, labels, active chart)
@@ -477,15 +479,34 @@ function setupUIListeners() {
     }
   });
 
-  // Reset button
-  document.getElementById('reset-btn').addEventListener('click', () => {
+  // Reset/Restart handler
+  const resetHandler = () => {
     simulation.reset();
     chartHistory = [];
+    isDead = false;
+    const overlay = document.getElementById('death-overlay');
+    if (overlay) overlay.classList.add('hidden');
     console.log('[App] Simulation state reset.');
     if (isConnected && worker) {
       worker.postMessage({ type: 'reset' });
     }
-  });
+
+    // Refresh UI parameters and inputs to default values
+    renderPinnedReactions();
+    if (selectedReactionId && simulation.reactions[selectedReactionId]) {
+      handleReactionSelect({
+        biggId: selectedReactionId,
+        name: simulation.reactions[selectedReactionId].name
+      });
+    }
+  };
+
+  document.getElementById('reset-btn').addEventListener('click', resetHandler);
+  
+  const deathResetBtn = document.getElementById('death-reset-btn');
+  if (deathResetBtn) {
+    deathResetBtn.addEventListener('click', resetHandler);
+  }
 
   // Speed slider
   const speedSlider = document.getElementById('speed-slider');
@@ -2833,6 +2854,16 @@ function updateConnectionStatusUI(connected) {
  */
 function handleServerState(state) {
   if (!simulation) return;
+
+  isDead = state.is_dead || false;
+  const overlay = document.getElementById('death-overlay');
+  if (overlay) {
+    if (isDead) {
+      overlay.classList.remove('hidden');
+    } else {
+      overlay.classList.add('hidden');
+    }
+  }
 
   // 1. Update metabolite concentrations
   for (const [m_id, data] of Object.entries(state.metabolites)) {
