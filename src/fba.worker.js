@@ -9,6 +9,8 @@ let simulation = null;
 let isPaused = true;
 let speedMultiplier = 1.0;
 let loopInterval = null;
+let firstFbaSolved = false;
+
 
 class WorkerSimulation {
   constructor(escherMapData) {
@@ -434,6 +436,7 @@ self.onmessage = async (event) => {
     }
   } else if (msg.type === 'update_fluxes') {
     if (simulation) {
+      firstFbaSolved = true;
       simulation.updateFluxes(msg.fluxes, msg.biomass_flux);
       sendState();
     }
@@ -457,10 +460,12 @@ self.onmessage = async (event) => {
     }
   } else if (msg.type === 'reset') {
     if (simulation) {
+      firstFbaSolved = false;
       simulation.reset();
       sendState();
     }
   }
+
 };
 
 function startSimulationLoop() {
@@ -477,9 +482,10 @@ function sendState() {
   if (!simulation) return;
 
   const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0.0;
-  const isDead = biomassFlux < 0.005; // Growth rate less than 0.005 is practically dead
+  const isDead = firstFbaSolved && (biomassFlux < 0.005); // Growth rate less than 0.005 is practically dead
 
   const state = {
+
     metabolites: {},
     reactions: {},
     biomass_flux: Math.max(0.0, biomassFlux),
