@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit } from './tracker.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment } from './src/supabase_db.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -243,6 +244,76 @@ export default defineConfig(({ mode }) => {
     }
   };
 
+  const handleAuth = async (req, res, next) => {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    
+    if (url.pathname === '/api/auth/google' && req.method === 'POST') {
+      try {
+        const { credential } = await getPostBody(req);
+        if (!credential) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing credential.' }));
+          return;
+        }
+        const session = await verifyGoogleTokenAndLogin(credential);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(session));
+      } catch (err) {
+        console.error('Vite Auth Google error:', err);
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/auth/status' && req.method === 'GET') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const guestId = req.headers['x-guest-id'];
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        
+        const status = await getUserStatus(token, ip, guestId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(status));
+      } catch (err) {
+        console.error('Vite Auth Status error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        if (token) {
+          await logoutSession(token);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (err) {
+        console.error('Vite Logout error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/payments/simulate' && req.method === 'POST') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        if (!token) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized.' }));
+          return;
+        }
+        const result = await simulatePremiumPayment(token);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        console.error('Vite Payment simulation error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else {
+      next();
+    }
+  };
+
   const handleChat = async (req, res, next) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     if (url.pathname === '/api/chat' && req.method === 'POST') {
@@ -256,21 +327,28 @@ export default defineConfig(({ mode }) => {
           return;
         }
 
+        // Rate-limiting check via Supabase
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const guestId = req.headers['x-guest-id'];
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+        const limitCheck = await checkLimitAndIncrement(ip, guestId, token);
+        if (!limitCheck.allowed) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Limit Reached' }));
+          return;
+        }
+
         const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
 
-IMPORTANT: Respond in Russian (на русском языке), keeping your answers concise, scientifically accurate, and encouraging.
+IMPORTANT: Respond in the language of the user's query (e.g. if the user asks a question in Russian, reply in Russian; if in English, reply in English; etc.). Keep your answer concise, scientifically accurate, and encouraging.
 
 NOTE: The active model and map are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map), NOT the simplified e_coli_core model. The primary growth rate / biomass reaction is BIOMASS_Ec_iJO1366_core_53p95M. Keep this in mind when discussing pathways, connections, and reactions on the screen.
 
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
-
-Instructions:
-1. Explain metabolism in simple, clear terms (undergraduate biology level).
-2. Use BiGG IDs (e.g. GLCptspp, PFK, PGI, PDH, PFL) when discussing specific reactions, but also mention their common names.
-3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
-4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
 `;
 
         const contents = [];
@@ -306,10 +384,10 @@ Instructions:
         }
 
         const data = await response.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Извините, не удалось получить ответ от ИИ.';
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ reply }));
+        res.end(JSON.stringify({ reply, remaining: limitCheck.remaining }));
       } catch (err) {
         console.error('Error in chat API (Vite Dev):', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -336,12 +414,14 @@ Instructions:
           getHighs().catch(() => {}); // start loading solver in the background on dev server startup
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
+          server.middlewares.use(handleAuth);
           server.middlewares.use(handleChat);
         },
         configurePreviewServer(server) {
           getHighs().catch(() => {});
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
+          server.middlewares.use(handleAuth);
           server.middlewares.use(handleChat);
         }
       }

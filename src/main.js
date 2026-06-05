@@ -3064,54 +3064,308 @@ let scenarioObjectivesStatus = {}; // objectiveId -> completed (bool)
 const SCENARIOS = {
   oxygen_switch: {
     id: 'oxygen_switch',
-    title: '1. Кислородное переключение',
-    desc: 'Цель: Показать, что клетка переключает пути метаболизма в зависимости от доступности кислорода. Аэробное дыхание через PDH энергетически гораздо выгоднее, чем анаэробное брожение через PFL.',
+    title: '1. Oxygen Switch',
+    desc: 'Goal: Show that the cell switches metabolic pathways based on oxygen availability. Aerobic respiration via PDH is thermodynamically much more efficient than anaerobic fermentation via PFL.',
     objectives: [
-      { id: 'set_o2_0', text: 'Установить кислород (o2_e) на 0 (анаэробные условия)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration < 0.01 },
-      { id: 'observe_pfl', text: 'Убедиться, что пошел поток через PFL (поток > 2.0)', check: () => simulation.reactions['PFL'] && Math.abs(simulation.reactions['PFL'].flux) > 2.0 },
-      { id: 'increase_o2', text: 'Плавно увеличить подачу кислорода (o2_e >= 0.5)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration >= 0.49 },
-      { id: 'observe_pdh', text: 'Наблюдать, как PDH включается (> 2.0), а PFL затухает (< 0.5)', check: () => {
+      { id: 'set_o2_0', text: 'Set oxygen (o2_e) to 0 (anaerobic conditions)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration < 0.01 },
+      { id: 'observe_pfl', text: 'Ensure there is flux through PFL (flux > 2.0)', check: () => simulation.reactions['PFL'] && Math.abs(simulation.reactions['PFL'].flux) > 2.0 },
+      { id: 'increase_o2', text: 'Gradually increase oxygen supply (o2_e >= 0.5)', check: () => simulation.metabolites['o2_e'] && simulation.metabolites['o2_e'].concentration >= 0.49 },
+      { id: 'observe_pdh', text: 'Observe PDH turning on (> 2.0) and PFL shutting down (< 0.5)', check: () => {
         const pdhVal = simulation.reactions['PDH'] ? Math.abs(simulation.reactions['PDH'].flux) : 0;
         const pflVal = simulation.reactions['PFL'] ? Math.abs(simulation.reactions['PFL'].flux) : 999;
         return pdhVal > 2.0 && pflVal < 0.5;
       }}
     ],
-    reflection: 'Почему при подаче кислорода уровень atp_c (или выход ATP) растет, даже если количество входящей глюкозы не изменилось?',
+    reflection: 'Why does the atp_c level (or ATP yield) increase when oxygen is supplied, even if the incoming glucose rate remains unchanged?',
     controls: [
-      { id: 'o2_e', name: 'Подача Кислорода (o2_e)', min: 0.0, max: 1.0, step: 0.05, value: 0.0 }
+      { id: 'o2_e', name: 'Oxygen Supply (o2_e)', min: 0.0, max: 1.0, step: 0.05, value: 0.0 }
     ]
   },
   metabolic_jam: {
     id: 'metabolic_jam',
-    title: '2. Метаболическая пробка',
-    desc: 'Цель: Показать ограничение пропускной способности путей (Vmax). Если ферменты (например, PDH) работают на пределе, приток лишней глюкозы ведет к критическому накоплению промежуточных продуктов (пирувата).',
+    title: '2. Metabolic Jam',
+    desc: 'Goal: Show pathway capacity limitation (Vmax). If enzymes (e.g., PDH) are running at their limit, the influx of excess glucose leads to a critical accumulation of intermediate products (pyruvate).',
     objectives: [
-      { id: 'increase_glc', text: 'Увеличить концентрацию глюкозы (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
-      { id: 'reduce_pdh_vmax', text: 'Снизить Vmax фермента PDH до 2.0 или ниже', check: () => simulation.reactions['PDH'] && simulation.reactions['PDH'].vMax <= 2.01 },
-      { id: 'observe_pyr_accum', text: 'Зафиксировать накопление пирувата (pyr_c > 8.0 mM)', check: () => simulation.metabolites['pyr_c'] && simulation.metabolites['pyr_c'].concentration > 8.0 }
+      { id: 'increase_glc', text: 'Increase glucose concentration (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
+      { id: 'reduce_pdh_vmax', text: 'Reduce Vmax of PDH enzyme to 2.0 or below', check: () => simulation.reactions['PDH'] && simulation.reactions['PDH'].vMax <= 2.01 },
+      { id: 'observe_pyr_accum', text: 'Observe accumulation of pyruvate (pyr_c > 8.0 mM)', check: () => simulation.metabolites['pyr_c'] && simulation.metabolites['pyr_c'].concentration > 8.0 }
     ],
-    reflection: 'Почему при избытке глюкозы скорость роста (biomass_flux) перестает увеличиваться и упирается в предел?',
+    reflection: 'Why does the growth rate (biomass_flux) stop increasing and hit a limit when there is an excess of glucose?',
     controls: [
-      { id: 'glc__D_e', name: 'Концентрация Глюкозы (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 2.0 }
+      { id: 'glc__D_e', name: 'Glucose Concentration (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 2.0 }
     ]
   },
   warburg_effect: {
     id: 'warburg_effect',
-    title: '3. Эффект Варбурга',
-    desc: 'Цель: Продемонстрировать явление overflow-метаболизма (эффект Варбурга в раковых клетках). Когда скорость гликолиза превышает пропускную способность дыхания, избыток углерода сбрасывается в лактат даже при наличии кислорода.',
+    title: '3. Warburg Effect',
+    desc: 'Goal: Demonstrate overflow metabolism (similar to the Warburg effect in cancer cells). When the rate of glycolysis exceeds the capacity of respiration, excess carbon is excreted as lactate, even in the presence of oxygen.',
     objectives: [
-      { id: 'reduce_resp', text: 'Ограничить Vmax дыхания (CYTBO3_4pp) до 5.0 или ниже', check: () => simulation.reactions['CYTBO3_4pp'] && simulation.reactions['CYTBO3_4pp'].vMax <= 5.01 },
-      { id: 'increase_glc', text: 'Увеличить концентрацию глюкозы (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
-      { id: 'observe_lac_flux', text: 'Наблюдать выделение лактата в среду (поток EX_lac__D_e > 1.0)', check: () => simulation.reactions['EX_lac__D_e'] && simulation.reactions['EX_lac__D_e'].flux > 1.0 }
+      { id: 'reduce_resp', text: 'Limit Vmax of respiration (CYTBO3_4pp) to 5.0 or below', check: () => simulation.reactions['CYTBO3_4pp'] && simulation.reactions['CYTBO3_4pp'].vMax <= 5.01 },
+      { id: 'increase_glc', text: 'Increase glucose concentration (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
+      { id: 'observe_lac_flux', text: 'Observe excretion of lactate into the medium (EX_lac__D_e flux > 1.0)', check: () => simulation.reactions['EX_lac__D_e'] && simulation.reactions['EX_lac__D_e'].flux > 1.0 }
     ],
-    reflection: 'Почему раковые клетки переходят на лактатное брожение даже в аэробных условиях? В чем преимущество такой адаптации для их деления?',
+    reflection: 'Why do cancer cells switch to lactic acid fermentation even under aerobic conditions? What is the advantage of this adaptation for rapid division?',
     controls: [
-      { id: 'glc__D_e', name: 'Концентрация Глюкозы (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 10.0 }
+      { id: 'glc__D_e', name: 'Glucose Concentration (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 10.0 }
     ]
   }
 };
 
 let aiChatHistory = [];
+
+// Auth & Rate-limiting State
+let guestId = localStorage.getItem('chatGuestId');
+if (!guestId) {
+  guestId = 'guest_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  localStorage.setItem('chatGuestId', guestId);
+}
+
+let userToken = localStorage.getItem('userToken');
+let googleClientId = null;
+let currentLimit = { max: 5, count: 0, remaining: 5 };
+let userProfile = null;
+let googleAuthInitialized = false;
+
+async function checkAuthStatus() {
+  const token = localStorage.getItem('userToken');
+  try {
+    const headers = { 'x-guest-id': guestId };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch('/api/auth/status', { headers });
+    if (res.ok) {
+      const data = await res.json();
+      userProfile = data.user;
+      currentLimit = data.limit;
+      googleClientId = data.googleClientId;
+      
+      updateUserStatusUI();
+      
+      if (googleClientId && !googleAuthInitialized) {
+        initGoogleAuth(googleClientId);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to check auth status:', err);
+  }
+}
+
+function initGoogleAuth(clientId) {
+  if (typeof google === 'undefined') {
+    setTimeout(() => initGoogleAuth(clientId), 500);
+    return;
+  }
+  googleAuthInitialized = true;
+  
+  google.accounts.id.initialize({
+    client_id: clientId,
+    callback: handleGoogleCredentialResponse
+  });
+  
+  renderGoogleButton();
+}
+
+function renderGoogleButton() {
+  const container = document.getElementById('google-signin-btn-container');
+  if (container) {
+    container.innerHTML = '';
+    const btnDiv = document.createElement('div');
+    btnDiv.id = 'google-signin-btn';
+    container.appendChild(btnDiv);
+    google.accounts.id.renderButton(
+      document.getElementById('google-signin-btn'),
+      { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
+    );
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('userToken', data.token);
+      userToken = data.token;
+      await checkAuthStatus();
+    } else {
+      const err = await res.json();
+      alert(`Google Auth failed: ${err.error}`);
+    }
+  } catch (err) {
+    console.error('Google credential validation error:', err);
+  }
+}
+
+async function handleLogout() {
+  const token = localStorage.getItem('userToken');
+  if (token) {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error('Logout request error:', e);
+    }
+  }
+  localStorage.removeItem('userToken');
+  userToken = null;
+  userProfile = null;
+  await checkAuthStatus();
+}
+
+function updateUserStatusUI() {
+  const statusBar = document.getElementById('ai-chat-status-bar');
+  const lockOverlay = document.getElementById('ai-chat-lock-overlay');
+  const lockMessage = document.getElementById('lock-message');
+  const inputContainer = document.querySelector('.chat-input-container');
+  const btnUpgrade = document.getElementById('btn-upgrade-premium');
+  
+  if (!statusBar) return;
+  
+  if (userProfile) {
+    const isPremium = userProfile.isPremium;
+    if (isPremium) {
+      statusBar.innerHTML = `
+        <span>💎 Premium Active (Unlimited)</span>
+        <span>
+          ${userProfile.name}
+          <button id="btn-logout" class="chat-logout-btn">Log out</button>
+        </span>
+      `;
+    } else {
+      statusBar.innerHTML = `
+        <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+        <span>
+          ${userProfile.name}
+          <button id="btn-logout" class="chat-logout-btn">Log out</button>
+        </span>
+      `;
+    }
+  } else {
+    statusBar.innerHTML = `
+      <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+      <button id="btn-status-login" class="chat-logout-btn" style="color: #38bdf8;">Sign in</button>
+    `;
+  }
+  
+  const btnLogout = document.getElementById('btn-logout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', handleLogout);
+  }
+  
+  const btnStatusLogin = document.getElementById('btn-status-login');
+  if (btnStatusLogin) {
+    btnStatusLogin.addEventListener('click', () => {
+      if (lockOverlay) {
+        lockOverlay.classList.remove('hidden');
+        renderGoogleButton();
+      }
+    });
+  }
+  
+  const isPremium = userProfile && userProfile.isPremium;
+  const limitsExceeded = currentLimit.remaining <= 0;
+  
+  if (limitsExceeded && !isPremium) {
+    if (lockOverlay) lockOverlay.classList.remove('hidden');
+    if (inputContainer) inputContainer.classList.add('hidden');
+    
+    if (userProfile) {
+      if (btnUpgrade) btnUpgrade.classList.remove('hidden');
+      const googleContainer = document.getElementById('google-signin-btn-container');
+      if (googleContainer) googleContainer.innerHTML = '';
+      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Upgrade to Premium for $5.00 to get unlimited access.';
+    } else {
+      if (btnUpgrade) btnUpgrade.classList.add('hidden');
+      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Sign in with Google to continue, or buy Premium.';
+      renderGoogleButton();
+    }
+  } else {
+    if (lockOverlay) lockOverlay.classList.add('hidden');
+    if (inputContainer) inputContainer.classList.remove('hidden');
+  }
+}
+
+function openMockCheckout() {
+  const overlay = document.createElement('div');
+  overlay.className = 'mock-payment-overlay';
+  overlay.id = 'mock-payment-modal';
+  overlay.innerHTML = `
+    <div class="payment-card glass">
+      <button class="btn-close-payment" id="btn-close-payment">✕</button>
+      <h3>⚡ CellFlux Premium Access</h3>
+      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">1-Month Unlimited AI Chat & Scenarios (one-time payment)</p>
+      <div class="price-tag">$5.00 USD</div>
+      
+      <div class="card-input-group">
+        <div>
+          <label>Card Number</label>
+          <input type="text" placeholder="4000 1234 5678 9010" id="pay-card-num" value="4000 1234 5678 9010" />
+        </div>
+        <div class="payment-row">
+          <div>
+            <label>Expiry Date</label>
+            <input type="text" placeholder="12/28" id="pay-card-exp" value="12/28" />
+          </div>
+          <div>
+            <label>CVC</label>
+            <input type="text" placeholder="123" id="pay-card-cvc" value="123" />
+          </div>
+        </div>
+        <div>
+          <label>Cardholder Name</label>
+          <input type="text" placeholder="John Doe" id="pay-card-name" value="${userProfile ? userProfile.name : 'John Doe'}" />
+        </div>
+      </div>
+      
+      <button class="btn btn-primary w-100" id="btn-confirm-payment" style="height: 40px; font-weight: 700;">Pay $5.00</button>
+      <p style="font-size: 10px; color: #64748b; text-align: center; margin: 12px 0 0 0;">🔐 Simulated sandbox payment. No real money will be charged.</p>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  
+  document.getElementById('btn-close-payment').addEventListener('click', () => {
+    overlay.remove();
+  });
+  
+  document.getElementById('btn-confirm-payment').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-confirm-payment');
+    btn.disabled = true;
+    btn.textContent = 'Processing transaction...';
+    
+    const token = localStorage.getItem('userToken');
+    try {
+      const res = await fetch('/api/payments/simulate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        btn.textContent = '✓ Payment Successful!';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+          overlay.remove();
+          checkAuthStatus();
+        }, 1500);
+      } else {
+        alert('Payment failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Pay $5.00';
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Payment request error.');
+      btn.disabled = false;
+      btn.textContent = 'Pay $5.00';
+    }
+  });
+}
 
 function setupScenariosAndChat() {
   // 1. Setup Tab Switching in Left Sidebar
@@ -3237,6 +3491,17 @@ function setupScenariosAndChat() {
       chatDrawer.classList.add('hidden');
     }
   });
+
+  // Upgrade to Premium Button
+  const btnUpgrade = document.getElementById('btn-upgrade-premium');
+  if (btnUpgrade) {
+    btnUpgrade.addEventListener('click', () => {
+      openMockCheckout();
+    });
+  }
+
+  // Initial Auth & Limit checks
+  checkAuthStatus();
 }
 
 function selectScenario(scenarioId) {
@@ -3519,11 +3784,17 @@ async function sendChatMessage() {
     const context = getSimulationContext();
     const history = aiChatHistory.slice(-10); // Keep last 10 messages context to prevent tokens overflow
 
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-guest-id': guestId
+    };
+    if (userToken) {
+      headers['Authorization'] = `Bearer ${userToken}`;
+    }
+
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({ message, history, context })
     });
 
@@ -3537,15 +3808,26 @@ async function sendChatMessage() {
       // Save in history
       aiChatHistory.push({ role: 'user', text: message });
       aiChatHistory.push({ role: 'model', text: data.reply });
+      
+      // Update remaining limits dynamically
+      if (typeof data.remaining !== 'undefined') {
+        currentLimit.remaining = data.remaining;
+        updateUserStatusUI();
+      }
     } else {
-      const err = await res.json();
-      appendModelMessage(`Ошибка: ${err.error || 'Не удалось отправить запрос к ИИ.'}`);
+      if (res.status === 403) {
+        appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
+        await checkAuthStatus();
+      } else {
+        const err = await res.json();
+        appendModelMessage(`Error: ${err.error || 'Failed to send query to AI.'}`);
+      }
     }
   } catch (err) {
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
     console.error('Failed to chat:', err);
-    appendModelMessage('Ошибка: отсутствует соединение с сервером чата.');
+    appendModelMessage('Error: No connection to the chat server.');
   }
 }
 
@@ -3554,14 +3836,14 @@ async function submitReflectionAnswer() {
   if (!answerInput) return;
   const answer = answerInput.value.trim();
   if (!answer) {
-    alert('Пожалуйста, запишите ответ на вопрос перед проверкой.');
+    alert('Please write an answer to the question before submitting.');
     return;
   }
 
-  const promptMessage = `Я выполняю учебный сценарий "${SCENARIOS[activeScenarioId].title}".
-Мой ответ на вопрос рефлексии: "${SCENARIOS[activeScenarioId].reflection}"
-Ответ: "${answer}"
-Пожалуйста, оцени мой ответ с точки зрения биологической правильности на основе текущих показателей на карте, поправь меня, если я ошибся, и подробно объясни суть процесса.`;
+  const promptMessage = `I am performing the educational scenario "${SCENARIOS[activeScenarioId].title}".
+My answer to the reflection question: "${SCENARIOS[activeScenarioId].reflection}"
+Answer: "${answer}"
+Please evaluate my answer for biological correctness based on the current metabolic map parameters, correct me if I am wrong, and explain the biology in detail.`;
 
   // Focus on AI chat and open drawer
   const chatDrawer = document.getElementById('ai-chat-drawer');
@@ -3575,7 +3857,7 @@ async function submitReflectionAnswer() {
   answerInput.value = '';
 
   // Append user message in UI
-  appendUserMessage(`[Проверка рефлексии]: ${answer}`);
+  appendUserMessage(`[Reflection Check]: ${answer}`);
 
   // Show typing loader
   const chatMessages = document.getElementById('ai-chat-messages');
@@ -3596,11 +3878,17 @@ async function submitReflectionAnswer() {
     const context = getSimulationContext();
     const history = aiChatHistory.slice(-10);
 
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-guest-id': guestId
+    };
+    if (userToken) {
+      headers['Authorization'] = `Bearer ${userToken}`;
+    }
+
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({ message: promptMessage, history, context })
     });
 
@@ -3610,17 +3898,28 @@ async function submitReflectionAnswer() {
     if (res.ok) {
       const data = await res.json();
       appendModelMessage(data.reply);
-      aiChatHistory.push({ role: 'user', text: `[Проверка ответа]: ${answer}` });
+      aiChatHistory.push({ role: 'user', text: `[Reflection Check]: ${answer}` });
       aiChatHistory.push({ role: 'model', text: data.reply });
+      
+      // Update remaining limits dynamically
+      if (typeof data.remaining !== 'undefined') {
+        currentLimit.remaining = data.remaining;
+        updateUserStatusUI();
+      }
     } else {
-      const err = await res.json();
-      appendModelMessage(`Ошибка: ${err.error || 'Не удалось отправить ответ на оценку.'}`);
+      if (res.status === 403) {
+        appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
+        await checkAuthStatus();
+      } else {
+        const err = await res.json();
+        appendModelMessage(`Error: ${err.error || 'Failed to submit answer for evaluation.'}`);
+      }
     }
   } catch (err) {
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
     console.error('Failed to submit reflection:', err);
-    appendModelMessage('Ошибка: нет соединения с сервером для оценки ответа.');
+    appendModelMessage('Error: No connection to the server for evaluation.');
   }
 }
 

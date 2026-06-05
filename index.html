@@ -12,6 +12,8 @@
     
     <!-- Link to Stylesheet -->
     <link rel="stylesheet" href="/src/style.css" />
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <!-- App Container -->
@@ -105,8 +107,8 @@
       <aside class="left-panel panel glass">
         <!-- Sidebar Navigation Tabs -->
         <div class="panel-tabs">
-          <button id="tab-metrics" class="panel-tab active">Показатели</button>
-          <button id="tab-scenarios" class="panel-tab">Сценарии 🎓</button>
+          <button id="tab-metrics" class="panel-tab active">Metrics</button>
+          <button id="tab-scenarios" class="panel-tab">Scenarios 🎓</button>
         </div>
 
         <!-- Tab 1: Metrics & Pinned Reactions -->
@@ -141,22 +143,22 @@
 
         <!-- Tab 2: Interactive Learning Scenarios -->
         <div id="tab-content-scenarios" class="tab-content hidden">
-          <h2>Учебные сценарии</h2>
+          <h2>Learning Scenarios</h2>
           <div class="scenarios-list" id="scenarios-list-container">
             <div class="scenario-card" data-scenario="oxygen_switch">
-              <h3>1. Кислородное переключение</h3>
-              <p>Как меняются пути в зависимости от среды: анаэробное брожение vs аэробное дыхание.</p>
-              <div class="scenario-badge">Адаптация</div>
+              <h3>1. Oxygen Switch</h3>
+              <p>How pathways change based on environment: anaerobic fermentation vs aerobic respiration.</p>
+              <div class="scenario-badge">Adaptation</div>
             </div>
             <div class="scenario-card" data-scenario="metabolic_jam">
-              <h3>2. Метаболическая пробка</h3>
-              <p>Насыщение путей: ограничение Vmax и накопление пирувата при избытке глюкозы.</p>
-              <div class="scenario-badge">Порог насыщения</div>
+              <h3>2. Metabolic Jam</h3>
+              <p>Pathway saturation: Vmax limitations and pyruvate accumulation under excess glucose.</p>
+              <div class="scenario-badge">Saturation Limit</div>
             </div>
             <div class="scenario-card" data-scenario="warburg_effect">
-              <h3>3. Эффект Варбурга</h3>
-              <p>Окислительный выброс лактата при высокой скорости глюколиза или дефектах дыхания.</p>
-              <div class="scenario-badge">Канцерогенный метаболизм</div>
+              <h3>3. Warburg Effect</h3>
+              <p>Oxidative excretion of lactate under high glycolysis rate or respiration defects.</p>
+              <div class="scenario-badge">Cancer Metabolism</div>
             </div>
           </div>
 
@@ -164,16 +166,16 @@
           <div id="active-scenario-detail" class="active-scenario-detail hidden">
             <hr class="panel-divider" />
             <div class="scenario-detail-header">
-              <h3 id="active-scenario-title">Название сценария</h3>
-              <button id="btn-exit-scenario" class="btn-exit-scenario" title="Выйти из сценария">✕ Выход</button>
+              <h3 id="active-scenario-title">Scenario Title</h3>
+              <button id="btn-exit-scenario" class="btn-exit-scenario" title="Exit scenario">✕ Exit</button>
             </div>
-            <p id="active-scenario-desc" class="scenario-description">Описание сценария...</p>
+            <p id="active-scenario-desc" class="scenario-description">Scenario description...</p>
             
-            <button id="btn-start-scenario" class="btn btn-primary w-100">↺ Сбросить и начать</button>
+            <button id="btn-start-scenario" class="btn btn-primary w-100">↺ Reset and Start</button>
             
             <!-- Dynamic Controls inside Scenario (Oxygen, Glucose slider, etc.) -->
             <div id="scenario-controls-container" class="scenario-controls-container hidden">
-              <h3>Управление средой:</h3>
+              <h3>Environment Control:</h3>
               <div id="scenario-dynamic-slider-group" class="slider-group">
                 <!-- Will be dynamically updated/populated -->
               </div>
@@ -181,7 +183,7 @@
 
             <!-- Checklist of Objectives -->
             <div class="scenario-objectives-section">
-              <h3>Задачи:</h3>
+              <h3>Objectives:</h3>
               <ul id="scenario-objectives-list" class="scenario-objectives-list">
                 <!-- Objectives will be dynamically populated -->
               </ul>
@@ -189,10 +191,10 @@
 
             <!-- Reflection Question Section -->
             <div id="scenario-reflection-section" class="scenario-reflection-section">
-              <h3>Рефлексия:</h3>
-              <p id="scenario-reflection-question" class="reflection-question">Вопрос...</p>
-              <textarea id="scenario-reflection-answer" placeholder="Введите ваш ответ здесь для проверки преподавателем-ИИ..." rows="4"></textarea>
-              <button id="btn-submit-reflection" class="btn btn-secondary w-100 mt-2">Проверить ответ с ИИ</button>
+              <h3>Reflection:</h3>
+              <p id="scenario-reflection-question" class="reflection-question">Question...</p>
+              <textarea id="scenario-reflection-answer" placeholder="Enter your answer here for evaluation by the AI tutor..." rows="4"></textarea>
+              <button id="btn-submit-reflection" class="btn btn-secondary w-100 mt-2">Submit answer to AI</button>
             </div>
           </div>
         </div>
@@ -377,7 +379,7 @@
       <!-- Floating AI Chatbot Widget -->
       <div id="ai-chat-widget" class="ai-chat-widget">
         <!-- Floating chat bubble button -->
-        <button id="ai-chat-trigger" class="ai-chat-trigger animate-bounce" title="Задать вопрос ИИ-ассистенту">
+        <button id="ai-chat-trigger" class="ai-chat-trigger animate-bounce" title="Ask the AI Assistant">
           <span class="chat-icon">💬</span>
           <span class="chat-pulse"></span>
         </button>
@@ -388,33 +390,51 @@
             <div class="chat-title-group">
               <span class="chat-logo">🤖</span>
               <div>
-                <h3>ИИ-Ассистент</h3>
-                <span class="chat-status">В сети • Анализирует карту</span>
+                <h3>AI Assistant</h3>
+                <span class="chat-status">Online • Analyzing map</span>
               </div>
             </div>
             <div class="chat-header-actions">
-              <button id="ai-chat-context-btn" class="chat-header-btn" title="Показать контекст симуляции">👁️ Контекст</button>
+              <button id="ai-chat-context-btn" class="chat-header-btn" title="Show simulation context">👁️ Context</button>
               <button id="ai-chat-close" class="chat-header-btn close-btn">✕</button>
             </div>
           </div>
 
           <!-- Collapsible context preview -->
           <div id="ai-chat-context-panel" class="chat-context-panel hidden">
-            <h4>Контекст симуляции, передаваемый ИИ:</h4>
+            <h4>Simulation context sent to AI:</h4>
             <pre id="ai-chat-context-json" class="code-font"></pre>
+          </div>
+
+          <!-- User status bar (limits/login info) -->
+          <div id="ai-chat-status-bar" class="chat-status-bar">
+            Loading status...
           </div>
 
           <!-- Messages list -->
           <div id="ai-chat-messages" class="chat-messages">
             <div class="message message-model">
-              Привет! Я твой ИИ-помощник по метаболизму E. coli. Ты можешь задать мне любые вопросы по карте, реакциям, метаболическим путям или по текущим учебным сценариям.
+              Hello! I am your AI assistant for E. coli metabolism. Feel free to ask me any questions about the map, reactions, metabolic pathways, or the current learning scenarios.
+            </div>
+          </div>
+
+          <!-- Lock overlay for limits/auth -->
+          <div id="ai-chat-lock-overlay" class="chat-lock-overlay hidden">
+            <div class="lock-card">
+              <span class="lock-icon">🔒</span>
+              <h4>Daily Limit Reached</h4>
+              <p id="lock-message">Guests are limited to 5 queries per day. Sign in with Google to continue, or buy Premium for unlimited access.</p>
+              <div id="google-signin-btn-container" class="google-signin-btn-container">
+                <!-- Google auth button will render here -->
+              </div>
+              <button id="btn-upgrade-premium" class="btn btn-primary mt-2 w-100 hidden">Buy 1-Month Premium ($5)</button>
             </div>
           </div>
 
           <!-- Input bar -->
           <div class="chat-input-container">
-            <input type="text" id="ai-chat-input" placeholder="Задайте вопрос по метаболизму..." autocomplete="off" />
-            <button id="ai-chat-send-btn" class="btn btn-primary">Отправить</button>
+            <input type="text" id="ai-chat-input" placeholder="Ask a question about metabolism..." autocomplete="off" />
+            <button id="ai-chat-send-btn" class="btn btn-primary">Send</button>
           </div>
         </div>
       </div>

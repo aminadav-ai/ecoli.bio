@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit } from './tracker.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment } from './src/supabase_db.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -220,10 +221,21 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: 'GOOGLE_API_KEY is not configured on the server.' });
     }
 
+    // Rate-limiting check via Supabase
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const guestId = req.headers['x-guest-id'];
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+    const limitCheck = await checkLimitAndIncrement(ip, guestId, token);
+    if (!limitCheck.allowed) {
+      return res.status(403).json({ error: 'Limit Reached' });
+    }
+
     const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
 
-IMPORTANT: Respond in Russian (на русском языке), keeping your answers concise, scientifically accurate, and encouraging.
+IMPORTANT: Respond in the language of the user's query (e.g. if the user asks a question in Russian, reply in Russian; if in English, reply in English; etc.). Keep your answer concise, scientifically accurate, and encouraging.
 
 NOTE: The active model and map are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map), NOT the simplified e_coli_core model. The primary growth rate / biomass reaction is BIOMASS_Ec_iJO1366_core_53p95M. Keep this in mind when discussing pathways, connections, and reactions on the screen.
 
@@ -270,14 +282,74 @@ Instructions:
     }
 
     const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Извините, не удалось получить ответ от ИИ.';
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
     
-    return res.json({ reply });
+    return res.json({ reply, remaining: limitCheck.remaining });
   } catch (err) {
     console.error('Error in /api/chat API:', err);
     return res.status(500).json({ error: err.message });
   }
 });
+
+// OAuth and Subscription Routes
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ error: 'Missing credential.' });
+    }
+    const session = await verifyGoogleTokenAndLogin(credential);
+    return res.json(session);
+  } catch (err) {
+    console.error('Auth Google error:', err);
+    return res.status(401).json({ error: err.message });
+  }
+});
+
+app.get('/api/auth/status', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const guestId = req.headers['x-guest-id'];
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    
+    const status = await getUserStatus(token, ip, guestId);
+    return res.json(status);
+  } catch (err) {
+    console.error('Auth Status error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (token) {
+      await logoutSession(token);
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Logout error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/payments/simulate', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+    const result = await simulatePremiumPayment(token);
+    return res.json(result);
+  } catch (err) {
+    console.error('Payment simulation error:', err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 
 // Middleware to track visits
 app.use((req, res, next) => {
