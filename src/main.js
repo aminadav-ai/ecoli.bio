@@ -1062,6 +1062,10 @@ function handleMetaboliteSelect(node) {
   if (mobilePopup) {
     if (isMobile) {
       mobilePopup.classList.remove('hidden');
+      const mobileBiggEl = document.getElementById('mobile-metab-bigg-id-val');
+      if (mobileBiggEl) {
+        mobileBiggEl.textContent = node.biggId;
+      }
       setTimeout(updateMobilePopupPosition, 0);
     } else {
       mobilePopup.classList.add('hidden');
