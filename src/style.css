@@ -2415,3 +2415,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
   margin-top: 4px;
 }
 
+/* Mobile Responsive Styling */
+@media (max-width: 768px) {
+  .app-header,
+  .left-panel,
+  .right-panel {
+    display: none !important;
+  }
+}
+
+

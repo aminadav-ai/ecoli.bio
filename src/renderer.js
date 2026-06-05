@@ -751,16 +751,16 @@ export class PixiRenderer {
     });
   }
 
-  /**
-   * Helper to get horizontal center offset that sits exactly halfway between
-   * the left overlay panel (420px width including margin) and right inspector panel (400px width including margin if visible).
-   */
   getUsableCenterX() {
+    if (window.innerWidth <= 768) {
+      return this.app.renderer.width / 2;
+    }
     const leftSpace = 420;
     const rightPanel = document.getElementById('inspector-panel');
     const rightSpace = (rightPanel && !rightPanel.classList.contains('hidden-panel')) ? 400 : 0;
     return (this.app.renderer.width + leftSpace - rightSpace) / 2;
   }
+
 
   /**
    * Fits the entire metabolic map centered inside the viewport canvas.
@@ -1025,6 +1025,13 @@ export class PixiRenderer {
         const canvasY = e.clientY;
         const node = this.hitTestMetabolite(canvasX, canvasY);
         el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
+
+        // Clear hover/tooltip on mobile/desktop if we drag and finish on empty space
+        if (!node) {
+          this.hoveredNode = null;
+          const event = new CustomEvent('metabolite-hover', { detail: null });
+          el.dispatchEvent(event);
+        }
       }
     };
 
@@ -1070,8 +1077,14 @@ export class PixiRenderer {
       if (!node && !this.hoveredReaction) {
         this.clearSelection();
         this.onSelectMetabolite(null);
+
+        // Hide tooltip
+        this.hoveredNode = null;
+        const event = new CustomEvent('metabolite-hover', { detail: null });
+        el.dispatchEvent(event);
       }
     });
+
   }
 
   /**
