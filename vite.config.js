@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
+import { trackVisit } from './tracker.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -123,6 +124,19 @@ function calculateBounds(concentrations, parameters) {
 }
 
 export default defineConfig(({ mode }) => {
+  // Load env variables to ensure Telegram credentials are available on process.env
+  const env = loadEnv(mode, process.cwd(), '');
+  process.env.TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
+  process.env.TELEGRAM_CHAT_ID = env.TELEGRAM_CHAT_ID;
+
+  const handleTrackVisit = async (req, res, next) => {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      trackVisit(req).catch(err => console.error('[Vite Dev Server] Visit tracking error:', err));
+    }
+    next();
+  };
+
   const getPostBody = (req) => {
     return new Promise((resolve, reject) => {
       let body = '';
@@ -225,9 +239,11 @@ export default defineConfig(({ mode }) => {
       {
         name: 'fba-solver-middleware',
         configureServer(server) {
+          server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
         },
         configurePreviewServer(server) {
+          server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
         }
       }
