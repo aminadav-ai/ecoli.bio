@@ -3635,16 +3635,126 @@ function appendUserMessage(text) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function parseMarkdownOnly(text) {
+  let escaped = escapeHtml(text);
+  // **bold** -> <strong>bold</strong>
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // *italic* -> <em>italic</em>
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  escaped = escaped.replace(/_(.*?)_/g, '<em>$1</em>');
+  return escaped;
+}
+
+function makeElementsClickable(container) {
+  const idMap = new Map();
+  if (renderer) {
+    if (renderer.metabNodes) {
+      renderer.metabNodes.forEach(n => {
+        if (n.biggId) idMap.set(n.biggId.toLowerCase(), { type: 'metabolite', id: n.id, node: n });
+        if (n.id) idMap.set(n.id.toLowerCase(), { type: 'metabolite', id: n.id, node: n });
+      });
+    }
+    if (renderer.reactions) {
+      renderer.reactions.forEach(r => {
+        if (r.biggId) idMap.set(r.biggId.toLowerCase(), { type: 'reaction', id: r.id, rxn: r });
+        if (r.id) idMap.set(r.id.toLowerCase(), { type: 'reaction', id: r.id, rxn: r });
+      });
+    }
+  }
+
+  const wordRegex = /\b[A-Za-z0-9_]{3,}\b/g;
+
+  // Walk text nodes
+  const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+  let textNode;
+  const nodesToReplace = [];
+
+  while (textNode = walk.nextNode()) {
+    const text = textNode.nodeValue;
+    let hasMatch = false;
+    wordRegex.lastIndex = 0;
+    let match;
+    while ((match = wordRegex.exec(text)) !== null) {
+      if (idMap.has(match[0].toLowerCase())) {
+        hasMatch = true;
+        break;
+      }
+    }
+    if (hasMatch) {
+      nodesToReplace.push(textNode);
+    }
+  }
+
+  nodesToReplace.forEach(node => {
+    const text = node.nodeValue;
+    wordRegex.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+
+    while ((match = wordRegex.exec(text)) !== null) {
+      const matchedText = match[0];
+      const lower = matchedText.toLowerCase();
+
+      if (idMap.has(lower)) {
+        if (match.index > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+        }
+
+        const info = idMap.get(lower);
+        const span = document.createElement('span');
+        span.className = 'clickable-map-element';
+        span.textContent = matchedText;
+        span.dataset.type = info.type;
+        span.dataset.id = info.id;
+
+        span.addEventListener('click', () => {
+          if (info.type === 'metabolite') {
+            renderer.selectMetabolite(info.node.id);
+            handleMetaboliteSelect(info.node);
+            renderer.focusOnCoordinates(info.node.x, info.node.y, 0.85);
+          } else {
+            renderer.selectReaction(info.rxn.id);
+            handleReactionSelect(info.rxn);
+            renderer.focusOnCoordinates(info.rxn.labelX, info.rxn.labelY, 0.85);
+          }
+        });
+
+        fragment.appendChild(span);
+        lastIndex = wordRegex.lastIndex;
+      }
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+    }
+
+    node.parentNode.replaceChild(fragment, node);
+  });
+}
+
 function appendModelMessage(text) {
   const chatMessages = document.getElementById('ai-chat-messages');
   if (!chatMessages) return;
 
   const div = document.createElement('div');
   div.className = 'message message-model';
-  // Use simple markdown links/bold parse if needed, but textContent is safest for safety.
-  // We can do a basic replacement for newlines to keep text readable.
   div.style.whiteSpace = 'pre-wrap';
-  div.textContent = text;
+  
+  // Set parsed HTML (with bold/italic)
+  div.innerHTML = parseMarkdownOnly(text);
+  
+  // Add interactive click handlers to any detected reaction/metabolite IDs
+  makeElementsClickable(div);
   
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;

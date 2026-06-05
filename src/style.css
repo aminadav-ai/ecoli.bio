@@ -3043,5 +3043,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 }
 
+.clickable-map-element {
+  color: #38bdf8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.clickable-map-element:hover {
+  color: #7dd3fc;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
 
 
