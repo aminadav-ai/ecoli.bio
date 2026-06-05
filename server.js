@@ -54,7 +54,10 @@ function calculateBounds(concentrations, parameters) {
   const bounds = {};
   
   // Define default blocked bypasses
-  const defaultBlocked = ['PFK_3', 'FBA3', 'F6PA', 'GLCDpp', 'XYLI2', 'GLCabcpp'];
+  const defaultBlocked = [
+    'PFK_3', 'FBA3', 'F6PA', 'GLCDpp', 'XYLI2', 'GLCabcpp',
+    'HPYRI', 'PROt2rpp', 'CA2t3pp', 'R15BPK', 'VPAMTr', 'ADK3'
+  ];
   
   // Define coupled checkpoints
   const coupledCheckpoints = new Set(['GLCptspp', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi']);
