@@ -3231,8 +3231,9 @@ function updateUserStatusUI() {
   if (userProfile) {
     const isPremium = userProfile.isPremium;
     if (isPremium) {
+      const tierName = userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic';
       statusBar.innerHTML = `
-        <span>💎 Premium Active (Unlimited)</span>
+        <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left</span>
         <span>
           ${userProfile.name}
           <button id="btn-logout" class="chat-logout-btn">Log out</button>
@@ -3249,7 +3250,7 @@ function updateUserStatusUI() {
     }
   } else {
     statusBar.innerHTML = `
-      <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+      <span>Guest: ${currentLimit.remaining} / ${currentLimit.max} left</span>
       <button id="btn-status-login" class="chat-logout-btn" style="color: #38bdf8;">Sign in</button>
     `;
   }
@@ -3272,18 +3273,21 @@ function updateUserStatusUI() {
   const isPremium = userProfile && userProfile.isPremium;
   const limitsExceeded = currentLimit.remaining <= 0;
   
-  if (limitsExceeded && !isPremium) {
+  if (limitsExceeded) {
     if (lockOverlay) lockOverlay.classList.remove('hidden');
     if (inputContainer) inputContainer.classList.add('hidden');
     
     if (userProfile) {
-      if (btnUpgrade) btnUpgrade.classList.remove('hidden');
+      if (btnUpgrade) {
+        btnUpgrade.classList.remove('hidden');
+        btnUpgrade.textContent = 'Upgrade Plan';
+      }
       const googleContainer = document.getElementById('google-signin-btn-container');
       if (googleContainer) googleContainer.innerHTML = '';
-      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Upgrade to Premium for $5.00 to get unlimited access.';
+      if (lockMessage) lockMessage.textContent = 'Daily query limit reached. Upgrade to Premium Basic ($5.00) or Premium Pro ($15.00) to get more queries.';
     } else {
       if (btnUpgrade) btnUpgrade.classList.add('hidden');
-      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Sign in with Google to continue, or buy Premium.';
+      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Sign in with Google to get 5 daily queries, or upgrade your plan.';
       renderGoogleButton();
     }
   } else {
@@ -3296,12 +3300,28 @@ function openMockCheckout() {
   const overlay = document.createElement('div');
   overlay.className = 'mock-payment-overlay';
   overlay.id = 'mock-payment-modal';
+  
+  let selectedTier = 1;
+  let selectedPrice = "5.00";
+  
   overlay.innerHTML = `
     <div class="payment-card glass">
       <button class="btn-close-payment" id="btn-close-payment">✕</button>
       <h3>⚡ CellFlux Premium Access</h3>
-      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">1-Month Unlimited AI Chat & Scenarios (one-time payment)</p>
-      <div class="price-tag">$5.00 USD</div>
+      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">1-Month AI Chat & Scenarios (one-time payment)</p>
+      
+      <div class="plan-selector">
+        <div class="plan-card active" id="plan-tier-1" data-tier="1" data-price="5.00">
+          <h4>💎 Basic</h4>
+          <p>100 queries/day</p>
+          <div class="price">$5.00</div>
+        </div>
+        <div class="plan-card" id="plan-tier-2" data-tier="2" data-price="15.00">
+          <h4>⚡ Pro</h4>
+          <p>500 queries/day</p>
+          <div class="price">$15.00</div>
+        </div>
+      </div>
       
       <div class="card-input-group">
         <div>
@@ -3331,38 +3351,61 @@ function openMockCheckout() {
   
   document.body.appendChild(overlay);
   
+  const card1 = document.getElementById('plan-tier-1');
+  const card2 = document.getElementById('plan-tier-2');
+  const btnConfirm = document.getElementById('btn-confirm-payment');
+  
+  card1.addEventListener('click', () => {
+    card1.classList.add('active');
+    card2.classList.remove('active');
+    selectedTier = 1;
+    selectedPrice = "5.00";
+    btnConfirm.textContent = `Pay $${selectedPrice}`;
+  });
+  
+  card2.addEventListener('click', () => {
+    card2.classList.add('active');
+    card1.classList.remove('active');
+    selectedTier = 2;
+    selectedPrice = "15.00";
+    btnConfirm.textContent = `Pay $${selectedPrice}`;
+  });
+  
   document.getElementById('btn-close-payment').addEventListener('click', () => {
     overlay.remove();
   });
   
-  document.getElementById('btn-confirm-payment').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-confirm-payment');
-    btn.disabled = true;
-    btn.textContent = 'Processing transaction...';
+  btnConfirm.addEventListener('click', async () => {
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = 'Processing transaction...';
     
     const token = localStorage.getItem('userToken');
     try {
       const res = await fetch('/api/payments/simulate', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tier: selectedTier })
       });
       if (res.ok) {
-        btn.textContent = '✓ Payment Successful!';
-        btn.style.backgroundColor = '#10b981';
+        btnConfirm.textContent = '✓ Payment Successful!';
+        btnConfirm.style.backgroundColor = '#10b981';
         setTimeout(() => {
           overlay.remove();
           checkAuthStatus();
         }, 1500);
       } else {
         alert('Payment failed. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'Pay $5.00';
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = `Pay $${selectedPrice}`;
       }
     } catch (e) {
       console.error(e);
       alert('Payment request error.');
-      btn.disabled = false;
-      btn.textContent = 'Pay $5.00';
+      btnConfirm.disabled = false;
+      btnConfirm.textContent = `Pay $${selectedPrice}`;
     }
   });
 }

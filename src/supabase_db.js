@@ -52,11 +52,18 @@ export function isPremiumActive(user) {
 export async function checkLimitAndIncrement(ip, guestId, authToken) {
   const user = await getUserByToken(authToken);
   
-  if (user && isPremiumActive(user)) {
-    return { allowed: true, isPremium: true, user, remaining: 999 };
+  let limitMax = 2; // Default Guest limit
+  const isPremium = user && isPremiumActive(user);
+
+  if (user) {
+    if (isPremium) {
+      const tier = user.premium_tier || 1;
+      limitMax = tier === 2 ? 500 : 100;
+    } else {
+      limitMax = 5; // Authorized Free limit
+    }
   }
 
-  const limitMax = 5;
   // Use user email if logged in, otherwise guest ID or IP
   const identifier = user 
     ? `user:${user.email}` 
@@ -79,10 +86,10 @@ export async function checkLimitAndIncrement(ip, guestId, authToken) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ count: 1, last_reset: now.toISOString() })
         });
-        return { allowed: true, isPremium: false, user, remaining: limitMax - 1 };
+        return { allowed: true, isPremium, user, remaining: limitMax - 1 };
       } else {
         if (record.count >= limitMax) {
-          return { allowed: false, isPremium: false, user, remaining: 0 };
+          return { allowed: false, isPremium, user, remaining: 0 };
         } else {
           const newCount = record.count + 1;
           await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
@@ -90,7 +97,7 @@ export async function checkLimitAndIncrement(ip, guestId, authToken) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ count: newCount })
           });
-          return { allowed: true, isPremium: false, user, remaining: limitMax - newCount };
+          return { allowed: true, isPremium, user, remaining: limitMax - newCount };
         }
       }
     } else {
@@ -103,12 +110,12 @@ export async function checkLimitAndIncrement(ip, guestId, authToken) {
         },
         body: JSON.stringify({ identifier, count: 1, last_reset: now.toISOString() })
       });
-      return { allowed: true, isPremium: false, user, remaining: limitMax - 1 };
+      return { allowed: true, isPremium, user, remaining: limitMax - 1 };
     }
   } catch (err) {
     console.error('[Supabase DB] Check limit error:', err);
     // Safe fallback: allow query if Supabase fails (avoids breaking chatbot if DB goes down)
-    return { allowed: true, isPremium: false, user, remaining: 1 };
+    return { allowed: true, isPremium, user, remaining: 1 };
   }
 }
 
@@ -155,6 +162,7 @@ export async function verifyGoogleTokenAndLogin(credential) {
       email: user.email,
       name: user.name,
       isPremium: isPremiumActive(user),
+      premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until
     }
   };
@@ -163,7 +171,18 @@ export async function verifyGoogleTokenAndLogin(credential) {
 // 3. Get session status, user profile & remaining limits
 export async function getUserStatus(token, ip, guestId) {
   const user = await getUserByToken(token);
-  const limitMax = 5;
+  
+  let limitMax = 2; // Default Guest limit
+  const isPremium = user && isPremiumActive(user);
+  if (user) {
+    if (isPremium) {
+      const tier = user.premium_tier || 1;
+      limitMax = tier === 2 ? 500 : 100;
+    } else {
+      limitMax = 5; // Authorized Free limit
+    }
+  }
+
   const identifier = user ? `user:${user.email}` : `guest:${guestId || ip || 'unknown'}`;
   let count = 0;
 
@@ -182,8 +201,6 @@ export async function getUserStatus(token, ip, guestId) {
     console.error('[Supabase DB] Failed to get limit count:', err);
   }
 
-  const isPremium = isPremiumActive(user);
-
   return {
     loggedIn: !!user,
     googleClientId: process.env.GOOGLE_CLIENT_ID,
@@ -191,12 +208,13 @@ export async function getUserStatus(token, ip, guestId) {
       email: user.email,
       name: user.name,
       isPremium,
+      premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until
     } : null,
     limit: {
       max: limitMax,
       count,
-      remaining: isPremium ? 999 : Math.max(0, limitMax - count)
+      remaining: Math.max(0, limitMax - count)
     }
   };
 }
@@ -214,7 +232,7 @@ export async function logoutSession(token) {
 }
 
 // 5. Simulate Premium Payment
-export async function simulatePremiumPayment(token) {
+export async function simulatePremiumPayment(token, tier) {
   const user = await getUserByToken(token);
   if (!user) {
     throw new Error('Unauthorized or invalid session.');
@@ -222,15 +240,21 @@ export async function simulatePremiumPayment(token) {
 
   const premiumUntil = new Date();
   premiumUntil.setDate(premiumUntil.getDate() + 30);
+  
+  const chosenTier = parseInt(tier, 10) === 2 ? 2 : 1;
 
   await supabaseFetch(`users?email=eq.${encodeURIComponent(user.email)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ premium_until: premiumUntil.toISOString() })
+    body: JSON.stringify({ 
+      premium_until: premiumUntil.toISOString(),
+      premium_tier: chosenTier
+    })
   });
 
   return {
     success: true,
-    premiumUntil: premiumUntil.toISOString()
+    premiumUntil: premiumUntil.toISOString(),
+    premiumTier: chosenTier
   };
 }

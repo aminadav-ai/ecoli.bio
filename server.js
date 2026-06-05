@@ -213,6 +213,29 @@ app.post('/api/solve-fba', async (req, res) => {
   }
 });
 
+async function fetchGeminiWithRetry(url, options, retries = 2, delay = 1000) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.status === 503 || response.status === 429) {
+        if (i < retries) {
+          console.warn(`[Gemini API] Got status ${response.status}. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      return response;
+    } catch (err) {
+      if (i < retries) {
+        console.warn(`[Gemini API] Fetch failed: ${err.message}. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, history, context } = req.body;
@@ -263,7 +286,7 @@ Instructions:
       parts: [{ text: message }]
     });
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetchGeminiWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -342,7 +365,8 @@ app.post('/api/payments/simulate', async (req, res) => {
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized.' });
     }
-    const result = await simulatePremiumPayment(token);
+    const { tier } = req.body || {};
+    const result = await simulatePremiumPayment(token, tier);
     return res.json(result);
   } catch (err) {
     console.error('Payment simulation error:', err);

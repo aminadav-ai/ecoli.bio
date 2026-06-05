@@ -301,7 +301,8 @@ export default defineConfig(({ mode }) => {
           res.end(JSON.stringify({ error: 'Unauthorized.' }));
           return;
         }
-        const result = await simulatePremiumPayment(token);
+        const { tier } = await getPostBody(req);
+        const result = await simulatePremiumPayment(token, tier);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -313,6 +314,29 @@ export default defineConfig(({ mode }) => {
       next();
     }
   };
+
+  async function fetchGeminiWithRetry(url, options, retries = 2, delay = 1000) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (response.status === 503 || response.status === 429) {
+          if (i < retries) {
+            console.warn(`[Gemini API] Got status ${response.status}. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        return response;
+      } catch (err) {
+        if (i < retries) {
+          console.warn(`[Gemini API] Fetch failed: ${err.message}. Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw err;
+      }
+    }
+  }
 
   const handleChat = async (req, res, next) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -365,7 +389,7 @@ ${JSON.stringify(context, null, 2)}
           parts: [{ text: message }]
         });
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetchGeminiWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
