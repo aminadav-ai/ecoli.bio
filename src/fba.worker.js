@@ -527,7 +527,11 @@ class WorkerSimulation {
         target = Math.max(0.1, Math.min(target, 150.0));
         metab.targetConcentration = target;
 
-        const dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
+        let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
+        if (mId === 'h2o2_c') {
+          // Simulate rapid degradation of hydrogen peroxide by catalase/peroxidase (sink)
+          dC -= 10.0 * metab.concentration;
+        }
         const nextConc = metab.concentration + dC * dt;
         metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
       }
