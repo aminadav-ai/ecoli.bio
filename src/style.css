@@ -2300,3 +2300,118 @@ input[type="range"]::-webkit-slider-thumb:hover {
   0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
   100% { transform: scale(1.12); filter: drop-shadow(0 0 22px rgba(239, 68, 68, 0.8)); }
 }
+
+/* Settings Container & Dropdown */
+.settings-container {
+  position: relative;
+}
+
+.settings-badge-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.settings-badge-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: rotate(30deg) translateY(-1px);
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header Controls */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.header-btn {
+  height: 28px !important;
+  font-size: 11px !important;
+  padding: 0 10px !important;
+  flex: none !important;
+}
+
+.speed-control-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.speed-control-compact input[type="range"] {
+  width: 80px;
+}
+
+/* Checkbox styling */
+.ode-settings-section {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input {
+  cursor: pointer;
+}
+
+.checkbox-help {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+

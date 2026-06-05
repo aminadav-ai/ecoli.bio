@@ -41,6 +41,16 @@
         </div>
 
         <div class="header-actions">
+          <!-- Play / Pause / Reset / Speed -->
+          <div class="header-controls">
+            <button id="play-pause-btn" class="btn btn-primary header-btn">⏸ Pause</button>
+            <button id="reset-btn" class="btn btn-secondary header-btn">↺ Reset</button>
+            <div class="speed-control-compact">
+              <span id="speed-val">1.0x</span>
+              <input type="range" id="speed-slider" min="0.1" max="5.0" step="0.1" value="1.0" />
+            </div>
+          </div>
+
           <!-- Map Warnings Panel -->
           <div id="map-warnings-container" class="map-warnings-container hidden">
             <button id="warnings-toggle-btn" class="warnings-badge-btn">
@@ -58,147 +68,41 @@
             </div>
           </div>
 
+          <!-- Map Settings (Gear) Trigger -->
+          <div class="settings-container">
+            <button id="settings-toggle-btn" class="settings-badge-btn" title="Map Settings">
+              <span class="settings-icon">⚙️</span>
+            </button>
+            <div id="settings-dropdown" class="settings-dropdown glass hidden">
+              <div class="dropdown-header">
+                <h3>Map Settings</h3>
+                <button id="settings-close-btn" class="close-dropdown-btn">✕</button>
+              </div>
+              <div class="settings-body">
+                <div class="slider-group">
+                  <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
+                  <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
+                </div>
+                <div class="form-group">
+                  <label for="namespace-select">Metabolite Namespace</label>
+                  <select id="namespace-select" class="select-dropdown">
+                    <option value="common">Common Name</option>
+                    <option value="ecocyc">EcoCyc ID</option>
+                    <option value="bigg" selected>BiGG ID</option>
+                    <option value="kegg">KEGG ID</option>
+                    <option value="chebi">ChEBI ID</option>
+                    <option value="hmdb">HMDB ID</option>
+                  </select>
+                  <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
       <!-- Left Overlay Panel (Global Controls & Overview) -->
       <aside class="left-panel panel glass">
-        <!-- GEO Dataset Search Section -->
-        <section class="geo-search-section">
-          <h2>NCBI GEO Search</h2>
-          <div class="geo-search-container">
-            <div class="geo-search-wrapper">
-              <span class="geo-search-icon">🧬</span>
-              <input type="text" id="geo-search-input" placeholder="Search GEO for E. coli datasets" autocomplete="off" />
-              <button id="geo-dropdown-btn" class="geo-dropdown-arrow-btn" title="Show Examples">▼</button>
-              <button id="geo-clear-btn" class="geo-clear-btn hidden" title="Clear search">✕</button>
-            </div>
-            <!-- Custom Examples Dropdown -->
-            <div id="geo-examples-dropdown" class="geo-examples-dropdown glass hidden">
-              <div class="geo-dropdown-header">Example Searches</div>
-              <ul id="geo-examples-list">
-                <li>glucose limitation</li>
-                <li>acetate overflow</li>
-                <li>glycerol metabolism</li>
-                <li>lactose operon</li>
-                <li>anaerobic vs aerobic growth</li>
-                <li>oxidative stress</li>
-                <li>ph stress</li>
-                <li>nutrient starvation</li>
-                <li>glycolysis flux</li>
-                <li>tca cycle activity</li>
-                <li>pts system</li>
-                <li>stationary phase</li>
-                <li>rpoS gene</li>
-                <li>crp gene</li>
-                <li>pykA gene</li>
-                <li>arcA gene</li>
-                <li>fis gene</li>
-                <li>ppc gene</li>
-              </ul>
-            </div>
-          </div>
-          <button id="geo-submit-btn" class="btn btn-primary" style="margin-top: 10px;">Search GEO</button>
-
-          <!-- Selected GEO Dataset Panel -->
-          <div id="geo-selected-dataset" class="geo-selected-dataset hidden glass">
-            <div class="geo-selected-header">
-              <span>Active Atlas Dataset</span>
-              <button id="geo-deselect-btn" class="geo-deselect-btn" title="Deselect dataset">✕</button>
-            </div>
-            <div class="geo-selected-body">
-              <span id="geo-selected-accession" class="geo-accession-badge"></span>
-              <h4 id="geo-selected-title" class="geo-selected-title"></h4>
-              <p id="geo-selected-summary" class="geo-selected-summary collapsed"></p>
-              <button id="geo-selected-read-more" class="geo-read-more-btn">Read Description</button>
-              
-              <!-- Analysis Button -->
-              <button id="geo-analyze-btn" class="btn btn-secondary btn-analyze-dataset" style="margin-top: 10px; width: 100%; border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc;">🔬 Analyze dataset</button>
-              
-              <!-- Analysis Loading Spinner -->
-              <div id="geo-analysis-loading" class="geo-analysis-loading hidden">
-                <div class="geo-spinner-small"></div>
-                <span>Analyzing dataset...</span>
-              </div>
-              
-              <!-- Analysis Results Area -->
-              <div id="geo-analysis-results" class="geo-analysis-results hidden">
-                <div class="form-group" style="margin-top: 12px; margin-bottom: 0;">
-                  <label for="geo-state-select" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #818cf8; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Metabolic Condition</label>
-                  <select id="geo-state-select" class="select-dropdown" style="margin-bottom: 4px; height: 32px; font-size: 12.5px;">
-                    <!-- Populated dynamically -->
-                  </select>
-                  <p id="geo-state-desc" class="geo-state-desc"></p>
-                  <button id="geo-state-details-btn" class="btn btn-secondary btn-state-details-toggle" style="margin-top: 8px; width: 100%; font-size: 11px; height: 28px;">Show Details</button>
-                  <div id="geo-state-details-panel" class="geo-state-details-panel hidden"></div>
-                  <div id="geo-analysis-usage" class="geo-analysis-usage hidden"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="control-section">
-          <h2>Simulation Controls</h2>
-          <div class="btn-group">
-            <button id="play-pause-btn" class="btn btn-primary">⏸ Pause</button>
-            <button id="reset-btn" class="btn btn-secondary">↺ Reset</button>
-          </div>
-          <div class="slider-group">
-            <label for="speed-slider">Simulation Speed: <span id="speed-val">1.0x</span></label>
-            <input type="range" id="speed-slider" min="0.1" max="5.0" step="0.1" value="1.0" />
-          </div>
-        </section>
-
-        <section class="display-section">
-          <h2>Map Settings</h2>
-          <div class="slider-group">
-            <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
-            <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
-          </div>
-          <div class="form-group" style="margin-top: 14px; margin-bottom: 0;">
-            <label for="namespace-select">Metabolite Namespace</label>
-            <select id="namespace-select" class="select-dropdown" style="margin-bottom: 4px;">
-              <option value="common">Common Name</option>
-              <option value="ecocyc">EcoCyc ID</option>
-              <option value="bigg" selected>BiGG ID</option>
-              <option value="kegg">KEGG ID</option>
-              <option value="chebi">ChEBI ID</option>
-              <option value="hmdb">HMDB ID</option>
-            </select>
-            <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
-          </div>
-        </section>
-
-        <section class="navigation-section">
-          <h2>Map Navigation</h2>
-          <div class="zoom-btn-group">
-            <button class="btn btn-zoom" id="btn-zoom-in" title="Zoom In">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-                <line x1="11" y1="8" x2="11" y2="14"></line>
-              </svg>
-            </button>
-            <button class="btn btn-zoom" id="btn-zoom-out" title="Zoom Out">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-              </svg>
-            </button>
-            <button class="btn btn-zoom" id="btn-zoom-canvas" title="Zoom to Canvas">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 5 5 5 5 9"></polyline>
-                <line x1="5" y1="5" x2="11" y2="11"></line>
-                <polyline points="15 19 19 19 19 15"></polyline>
-                <line x1="19" y1="19" x2="13" y2="13"></line>
-              </svg>
-            </button>
-          </div>
-        </section>
-
         <section class="strain-section">
           <h2>Metabolic Performance</h2>
           <div class="metrics-grid">
@@ -226,36 +130,15 @@
           </div>
         </section>
 
-        <section class="metabolite-list-section">
-          <h2>Metabolite Overview</h2>
-          <div id="metabolite-rows-container" class="metabolite-list">
-            <!-- Dynamically populated rows -->
+        <section class="ode-settings-section">
+          <h2>Simulation Settings</h2>
+          <div class="checkbox-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="ode-integration-toggle" />
+              Disable ODE Smoothing
+            </label>
+            <p class="checkbox-help">Instantly applies steady-state target concentrations instead of integrating smoothly over time (disables ODE Euler integration).</p>
           </div>
-        </section>
-
-        <!-- Cache Statistics Section -->
-        <section class="stats-section">
-          <h2>Cache & API Statistics</h2>
-          <div class="stats-grid">
-            <div class="stat-row">
-              <span class="stat-label">NCBI Cache Hits</span>
-              <span id="stat-ncbi-hits" class="stat-value text-emerald">0</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">NCBI Cache Misses</span>
-              <span id="stat-ncbi-misses" class="stat-value text-rose">0</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-row">
-              <span class="stat-label">Analysis Cache Hits</span>
-              <span id="stat-ai-hits" class="stat-value text-emerald">0</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Analysis Cache Misses</span>
-              <span id="stat-ai-misses" class="stat-value text-rose">0</span>
-            </div>
-          </div>
-          <button id="reset-stats-btn" class="btn btn-secondary" style="margin-top: 10px; width: 100%; font-size: 11px; height: 28px;">Reset Statistics</button>
         </section>
       </aside>
 
@@ -400,45 +283,6 @@
         </div>
       </aside>
 
-      <!-- GEO Search Results Modal -->
-      <div id="geo-modal-overlay" class="geo-modal-overlay hidden">
-        <div class="geo-modal-content glass">
-          <div class="geo-modal-header">
-            <h2>GEO Dataset Search Results</h2>
-            <button id="geo-modal-close-btn" class="geo-modal-close-btn" title="Close results">✕</button>
-          </div>
-          
-          <div class="geo-modal-body">
-            <!-- Loading Indicator -->
-            <div id="geo-modal-loading" class="geo-modal-loading hidden">
-              <div class="geo-spinner"></div>
-              <p>Searching Gene Expression Omnibus...</p>
-            </div>
-
-            <!-- Error message container -->
-            <div id="geo-modal-error" class="geo-modal-error-box hidden">
-              <span class="error-icon">⚠️</span>
-              <p id="geo-error-message"></p>
-            </div>
-
-            <!-- Results container -->
-            <div id="geo-modal-results-container" class="geo-modal-results-container">
-              <div class="geo-empty-state">
-                <span class="geo-empty-icon">🔍</span>
-                <p>Submit a search query to browse NCBI GEO datasets.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="geo-modal-footer">
-            <div id="geo-pagination" class="geo-pagination hidden">
-              <button id="geo-prev-btn" class="btn btn-secondary btn-pagination" disabled>◀ Previous</button>
-              <span id="geo-page-info" class="geo-page-info">Page 1 of 1</span>
-              <button id="geo-next-btn" class="btn btn-secondary btn-pagination" disabled>Next ▶</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Hover Tooltip -->
       <div id="tooltip" class="tooltip glass hidden">
@@ -453,11 +297,6 @@
         </div>
       </div>
 
-      <!-- GEO Hover Tooltip -->
-      <div id="geo-tooltip" class="geo-tooltip glass hidden">
-        <h4 id="geo-tooltip-title">Metabolite</h4>
-        <div id="geo-tooltip-content">Advice content</div>
-      </div>
 
       <!-- Death Overlay Panel -->
       <div id="death-overlay" class="death-overlay hidden">

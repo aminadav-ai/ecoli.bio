@@ -435,7 +435,7 @@ async function updateFbaBounds(currentTime) {
       }
     }
 
-    const res = await fetch('/api/get-bounds', {
+    const res = await fetch('/api/solve-fba', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -445,15 +445,16 @@ async function updateFbaBounds(currentTime) {
 
     if (res.ok) {
       const data = await res.json();
-      if (data.bounds && worker) {
+      if (data.fluxes && worker) {
         worker.postMessage({
-          type: 'solve_with_bounds',
-          bounds: data.bounds
+          type: 'update_fluxes',
+          fluxes: data.fluxes,
+          biomass_flux: data.biomass_flux
         });
       }
     }
   } catch (err) {
-    console.error('[App] Failed to fetch bounds from server:', err);
+    console.error('[App] Failed to solve FBA on server:', err);
   } finally {
     isFetchingBounds = false;
   }
@@ -953,10 +954,40 @@ function setupUIListeners() {
     });
   }
 
-  // Reset Cache Stats button
-  const resetStatsBtn = document.getElementById('reset-stats-btn');
-  if (resetStatsBtn) {
-    resetStatsBtn.addEventListener('click', resetStats);
+  // Map settings dropdown toggle
+  const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+  const settingsCloseBtn = document.getElementById('settings-close-btn');
+  const settingsDropdown = document.getElementById('settings-dropdown');
+  if (settingsToggleBtn && settingsDropdown) {
+    settingsToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsDropdown.classList.toggle('hidden');
+    });
+  }
+  if (settingsCloseBtn && settingsDropdown) {
+    settingsCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsDropdown.classList.add('hidden');
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (settingsDropdown && !e.target.closest('.settings-container')) {
+      settingsDropdown.classList.add('hidden');
+    }
+  });
+
+  // ODE integration toggle checkbox
+  const odeToggle = document.getElementById('ode-integration-toggle');
+  if (odeToggle) {
+    odeToggle.addEventListener('change', (e) => {
+      const isOdeDisabled = e.target.checked;
+      if (simulation) {
+        simulation.isOdeDisabled = isOdeDisabled;
+      }
+      if (isConnected && worker) {
+        worker.postMessage({ type: 'toggle_ode', value: isOdeDisabled });
+      }
+    });
   }
 }
 
@@ -2873,15 +2904,11 @@ function initWorker() {
   };
 
   // Trigger initialization immediately
-  const lpUrl = new URL('/static_lp_header.txt', window.location.href).href;
   const mapUrl = new URL('/iJO1366.Central metabolism.json', window.location.href).href;
-  const wasmUrl = new URL('/highs.wasm', window.location.href).href;
 
   worker.postMessage({
     type: 'init',
-    lpUrl,
-    mapUrl,
-    wasmUrl
+    mapUrl
   });
 }
 
@@ -2896,7 +2923,7 @@ function updateConnectionStatusUI(connected) {
       indicator.style.backgroundColor = '#34d399';
       indicator.style.boxShadow = '0 0 8px #34d399';
       indicator.classList.add('connected');
-      statusText.textContent = 'iJO1366 WASM';
+      statusText.textContent = 'Server FBA + Client ODE';
       statusText.style.color = '#34d399';
     } else {
       indicator.style.backgroundColor = '#ef4444';

@@ -5,19 +5,14 @@
  * simulation client-side using HiGHS compiled to WebAssembly.
  */
 
-import highsLoader from 'highs';
-import defaultBounds from './static_bounds.json';
-
-let highs = null;
 let simulation = null;
 let isPaused = true;
 let speedMultiplier = 1.0;
 let loopInterval = null;
 
 class WorkerSimulation {
-  constructor(escherMapData, staticLpHeader) {
+  constructor(escherMapData) {
     this.mapData = escherMapData;
-    this.staticLpHeader = staticLpHeader;
     this.serverBounds = {};
 
     this.metabolites = {};
@@ -116,14 +111,6 @@ class WorkerSimulation {
     };
 
     this.initialize();
-
-    // Calculate normal reference fluxes under default conditions
-    this.solveFba();
-    this.normalFluxes = {};
-    for (const mId of Object.keys(this.metabolites)) {
-      const info = this.getMetaboliteInfo(mId);
-      this.normalFluxes[mId] = info ? Math.max(1.5, info.influx) : 1.0;
-    }
   }
 
   initialize() {
@@ -256,13 +243,7 @@ class WorkerSimulation {
       rxn.vMax = rxn.defaultVmax;
       rxn.km = rxn.defaultKm;
     }
-
-    this.solveFba();
     this.normalFluxes = {};
-    for (const mId of Object.keys(this.metabolites)) {
-      const info = this.getMetaboliteInfo(mId);
-      this.normalFluxes[mId] = info ? Math.max(1.5, info.influx) : 1.0;
-    }
   }
 
   inject(metabId, amount) {
@@ -290,78 +271,29 @@ class WorkerSimulation {
     }
   }
 
-  formatBound(val, isUpper) {
-    if (val === null || val === undefined) {
-      return isUpper ? 'inf' : '-inf';
-    }
-    if (val === Infinity || val >= 999999) {
-      return 'inf';
-    }
-    if (val === -Infinity || val <= -999999) {
-      return '-inf';
-    }
-    return val.toString();
-  }
-
-  solveFba() {
-    const boundsLines = [];
-    
-    for (const [rxnId, b] of Object.entries(defaultBounds)) {
-      const serverB = this.serverBounds[rxnId];
-      let lb = b.lb;
-      let ub = b.ub;
-      if (serverB) {
-        lb = serverB.lowerBound;
-        ub = serverB.upperBound;
-      }
-      
-      const lbStr = this.formatBound(lb, false);
-      const ubStr = this.formatBound(ub, true);
-      boundsLines.push(`  ${lbStr} <= R_${rxnId} <= ${ubStr}`);
-    }
-
-    const lpString = this.staticLpHeader + boundsLines.join('\n') + '\nEnd';
-
-    try {
-      const sol = highs.solve(lpString, {
-        "log_to_console": false,
-        "output_flag": false
-      });
-
-      if (sol.Status === 'Optimal') {
-        const columns = sol.Columns;
-
-        // Map fluxes back to map reactions
-        for (const [coreRxnId, coreRxn] of Object.entries(this.reactions)) {
-          const modelRxnId = this.reactionMapping[coreRxnId] || coreRxnId;
-          const varName = 'R_' + modelRxnId;
-          if (columns[varName]) {
-            coreRxn.flux = columns[varName].Primal;
-          } else {
-            coreRxn.flux = 0.0;
-          }
-        }
-
-        // Map specific model objectives & special reactions
-        const biomassFlux = columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0;
-        if (this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
-          this.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = biomassFlux;
-        }
-
-        if (this.reactions['ATPS4r']) {
-          const atpsFlux = columns['R_ATPS4rpp']?.Primal || 0.0;
-          this.reactions['ATPS4r'].flux = atpsFlux;
-        }
+  updateFluxes(fluxes, biomassFlux) {
+    for (const [coreRxnId, coreRxn] of Object.entries(this.reactions)) {
+      const modelRxnId = this.reactionMapping[coreRxnId] || coreRxnId;
+      if (fluxes[modelRxnId] !== undefined) {
+        coreRxn.flux = fluxes[modelRxnId];
       } else {
-        console.warn(`[Worker] FBA solve failed: ${sol.Status}`);
-        for (const coreRxn of Object.values(this.reactions)) {
-          coreRxn.flux = 0.0;
-        }
-      }
-    } catch (err) {
-      console.error('[Worker] Error during highs.solve:', err);
-      for (const coreRxn of Object.values(this.reactions)) {
         coreRxn.flux = 0.0;
+      }
+    }
+
+    if (this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
+      this.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = biomassFlux;
+    }
+
+    if (this.reactions['ATPS4r']) {
+      this.reactions['ATPS4r'].flux = fluxes['ATPS4rpp'] || 0.0;
+    }
+
+    // Initialize normalFluxes on the first update
+    if (Object.keys(this.normalFluxes).length === 0) {
+      for (const mId of Object.keys(this.metabolites)) {
+        const info = this.getMetaboliteInfo(mId);
+        this.normalFluxes[mId] = info ? Math.max(1.5, info.influx) : 1.0;
       }
     }
   }
@@ -434,13 +366,17 @@ class WorkerSimulation {
         target = Math.max(0.1, Math.min(target, 150.0));
         metab.targetConcentration = target;
 
-        let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
-        if (mId === 'h2o2_c') {
-          // Simulate rapid degradation of hydrogen peroxide by catalase/peroxidase (sink)
-          dC -= 10.0 * metab.concentration;
+        if (this.isOdeDisabled) {
+          metab.concentration = target;
+        } else {
+          let dC = J_in - J_out * (metab.concentration / target) - 0.02 * metab.concentration;
+          if (mId === 'h2o2_c') {
+            // Simulate rapid degradation of hydrogen peroxide by catalase/peroxidase (sink)
+            dC -= 10.0 * metab.concentration;
+          }
+          const nextConc = metab.concentration + dC * dt;
+          metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
         }
-        const nextConc = metab.concentration + dC * dt;
-        metab.concentration = Math.max(0.1, Math.min(nextConc, 150.0));
       }
     }
   }
@@ -475,23 +411,13 @@ self.onmessage = async (event) => {
 
   if (msg.type === 'init') {
     try {
-      console.log('[Worker] Loading HiGHS WASM solver...');
-      highs = await highsLoader({
-        locateFile: () => msg.wasmUrl
-      });
-      console.log('[Worker] HiGHS WASM loaded successfully.');
-
-      console.log('[Worker] Fetching static LP header and map JSON files...');
-      const [lpRes, mapRes] = await Promise.all([
-        fetch(msg.lpUrl),
-        fetch(msg.mapUrl)
-      ]);
-      const lpHeader = await lpRes.text();
+      console.log('[Worker] Fetching map JSON file...');
+      const mapRes = await fetch(msg.mapUrl);
       const mapData = await mapRes.json();
-      console.log('[Worker] Files fetched successfully.');
+      console.log('[Worker] Map file fetched successfully.');
 
       console.log('[Worker] Initializing simulation state...');
-      simulation = new WorkerSimulation(mapData, lpHeader);
+      simulation = new WorkerSimulation(mapData);
       console.log('[Worker] Simulation state initialized.');
 
       self.postMessage({ type: 'ready' });
@@ -500,16 +426,17 @@ self.onmessage = async (event) => {
     } catch (err) {
       console.error('[Worker] Failed to initialize worker:', err);
     }
-  } else if (msg.type === 'solve_with_bounds') {
+  } else if (msg.type === 'update_fluxes') {
     if (simulation) {
-      simulation.serverBounds = msg.bounds;
-      simulation.solveFba();
+      simulation.updateFluxes(msg.fluxes, msg.biomass_flux);
       sendState();
     }
   } else if (msg.type === 'pause') {
     isPaused = msg.value;
   } else if (msg.type === 'speed') {
     speedMultiplier = msg.value;
+  } else if (msg.type === 'toggle_ode') {
+    if (simulation) simulation.isOdeDisabled = msg.value;
   } else if (msg.type === 'inject') {
     if (simulation) simulation.inject(msg.metab_id, msg.amount);
   } else if (msg.type === 'deplete') {
