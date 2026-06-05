@@ -186,17 +186,20 @@ app.post('/api/solve-fba', async (req, res) => {
         }
       }
       const biomassFlux = columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0;
+      const isDead = biomassFlux < 0.005;
 
       return res.json({
         status: sol.Status,
         fluxes,
-        biomass_flux: biomassFlux
+        biomass_flux: biomassFlux,
+        is_dead: isDead
       });
     } else {
       return res.json({
         status: sol.Status,
         fluxes: {},
-        biomass_flux: 0.0
+        biomass_flux: 0.0,
+        is_dead: true
       });
     }
   } catch (err) {

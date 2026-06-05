@@ -184,19 +184,22 @@ export default defineConfig(({ mode }) => {
             }
           }
           const biomassFlux = columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0;
+          const isDead = biomassFlux < 0.005;
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             status: sol.Status,
             fluxes,
-            biomass_flux: biomassFlux
+            biomass_flux: biomassFlux,
+            is_dead: isDead
           }));
         } else {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             status: sol.Status,
             fluxes: {},
-            biomass_flux: 0.0
+            biomass_flux: 0.0,
+            is_dead: true
           }));
         }
       } catch (err) {

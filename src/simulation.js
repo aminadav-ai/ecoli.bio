@@ -17,6 +17,9 @@ export class Simulation {
     this.kmMultiplier = 1.0;
     this.lastBasis = null;
     this.tickCounter = 0;
+    this.isDead = false;
+    this.normalFluxes = {};
+
 
     // Define cofactors and inorganic molecules to buffer (hold at constant physiological concentrations)
     this.bufferedIds = new Set([
@@ -270,11 +273,9 @@ export class Simulation {
     }
   }
 
-  /**
-   * Reset simulation concentrations and fluxes to initial steady state.
-   */
   reset() {
     this.tickCounter = 0;
+    this.isDead = false;
     for (const [id, metab] of Object.entries(this.metabolites)) {
       metab.concentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
       metab.targetConcentration = this.initialConcentrations[id] !== undefined ? this.initialConcentrations[id] : 1.0;
@@ -299,6 +300,15 @@ export class Simulation {
   }
 
   /**
+   * Depletes a specified metabolite concentration.
+   */
+  deplete(metabId) {
+    if (this.metabolites[metabId]) {
+      this.metabolites[metabId].concentration = 0.1;
+    }
+  }
+
+  /**
    * Tweaks Vmax or Km for a specific reaction.
    */
   updateParameter(rxnId, param, value) {
@@ -312,11 +322,113 @@ export class Simulation {
   }
 
   /**
-   * Refactored simulation step: handled entirely on the server side now.
-   * This tick is a no-op on the client side.
+   * Updates reaction fluxes in client simulation state.
+   */
+  updateFluxes(fluxes, biomassFlux) {
+    const reactionMapping = {
+      'PPKr': 'PPK',
+      'PPK2r': 'PPK2',
+    };
+
+    for (const [coreRxnId, coreRxn] of Object.entries(this.reactions)) {
+      const modelRxnId = reactionMapping[coreRxnId] || coreRxnId;
+      if (fluxes[modelRxnId] !== undefined) {
+        coreRxn.flux = fluxes[modelRxnId];
+      } else {
+        coreRxn.flux = 0.0;
+      }
+    }
+
+    if (this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
+      this.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = biomassFlux;
+    }
+
+    if (this.reactions['ATPS4r']) {
+      this.reactions['ATPS4r'].flux = fluxes['ATPS4rpp'] || 0.0;
+    }
+
+    // Initialize normalFluxes on first update
+    if (Object.keys(this.normalFluxes).length === 0) {
+      for (const mId of Object.keys(this.metabolites)) {
+        const info = this.getMetaboliteInfo(mId);
+        this.normalFluxes[mId] = info ? Math.max(1.5, info.influx) : 1.0;
+      }
+    }
+  }
+
+  /**
+   * Executes one simulation step on client side.
    */
   tick(speedMultiplier = 1.0) {
-    // No-op: Simulation calculations are executed on the Python server
+    const dt = 0.01 * speedMultiplier;
+
+    // Calculate Influxes and Outfluxes
+    const influxes = {};
+    const outfluxes = {};
+    for (const mId of Object.keys(this.metabolites)) {
+      influxes[mId] = 0.0;
+      outfluxes[mId] = 0.0;
+    }
+
+    for (const rxn of Object.values(this.reactions)) {
+      const flux = rxn.flux;
+      for (const [mId, coeff] of Object.entries(rxn.stoichiometry)) {
+        if (this.metabolites[mId]) {
+          const rate = coeff * flux;
+          if (rate > 0) {
+            influxes[mId] += rate;
+          } else {
+            outfluxes[mId] += Math.abs(rate);
+          }
+        }
+      }
+    }
+
+    // Euler Integration (Simplified, no intracellular ODE integration)
+    for (const [mId, metab] of Object.entries(this.metabolites)) {
+      if (metab.isBuffered) {
+        metab.targetConcentration = metab.concentration;
+        continue;
+      }
+
+      if (mId.endsWith('_e')) {
+        if (mId === 'glc__D_e') {
+          metab.targetConcentration = metab.concentration;
+          continue;
+        }
+        const nextConc = metab.concentration + (influxes[mId] - outfluxes[mId]) * dt;
+        metab.concentration = Math.max(0.0, Math.min(nextConc, 150.0));
+        metab.targetConcentration = metab.concentration;
+      } else {
+        const J_in = influxes[mId];
+        const J = J_in;
+        const J_normal = this.normalFluxes[mId] || 1.0;
+
+        let vMaxSum = 0.0;
+        let vMaxDefaultSum = 0.0;
+        for (const rxn of Object.values(this.reactions)) {
+          const coeff = rxn.stoichiometry[mId];
+          if (coeff) {
+            if (coeff < 0 || (coeff > 0 && rxn.reversibility)) {
+              vMaxSum += rxn.vMax;
+              vMaxDefaultSum += rxn.defaultVmax;
+            }
+          }
+        }
+
+        let activityRatio = 1.0;
+        if (vMaxSum > 0 && vMaxDefaultSum > 0) {
+          activityRatio = vMaxSum / vMaxDefaultSum;
+        }
+
+        const baseline = this.initialConcentrations[mId] || 1.0;
+        let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
+        target = Math.max(0.1, Math.min(target, 150.0));
+        
+        metab.targetConcentration = target;
+        metab.concentration = target;
+      }
+    }
   }
 
   /**

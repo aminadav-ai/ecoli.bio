@@ -233,9 +233,6 @@ let isDead = false;
 let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
-// Web Worker state
-let worker = null;
-let isConnected = false;
 let lastBoundsFetchTime = 0;
 
 // Inspection Selection State
@@ -401,9 +398,6 @@ async function bootstrap() {
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
 
-  // 6. Initialize local simulation worker
-  initWorker();
-
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
@@ -414,7 +408,7 @@ async function bootstrap() {
  */
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime) {
-  if (isFetchingBounds || !isConnected || !worker || !simulation) return;
+  if (isFetchingBounds || !simulation) return;
   isFetchingBounds = true;
 
   try {
@@ -445,12 +439,19 @@ async function updateFbaBounds(currentTime) {
 
     if (res.ok) {
       const data = await res.json();
-      if (data.fluxes && worker) {
-        worker.postMessage({
-          type: 'update_fluxes',
-          fluxes: data.fluxes,
-          biomass_flux: data.biomass_flux
-        });
+      if (data.fluxes) {
+        simulation.updateFluxes(data.fluxes, data.biomass_flux);
+        isDead = data.is_dead || false;
+        
+        // Show/hide death overlay directly
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) {
+          if (isDead) {
+            overlay.classList.remove('hidden');
+          } else {
+            overlay.classList.add('hidden');
+          }
+        }
       }
     }
   } catch (err) {
@@ -534,9 +535,6 @@ function setupUIListeners() {
     isPaused = !isPaused;
     playPauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
-    if (isConnected && worker) {
-      worker.postMessage({ type: 'pause', value: isPaused });
-    }
   });
 
   // Reset/Restart handler
@@ -547,9 +545,9 @@ function setupUIListeners() {
     const overlay = document.getElementById('death-overlay');
     if (overlay) overlay.classList.add('hidden');
     console.log('[App] Simulation state reset.');
-    if (isConnected && worker) {
-      worker.postMessage({ type: 'reset' });
-    }
+
+    // Recalculate fluxes immediately on reset
+    updateFbaBounds(performance.now());
 
     // Refresh UI parameters and inputs to default values
     renderPinnedReactions();
@@ -574,9 +572,6 @@ function setupUIListeners() {
   speedSlider.addEventListener('input', (e) => {
     speedMultiplier = parseFloat(e.target.value);
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
-    if (isConnected && worker) {
-      worker.postMessage({ type: 'speed', value: speedMultiplier });
-    }
   });
 
   // Label font size slider
@@ -645,9 +640,6 @@ function setupUIListeners() {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
         console.log(`[App] Spiked ${selectedMetaboliteId} by +${amount} mM`);
-        if (isConnected && worker) {
-          worker.postMessage({ type: 'inject', metab_id: selectedMetaboliteId, amount: amount });
-        }
       }
     });
   });
@@ -655,11 +647,8 @@ function setupUIListeners() {
   // Deplete metabolite
   document.getElementById('btn-deplete').addEventListener('click', () => {
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
-      simulation.metabolites[selectedMetaboliteId].concentration = 0.1;
+      simulation.deplete(selectedMetaboliteId);
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
-      if (isConnected && worker) {
-        worker.postMessage({ type: 'deplete', metab_id: selectedMetaboliteId });
-      }
     }
   });
 
@@ -810,10 +799,6 @@ function setupUIListeners() {
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
       if (pinnedSlider) pinnedSlider.value = val;
       if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
-      
-      if (isConnected && worker) {
-        worker.postMessage({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'vMax', value: val });
-      }
     }
   });
 
@@ -824,10 +809,6 @@ function setupUIListeners() {
     kmVal.textContent = val.toFixed(2);
     if (selectedReactionId) {
       simulation.updateParameter(selectedReactionId, 'km', val);
-      
-      if (isConnected && worker) {
-        worker.postMessage({ type: 'update_parameter', rxn_id: selectedReactionId, param: 'km', value: val });
-      }
     }
   });
 
@@ -976,19 +957,7 @@ function setupUIListeners() {
     }
   });
 
-  // ODE integration toggle checkbox
-  const odeToggle = document.getElementById('ode-integration-toggle');
-  if (odeToggle) {
-    odeToggle.addEventListener('change', (e) => {
-      const isOdeDisabled = e.target.checked;
-      if (simulation) {
-        simulation.isOdeDisabled = isOdeDisabled;
-      }
-      if (isConnected && worker) {
-        worker.postMessage({ type: 'toggle_ode', value: isOdeDisabled });
-      }
-    });
-  }
+
 }
 
 /**
@@ -1377,10 +1346,6 @@ function renderPinnedReactions() {
         const vmaxValText = document.getElementById('vmax-val');
         if (vmaxSlider) vmaxSlider.value = val;
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
-      }
-      
-      if (isConnected && worker) {
-        worker.postMessage({ type: 'update_parameter', rxn_id: rxnId, param: 'vMax', value: val });
       }
     });
     
@@ -2746,30 +2711,22 @@ function applyMetabolicState(state) {
 
   // 2. Apply reaction parameters (vMax, km)
   if (state.data.reactions) {
-    const updates = [];
     for (const [id, params] of Object.entries(state.data.reactions)) {
       if (simulation.reactions[id]) {
         if (typeof params === 'object') {
           if (params.vMax !== undefined) {
             simulation.updateParameter(id, 'vMax', Number(params.vMax));
-            updates.push({ rxn_id: id, param: 'vMax', value: Number(params.vMax) });
             console.log(`[GEO AI] Set vMax of ${id} to ${params.vMax}`);
           }
           if (params.km !== undefined) {
             simulation.updateParameter(id, 'km', Number(params.km));
-            updates.push({ rxn_id: id, param: 'km', value: Number(params.km) });
             console.log(`[GEO AI] Set km of ${id} to ${params.km}`);
           }
         } else {
           simulation.updateParameter(id, 'vMax', Number(params));
-          updates.push({ rxn_id: id, param: 'vMax', value: Number(params) });
           console.log(`[GEO AI] Set vMax of ${id} to ${params}`);
         }
       }
-    }
-    
-    if (isConnected && worker) {
-      worker.postMessage({ type: 'bulk_update_parameters', updates });
     }
   }
 
@@ -2879,115 +2836,4 @@ function resetStateDetails() {
   }
 }
 
-/**
- * Initializes the client-side simulation Web Worker.
- */
-function initWorker() {
-  updateConnectionStatusUI(false);
 
-  worker = new Worker(new URL('./fba.worker.js', import.meta.url), { type: 'module' });
-
-  worker.onmessage = (event) => {
-    const data = event.data;
-    if (data.type === 'ready') {
-      isConnected = true;
-      updateConnectionStatusUI(true);
-      syncParametersToWorker();
-    } else if (data.type === 'tick') {
-      handleServerState(data.state);
-    }
-  };
-
-  worker.onerror = (err) => {
-    console.error('[Worker] Error:', err);
-    isConnected = false;
-    updateConnectionStatusUI(false);
-  };
-
-  // Trigger initialization immediately
-  const mapUrl = new URL('/iJO1366.Central metabolism.json', window.location.href).href;
-
-  worker.postMessage({
-    type: 'init',
-    mapUrl
-  });
-}
-
-/**
- * Updates the top-right connection status badge.
- */
-function updateConnectionStatusUI(connected) {
-  const indicator = document.querySelector('.status-indicator');
-  const statusText = document.querySelector('.status-text');
-  if (indicator && statusText) {
-    if (connected) {
-      indicator.style.backgroundColor = '#34d399';
-      indicator.style.boxShadow = '0 0 8px #34d399';
-      indicator.classList.add('connected');
-      statusText.textContent = 'Server FBA + Client ODE';
-      statusText.style.color = '#34d399';
-    } else {
-      indicator.style.backgroundColor = '#ef4444';
-      indicator.style.boxShadow = '0 0 8px #ef4444';
-      indicator.classList.remove('connected');
-      statusText.textContent = 'Initializing...';
-      statusText.style.color = '#ef4444';
-    }
-  }
-}
-
-/**
- * Updates local Simulation variables using simulation state received from the worker.
- */
-function handleServerState(state) {
-  if (!simulation) return;
-
-  isDead = state.is_dead || false;
-  const overlay = document.getElementById('death-overlay');
-  if (overlay) {
-    if (isDead) {
-      overlay.classList.remove('hidden');
-    } else {
-      overlay.classList.add('hidden');
-    }
-  }
-
-  // 1. Update metabolite concentrations
-  for (const [m_id, data] of Object.entries(state.metabolites)) {
-    if (simulation.metabolites[m_id]) {
-      simulation.metabolites[m_id].concentration = data.concentration;
-    }
-  }
-
-  // 2. Update reaction fluxes
-  for (const [r_id, data] of Object.entries(state.reactions)) {
-    if (simulation.reactions[r_id]) {
-      simulation.reactions[r_id].flux = data.flux;
-    }
-  }
-
-  // 3. Fallback compatibility mapping for growth rate and ATP yield UI widgets
-  if (simulation.reactions['BIOMASS_Ecoli_core_w_GAM']) {
-    simulation.reactions['BIOMASS_Ecoli_core_w_GAM'].flux = state.biomass_flux;
-  }
-  if (simulation.reactions['ATPS4r']) {
-    simulation.reactions['ATPS4r'].flux = state.reactions['ATPS4rpp']?.flux || 0.0;
-  }
-}
-
-/**
- * Synchronizes client-side settings to the worker upon connection.
- */
-function syncParametersToWorker() {
-  if (!isConnected || !worker || !simulation) return;
-
-  const updates = [];
-  for (const rxn of Object.values(simulation.reactions)) {
-    updates.push({ rxn_id: rxn.id, param: 'vMax', value: rxn.vMax });
-    updates.push({ rxn_id: rxn.id, param: 'km', value: rxn.km });
-  }
-
-  worker.postMessage({ type: 'bulk_update_parameters', updates });
-  worker.postMessage({ type: 'pause', value: isPaused });
-  worker.postMessage({ type: 'speed', value: speedMultiplier });
-}
