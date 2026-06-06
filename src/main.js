@@ -3516,7 +3516,7 @@ function openMockCheckout() {
       <!-- Auto-Renew Checkbox -->
       <div class="auto-renew-checkbox-group">
         <input type="checkbox" id="pay-auto-renew" />
-        <label for="pay-auto-renew">Auto-renew subscription monthly (Автопродление)</label>
+        <label for="pay-auto-renew">Auto-renew subscription monthly</label>
       </div>
       
       <button class="btn btn-primary w-100" id="btn-confirm-payment" style="height: 40px; font-weight: 700; margin-top: 16px;">Pay $${selectedPrice}</button>
