@@ -3235,16 +3235,26 @@ function updateUserStatusUI() {
     const isPremium = userProfile.isPremium;
     if (isPremium) {
       const tierName = userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic';
-      statusBar.innerHTML = `
-        <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left</span>
-        <span>
-          ${userProfile.name}
-          <button id="btn-logout" class="chat-logout-btn">Log out</button>
-        </span>
-      `;
+      if (userProfile.premiumTier === 2) {
+        statusBar.innerHTML = `
+          <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+          <span>
+            ${userProfile.name}
+            <button id="btn-logout" class="chat-logout-btn">Log out</button>
+          </span>
+        `;
+      } else {
+        statusBar.innerHTML = `
+          <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
+          <span>
+            ${userProfile.name}
+            <button id="btn-logout" class="chat-logout-btn">Log out</button>
+          </span>
+        `;
+      }
     } else {
       statusBar.innerHTML = `
-        <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+        <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
         <span>
           ${userProfile.name}
           <button id="btn-logout" class="chat-logout-btn">Log out</button>
@@ -3253,7 +3263,7 @@ function updateUserStatusUI() {
     }
   } else {
     statusBar.innerHTML = `
-      <span>Guest: ${currentLimit.remaining} / ${currentLimit.max} left</span>
+      <span>Guest: ${currentLimit.remaining} / ${currentLimit.max} left <button id="btn-status-upgrade" class="chat-upgrade-btn">Buy</button></span>
       <button id="btn-status-login" class="chat-logout-btn" style="color: #38bdf8;">Sign in</button>
     `;
   }
@@ -3270,6 +3280,22 @@ function updateUserStatusUI() {
         lockOverlay.classList.remove('hidden');
         renderGoogleButton();
       }
+    });
+  }
+
+  const btnStatusUpgrade = document.getElementById('btn-status-upgrade');
+  if (btnStatusUpgrade) {
+    btnStatusUpgrade.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!userProfile) {
+        alert('Please sign in with Google first to purchase Premium!');
+        if (lockOverlay) {
+          lockOverlay.classList.remove('hidden');
+          renderGoogleButton();
+        }
+        return;
+      }
+      openMockCheckout();
     });
   }
   
