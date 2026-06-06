@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory } from './src/supabase_db.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -263,6 +263,10 @@ app.post('/api/chat', async (req, res) => {
     // Track user's AI chat query in Telegram background
     trackChatQuery(req, message).catch(err => console.error('[Server] Chat tracking error:', err));
 
+    const identifier = limitCheck.user ? `user:${limitCheck.user.email}` : `guest:${guestId || ip || 'unknown'}`;
+    // Save user's question to Supabase history
+    await saveChatMessage(identifier, 'user', message, context);
+
     const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 
 
@@ -311,6 +315,9 @@ Instructions:
     const data = await response.json();
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
     
+    // Save model's reply to Supabase history
+    await saveChatMessage(identifier, 'model', reply);
+
     return res.json({ reply, remaining: limitCheck.remaining });
   } catch (err) {
     console.error('Error in /api/chat API:', err);
@@ -330,6 +337,29 @@ app.post('/api/auth/google', async (req, res) => {
   } catch (err) {
     console.error('Auth Google error:', err);
     return res.status(401).json({ error: err.message });
+  }
+});
+
+app.get('/api/chat/history', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const guestId = req.headers['x-guest-id'];
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+    let identifier = `guest:${guestId || ip || 'unknown'}`;
+    if (token) {
+      const user = await getUserByToken(token);
+      if (user && user.email) {
+        identifier = `user:${user.email}`;
+      }
+    }
+
+    const history = await getChatHistory(identifier);
+    return res.json(history);
+  } catch (err) {
+    console.error('Error in /api/chat/history API:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 

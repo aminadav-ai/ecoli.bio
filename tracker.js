@@ -105,12 +105,8 @@ export function shouldIgnorePath(urlPath) {
     return false;
   }
 
-  // Ignore high frequency / internal endpoints
-  if (
-    pathLower === '/api/solve-fba' ||
-    pathLower === '/api/auth/heartbeat' ||
-    pathLower === '/api/auth/status'
-  ) {
+  // Ignore all API endpoints (they are not page visits)
+  if (pathLower.startsWith('/api/')) {
     return true;
   }
 

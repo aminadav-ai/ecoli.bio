@@ -3144,6 +3144,47 @@ let currentLimit = { max: 5, count: 0, remaining: 5 };
 let userProfile = null;
 let googleAuthInitialized = false;
 
+async function loadChatHistory() {
+  const token = localStorage.getItem('userToken');
+  try {
+    const headers = { 
+      'x-guest-id': guestId,
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch('/api/chat/history', { headers });
+    if (res.ok) {
+      const historyData = await res.json();
+      
+      const chatMessages = document.getElementById('ai-chat-messages');
+      if (chatMessages) {
+        // Reset container to default greeting message
+        chatMessages.innerHTML = `
+          <div class="message message-model">
+            Hello! I am your AI assistant for E. coli metabolism. Feel free to ask me any questions about the map, reactions, metabolic pathways, or the current learning scenarios.
+          </div>
+        `;
+        
+        aiChatHistory = [];
+        
+        // Populate messages from database history
+        for (const item of historyData) {
+          if (item.role === 'user') {
+            appendUserMessage(item.message);
+            aiChatHistory.push({ role: 'user', text: item.message });
+          } else {
+            appendModelMessage(item.message);
+            aiChatHistory.push({ role: 'model', text: item.message });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load chat history:', err);
+  }
+}
+
 async function checkAuthStatus(isVisit = false) {
   const token = localStorage.getItem('userToken');
   try {
@@ -3167,6 +3208,9 @@ async function checkAuthStatus(isVisit = false) {
       if (googleClientId && !googleAuthInitialized) {
         initGoogleAuth(googleClientId);
       }
+
+      // Load chat history from Supabase
+      await loadChatHistory();
     }
   } catch (err) {
     console.error('Failed to check auth status:', err);

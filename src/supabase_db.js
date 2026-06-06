@@ -441,3 +441,35 @@ export async function deleteUserFromDb(email) {
     throw err;
   }
 }
+
+// 11. Save chat message to history
+export async function saveChatMessage(identifier, role, message, context = null) {
+  try {
+    await supabaseFetch('chat_history', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        identifier,
+        role,
+        message,
+        context: context ? (typeof context === 'object' ? context : JSON.parse(context)) : null
+      })
+    });
+  } catch (err) {
+    console.warn('[Supabase DB] Failed to save chat message (make sure chat_history table is created in Supabase):', err.message);
+  }
+}
+
+// 12. Load chat history for identifier
+export async function getChatHistory(identifier, limit = 50) {
+  try {
+    const res = await supabaseFetch(`chat_history?identifier=eq.${encodeURIComponent(identifier)}&order=created_at.asc&limit=${limit}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[Supabase DB] Failed to load chat history (make sure chat_history table is created in Supabase):', err.message);
+    return [];
+  }
+}

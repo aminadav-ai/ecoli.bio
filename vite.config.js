@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory } from './src/supabase_db.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -449,6 +449,10 @@ export default defineConfig(({ mode }) => {
         // Track user's AI chat query in Telegram background
         trackChatQuery(req, message).catch(err => console.error('[Vite Dev Server] Chat tracking error:', err));
 
+        const identifier = limitCheck.user ? `user:${limitCheck.user.email}` : `guest:${guestId || ip || 'unknown'}`;
+        // Save user's question to Supabase history
+        await saveChatMessage(identifier, 'user', message, context);
+
         const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
 
@@ -495,10 +499,43 @@ ${JSON.stringify(context, null, 2)}
         const data = await response.json();
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
         
+        // Save model's reply to Supabase history
+        await saveChatMessage(identifier, 'model', reply);
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ reply, remaining: limitCheck.remaining }));
       } catch (err) {
         console.error('Error in chat API (Vite Dev):', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else {
+      next();
+    }
+  };
+
+  const handleChatHistory = async (req, res, next) => {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    if (url.pathname === '/api/chat/history' && req.method === 'GET') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const guestId = req.headers['x-guest-id'];
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+        let identifier = `guest:${guestId || ip || 'unknown'}`;
+        if (token) {
+          const user = await getUserByToken(token);
+          if (user && user.email) {
+            identifier = `user:${user.email}`;
+          }
+        }
+
+        const history = await getChatHistory(identifier);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(history));
+      } catch (err) {
+        console.error('Error in chat history API (Vite Dev):', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -524,6 +561,7 @@ ${JSON.stringify(context, null, 2)}
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);
+          server.middlewares.use(handleChatHistory);
           server.middlewares.use(handleChat);
         },
         configurePreviewServer(server) {
@@ -531,6 +569,7 @@ ${JSON.stringify(context, null, 2)}
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);
+          server.middlewares.use(handleChatHistory);
           server.middlewares.use(handleChat);
         }
       }
