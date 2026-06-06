@@ -3231,12 +3231,48 @@ async function handleLogout() {
   await checkAuthStatus();
 }
 
+function showLockOverlay(mode) {
+  const lockOverlay = document.getElementById('ai-chat-lock-overlay');
+  const lockTitle = document.getElementById('lock-title');
+  const lockMessage = document.getElementById('lock-message');
+  const lockIcon = document.getElementById('lock-icon');
+  const btnUpgrade = document.getElementById('btn-upgrade-premium');
+  const inputContainer = document.querySelector('.chat-input-container');
+
+  if (!lockOverlay) return;
+
+  lockOverlay.classList.remove('hidden');
+  if (inputContainer) inputContainer.classList.add('hidden');
+
+  if (mode === 'signin') {
+    if (lockIcon) lockIcon.textContent = '👤';
+    if (lockTitle) lockTitle.textContent = 'Sign In';
+    if (lockMessage) lockMessage.textContent = 'Sign in with Google to get 5 daily queries, save your progress, or upgrade to Premium.';
+    if (btnUpgrade) btnUpgrade.classList.add('hidden');
+    renderGoogleButton();
+  } else if (mode === 'limit_guest') {
+    if (lockIcon) lockIcon.textContent = '🔒';
+    if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
+    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Sign in with Google to get 5 daily queries, or upgrade your plan.';
+    if (btnUpgrade) btnUpgrade.classList.add('hidden');
+    renderGoogleButton();
+  } else if (mode === 'limit_user') {
+    if (lockIcon) lockIcon.textContent = '🔒';
+    if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
+    if (lockMessage) lockMessage.textContent = 'Daily query limit reached. Upgrade to Premium Basic ($5.00) or Premium Pro ($15.00) to get more queries.';
+    if (btnUpgrade) {
+      btnUpgrade.classList.remove('hidden');
+      btnUpgrade.textContent = 'Upgrade Plan';
+    }
+    const googleContainer = document.getElementById('google-signin-btn-container');
+    if (googleContainer) googleContainer.innerHTML = '';
+  }
+}
+
 function updateUserStatusUI() {
   const statusBar = document.getElementById('ai-chat-status-bar');
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
-  const lockMessage = document.getElementById('lock-message');
   const inputContainer = document.querySelector('.chat-input-container');
-  const btnUpgrade = document.getElementById('btn-upgrade-premium');
   
   if (!statusBar) return;
   
@@ -3269,10 +3305,7 @@ function updateUserStatusUI() {
   const btnStatusLogin = document.getElementById('btn-status-login');
   if (btnStatusLogin) {
     btnStatusLogin.addEventListener('click', () => {
-      if (lockOverlay) {
-        lockOverlay.classList.remove('hidden');
-        renderGoogleButton();
-      }
+      showLockOverlay('signin');
     });
   }
 
@@ -3282,10 +3315,7 @@ function updateUserStatusUI() {
       e.stopPropagation();
       if (!userProfile) {
         alert('Please sign in with Google first to purchase Premium!');
-        if (lockOverlay) {
-          lockOverlay.classList.remove('hidden');
-          renderGoogleButton();
-        }
+        showLockOverlay('signin');
         return;
       }
       openMockCheckout();
@@ -3344,34 +3374,19 @@ function updateUserStatusUI() {
       const loginBtn = document.getElementById('header-login-btn');
       if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-          if (lockOverlay) {
-            lockOverlay.classList.remove('hidden');
-            renderGoogleButton();
-          }
+          showLockOverlay('signin');
         });
       }
     }
   }
   
-  const isPremium = userProfile && userProfile.isPremium;
   const limitsExceeded = currentLimit.remaining <= 0;
   
   if (limitsExceeded) {
-    if (lockOverlay) lockOverlay.classList.remove('hidden');
-    if (inputContainer) inputContainer.classList.add('hidden');
-    
     if (userProfile) {
-      if (btnUpgrade) {
-        btnUpgrade.classList.remove('hidden');
-        btnUpgrade.textContent = 'Upgrade Plan';
-      }
-      const googleContainer = document.getElementById('google-signin-btn-container');
-      if (googleContainer) googleContainer.innerHTML = '';
-      if (lockMessage) lockMessage.textContent = 'Daily query limit reached. Upgrade to Premium Basic ($5.00) or Premium Pro ($15.00) to get more queries.';
+      showLockOverlay('limit_user');
     } else {
-      if (btnUpgrade) btnUpgrade.classList.add('hidden');
-      if (lockMessage) lockMessage.textContent = 'Daily free query limit reached. Sign in with Google to get 5 daily queries, or upgrade your plan.';
-      renderGoogleButton();
+      showLockOverlay('limit_guest');
     }
   } else {
     if (lockOverlay) lockOverlay.classList.add('hidden');
