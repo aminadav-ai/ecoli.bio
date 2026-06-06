@@ -3130,6 +3130,7 @@ const SCENARIOS = {
 };
 
 let aiChatHistory = [];
+let lastChatScrollTop = null;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -3737,18 +3738,33 @@ function setupScenariosAndChat() {
   if (chatTrigger && chatDrawer) {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      chatDrawer.classList.toggle('hidden');
-      // Remove bounce animation once user opens chat
-      chatTrigger.classList.remove('animate-bounce');
-      // Scroll to bottom of chat
       const chatMessages = document.getElementById('ai-chat-messages');
-      if (chatMessages) {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+      const isOpening = chatDrawer.classList.contains('hidden');
+      
+      if (isOpening) {
+        chatDrawer.classList.remove('hidden');
+        chatTrigger.classList.remove('animate-bounce');
+        if (chatMessages) {
+          if (lastChatScrollTop !== null) {
+            chatMessages.scrollTop = lastChatScrollTop;
+          } else {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        }
+      } else {
+        if (chatMessages) {
+          lastChatScrollTop = chatMessages.scrollTop;
+        }
+        chatDrawer.classList.add('hidden');
       }
     });
 
     chatClose.addEventListener('click', (e) => {
       e.stopPropagation();
+      const chatMessages = document.getElementById('ai-chat-messages');
+      if (chatMessages) {
+        lastChatScrollTop = chatMessages.scrollTop;
+      }
       chatDrawer.classList.add('hidden');
     });
 
