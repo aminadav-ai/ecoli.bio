@@ -3744,8 +3744,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 #user-tier-container.tier-free:hover {
-  background: rgba(148, 163, 184, 0.15);
-  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(249, 115, 22, 0.15);
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #f97316;
 }
 #user-tier-container.tier-basic:hover {
   background: rgba(56, 189, 248, 0.15);
