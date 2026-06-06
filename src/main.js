@@ -3302,6 +3302,14 @@ function updateUserStatusUI() {
         : 'Free Plan';
       userTierContainer.textContent = tierText;
       userTierContainer.className = `user-tier-container tier-${userProfile.isPremium ? (userProfile.premiumTier === 2 ? 'pro' : 'basic') : 'free'}`;
+      
+      if (!userTierContainer.dataset.hasListener) {
+        userTierContainer.dataset.hasListener = "true";
+        userTierContainer.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMockCheckout();
+        });
+      }
     } else {
       userTierContainer.className = 'user-tier-container hidden';
       userTierContainer.textContent = '';
@@ -3443,22 +3451,41 @@ function openMockCheckout() {
   overlay.className = 'mock-payment-overlay';
   overlay.id = 'mock-payment-modal';
   
-  let selectedTier = 1;
-  let selectedPrice = "5.00";
+  if (userProfile && userProfile.isPremium && userProfile.premiumTier === 2) {
+    overlay.innerHTML = `
+      <div class="payment-card glass" style="text-align: center; max-width: 400px; padding: 32px 24px;">
+        <button class="btn-close-payment" id="btn-close-payment">✕</button>
+        <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
+        <h3 style="margin-bottom: 8px;">Active Premium Pro</h3>
+        <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px 0;">You are currently subscribed to the highest tier access plan. Auto-renewal is ${userProfile.autoRenew ? 'enabled' : 'disabled'}. Thank you for your support!</p>
+        <button class="btn btn-primary w-100" id="btn-close-payment-ok" style="height: 40px; font-weight: 700;">Ok</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('btn-close-payment').addEventListener('click', () => overlay.remove());
+    document.getElementById('btn-close-payment-ok').addEventListener('click', () => overlay.remove());
+    return;
+  }
+
+  const isBasicActive = userProfile && userProfile.isPremium && userProfile.premiumTier === 1;
+  let selectedTier = isBasicActive ? 2 : 1;
+  let selectedPrice = isBasicActive ? "15.00" : "5.00";
   
   overlay.innerHTML = `
     <div class="payment-card glass">
       <button class="btn-close-payment" id="btn-close-payment">✕</button>
       <h3>⚡ CellFlux Premium Access</h3>
-      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">1-Month AI Chat & Scenarios (one-time payment)</p>
+      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">Upgrade AI Chat & Scenarios</p>
       
       <div class="plan-selector">
+        ${isBasicActive ? '' : `
         <div class="plan-card active" id="plan-tier-1" data-tier="1" data-price="5.00">
           <h4>💎 Basic</h4>
           <p>100 queries/day</p>
           <div class="price">$5.00</div>
         </div>
-        <div class="plan-card" id="plan-tier-2" data-tier="2" data-price="15.00">
+        `}
+        <div class="plan-card ${isBasicActive ? 'active' : ''}" id="plan-tier-2" data-tier="2" data-price="15.00">
           <h4>⚡ Pro</h4>
           <p>500 queries/day</p>
           <div class="price">$15.00</div>
@@ -3485,8 +3512,14 @@ function openMockCheckout() {
           <input type="text" placeholder="John Doe" id="pay-card-name" value="${userProfile ? userProfile.name : 'John Doe'}" />
         </div>
       </div>
+
+      <!-- Auto-Renew Checkbox -->
+      <div class="auto-renew-checkbox-group">
+        <input type="checkbox" id="pay-auto-renew" />
+        <label for="pay-auto-renew">Auto-renew subscription monthly (Автопродление)</label>
+      </div>
       
-      <button class="btn btn-primary w-100" id="btn-confirm-payment" style="height: 40px; font-weight: 700;">Pay $5.00</button>
+      <button class="btn btn-primary w-100" id="btn-confirm-payment" style="height: 40px; font-weight: 700; margin-top: 16px;">Pay $${selectedPrice}</button>
       <p style="font-size: 10px; color: #64748b; text-align: center; margin: 12px 0 0 0;">🔐 Simulated sandbox payment. No real money will be charged.</p>
     </div>
   `;
@@ -3497,21 +3530,25 @@ function openMockCheckout() {
   const card2 = document.getElementById('plan-tier-2');
   const btnConfirm = document.getElementById('btn-confirm-payment');
   
-  card1.addEventListener('click', () => {
-    card1.classList.add('active');
-    card2.classList.remove('active');
-    selectedTier = 1;
-    selectedPrice = "5.00";
-    btnConfirm.textContent = `Pay $${selectedPrice}`;
-  });
+  if (card1) {
+    card1.addEventListener('click', () => {
+      card1.classList.add('active');
+      if (card2) card2.classList.remove('active');
+      selectedTier = 1;
+      selectedPrice = "5.00";
+      btnConfirm.textContent = `Pay $${selectedPrice}`;
+    });
+  }
   
-  card2.addEventListener('click', () => {
-    card2.classList.add('active');
-    card1.classList.remove('active');
-    selectedTier = 2;
-    selectedPrice = "15.00";
-    btnConfirm.textContent = `Pay $${selectedPrice}`;
-  });
+  if (card2) {
+    card2.addEventListener('click', () => {
+      card2.classList.add('active');
+      if (card1) card1.classList.remove('active');
+      selectedTier = 2;
+      selectedPrice = "15.00";
+      btnConfirm.textContent = `Pay $${selectedPrice}`;
+    });
+  }
   
   document.getElementById('btn-close-payment').addEventListener('click', () => {
     overlay.remove();
@@ -3521,6 +3558,9 @@ function openMockCheckout() {
     btnConfirm.disabled = true;
     btnConfirm.textContent = 'Processing transaction...';
     
+    const autoRenewCheckbox = document.getElementById('pay-auto-renew');
+    const autoRenew = autoRenewCheckbox ? autoRenewCheckbox.checked : false;
+    
     const token = localStorage.getItem('userToken');
     try {
       const res = await fetch('/api/payments/simulate', {
@@ -3529,7 +3569,7 @@ function openMockCheckout() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ tier: selectedTier })
+        body: JSON.stringify({ tier: selectedTier, autoRenew })
       });
       if (res.ok) {
         btnConfirm.textContent = '✓ Payment Successful!';
@@ -3730,7 +3770,7 @@ function setupScenariosAndChat() {
       const chevron = reportsDropdownBtn ? reportsDropdownBtn.querySelector('.chevron-icon') : null;
       if (chevron) chevron.style.transform = 'rotate(0deg)';
 
-      reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
+      reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
       reportsModal.classList.remove('hidden');
 
       try {
@@ -3743,10 +3783,11 @@ function setupScenariosAndChat() {
         if (res.ok) {
           const users = await res.json();
           if (users.length === 0) {
-            reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
+            reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
           } else {
             reportsTableBody.innerHTML = users.map(u => {
               const lastVisitStr = u.last_visit ? new Date(u.last_visit).toLocaleString() : 'Never';
+              const autoRenewStr = u.auto_renew ? 'Yes' : 'No';
               return `
                 <tr>
                   <td>${u.email || ''}</td>
@@ -3755,17 +3796,52 @@ function setupScenariosAndChat() {
                   <td>${lastVisitStr}</td>
                   <td>${u.questions || 0}</td>
                   <td>${u.hours_spent || 0} hrs</td>
+                  <td>${autoRenewStr}</td>
+                  <td style="text-align: center;">
+                    <button class="delete-user-btn" data-email="${u.email}" title="Delete User">🗑️</button>
+                  </td>
                 </tr>
               `;
             }).join('');
+
+            // Attach event listeners for delete buttons
+            const deleteButtons = reportsTableBody.querySelectorAll('.delete-user-btn');
+            deleteButtons.forEach(btn => {
+              btn.addEventListener('click', async (evt) => {
+                evt.stopPropagation();
+                const emailToDelete = btn.dataset.email;
+                if (!emailToDelete) return;
+
+                if (confirm(`Are you sure you want to delete user ${emailToDelete}? All sessions, statistics, and access status will be permanently erased.`)) {
+                  try {
+                    const delRes = await fetch(`/api/admin/users/${encodeURIComponent(emailToDelete)}`, {
+                      method: 'DELETE',
+                      headers: {
+                        'Authorization': `Bearer ${token}`
+                      }
+                    });
+                    if (delRes.ok) {
+                      // Reload report
+                      reportUsersOpt.click();
+                    } else {
+                      const err = await delRes.json();
+                      alert(`Failed to delete user: ${err.error}`);
+                    }
+                  } catch (err) {
+                    console.error('Delete user error:', err);
+                    alert('Failed to connect to the server.');
+                  }
+                }
+              });
+            });
           }
         } else {
           const err = await res.json();
-          reportsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${err.error || 'Failed to load report data.'}</td></tr>`;
+          reportsTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${err.error || 'Failed to load report data.'}</td></tr>`;
         }
       } catch (err) {
         console.error('Failed to load user reports:', err);
-        reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ef4444;">Error: Failed to fetch data from server.</td></tr>';
+        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #ef4444;">Error: Failed to fetch data from server.</td></tr>';
       }
     });
   }

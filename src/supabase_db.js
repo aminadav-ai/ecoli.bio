@@ -205,7 +205,8 @@ export async function verifyGoogleTokenAndLogin(credential) {
       isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
-      premiumUntil: user.premium_until
+      premiumUntil: user.premium_until,
+      autoRenew: !!user.auto_renew
     }
   };
 }
@@ -268,7 +269,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium,
       premiumTier: user.premium_tier || 0,
-      premiumUntil: user.premium_until
+      premiumUntil: user.premium_until,
+      autoRenew: !!user.auto_renew
     } : null,
     limit: {
       max: limitMax,
@@ -291,7 +293,7 @@ export async function logoutSession(token) {
 }
 
 // 5. Simulate Premium Payment
-export async function simulatePremiumPayment(token, tier) {
+export async function simulatePremiumPayment(token, tier, autoRenew) {
   const user = await getUserByToken(token);
   if (!user) {
     throw new Error('Unauthorized or invalid session.');
@@ -307,14 +309,16 @@ export async function simulatePremiumPayment(token, tier) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ 
       premium_until: premiumUntil.toISOString(),
-      premium_tier: chosenTier
+      premium_tier: chosenTier,
+      auto_renew: !!autoRenew
     })
   });
 
   return {
     success: true,
     premiumUntil: premiumUntil.toISOString(),
-    premiumTier: chosenTier
+    premiumTier: chosenTier,
+    autoRenew: !!autoRenew
   };
 }
 
@@ -400,7 +404,40 @@ export async function getAllUsersFromDb() {
       visits: u.visits || 0,
       last_visit: u.last_visit || u.created_at || null,
       questions: u.questions || 0,
-      hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2))
+      hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2)),
+      auto_renew: !!u.auto_renew
     };
   });
+}
+
+// 10. Delete user and their associated data
+export async function deleteUserFromDb(email) {
+  try {
+    // delete user sessions
+    await supabaseFetch(`user_sessions?email=eq.${encodeURIComponent(email)}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error('[Supabase DB] Failed to delete user sessions:', err);
+  }
+
+  try {
+    // delete chat limits
+    const identifier = `user:${email}`;
+    await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error('[Supabase DB] Failed to delete chat limits:', err);
+  }
+
+  try {
+    // delete user
+    await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error('[Supabase DB] Failed to delete user:', err);
+    throw err;
+  }
 }

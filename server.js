@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb } from './src/supabase_db.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -401,6 +401,29 @@ app.get('/api/admin/reports/users', async (req, res) => {
   }
 });
 
+app.delete('/api/admin/users/:email', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+    const user = await getUserByToken(token);
+    if (!user || user.email !== 'fbhcdbhf@gmail.com') {
+      return res.status(403).json({ error: 'Forbidden.' });
+    }
+    const targetEmail = req.params.email;
+    if (!targetEmail) {
+      return res.status(400).json({ error: 'Email parameter is required.' });
+    }
+    await deleteUserFromDb(targetEmail);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Admin Delete User error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/payments/simulate', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -408,8 +431,8 @@ app.post('/api/payments/simulate', async (req, res) => {
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized.' });
     }
-    const { tier } = req.body || {};
-    const result = await simulatePremiumPayment(token, tier);
+    const { tier, autoRenew } = req.body || {};
+    const result = await simulatePremiumPayment(token, tier, autoRenew);
     return res.json(result);
   } catch (err) {
     console.error('Payment simulation error:', err);

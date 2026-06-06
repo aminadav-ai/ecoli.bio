@@ -3736,3 +3736,44 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(168, 85, 247, 0.05);
 }
 
+#user-tier-container {
+  cursor: pointer;
+}
+#user-tier-container:hover {
+  opacity: 0.85;
+  filter: brightness(1.2);
+}
+
+.auto-renew-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.auto-renew-checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+.auto-renew-checkbox-group label {
+  font-size: 13px;
+  color: #cbd5e1;
+  cursor: pointer;
+  margin: 0;
+}
+
+.delete-user-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+.delete-user-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
