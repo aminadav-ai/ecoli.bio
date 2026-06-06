@@ -3179,14 +3179,14 @@ function initGoogleAuth(clientId) {
 }
 
 function renderGoogleButton() {
-  const container = document.getElementById('google-signin-btn-container');
-  if (container) {
+  const container = document.getElementById('global-google-signin-btn-container');
+  if (container && typeof google !== 'undefined') {
     container.innerHTML = '';
     const btnDiv = document.createElement('div');
-    btnDiv.id = 'google-signin-btn';
+    btnDiv.id = 'global-google-signin-btn';
     container.appendChild(btnDiv);
     google.accounts.id.renderButton(
-      document.getElementById('google-signin-btn'),
+      document.getElementById('global-google-signin-btn'),
       { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
     );
   }
@@ -3204,6 +3204,7 @@ async function handleGoogleCredentialResponse(response) {
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
       await checkAuthStatus();
+      closeAuthModal();
     } else {
       const err = await res.json();
       alert(`Google Auth failed: ${err.error}`);
@@ -3231,6 +3232,21 @@ async function handleLogout() {
   await checkAuthStatus();
 }
 
+function openAuthModal() {
+  const authModal = document.getElementById('global-auth-modal');
+  if (authModal) {
+    authModal.classList.remove('hidden');
+    renderGoogleButton();
+  }
+}
+
+function closeAuthModal() {
+  const authModal = document.getElementById('global-auth-modal');
+  if (authModal) {
+    authModal.classList.add('hidden');
+  }
+}
+
 function showLockOverlay(mode) {
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const lockTitle = document.getElementById('lock-title');
@@ -3239,34 +3255,16 @@ function showLockOverlay(mode) {
   const btnUpgrade = document.getElementById('btn-upgrade-premium');
   const inputContainer = document.querySelector('.chat-input-container');
 
-  if (mode === 'signin') {
-    const chatDrawer = document.getElementById('ai-chat-drawer');
-    const chatTrigger = document.getElementById('ai-chat-trigger');
-    if (chatDrawer) {
-      chatDrawer.classList.remove('hidden');
-    }
-    if (chatTrigger) {
-      chatTrigger.classList.remove('animate-bounce');
-    }
-  }
-
   if (!lockOverlay) return;
 
   lockOverlay.classList.remove('hidden');
   if (inputContainer) inputContainer.classList.add('hidden');
 
-  if (mode === 'signin') {
-    if (lockIcon) lockIcon.textContent = '👤';
-    if (lockTitle) lockTitle.textContent = 'Sign In';
-    if (lockMessage) lockMessage.textContent = 'Sign in with Google to get 5 daily queries, save your progress, or upgrade to Premium.';
-    if (btnUpgrade) btnUpgrade.classList.add('hidden');
-    renderGoogleButton();
-  } else if (mode === 'limit_guest') {
+  if (mode === 'limit_guest') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
-    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Sign in with Google to get 5 daily queries, or upgrade your plan.';
+    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Sign in to continue, or upgrade your plan.';
     if (btnUpgrade) btnUpgrade.classList.add('hidden');
-    renderGoogleButton();
   } else if (mode === 'limit_user') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
@@ -3275,8 +3273,6 @@ function showLockOverlay(mode) {
       btnUpgrade.classList.remove('hidden');
       btnUpgrade.textContent = 'Upgrade Plan';
     }
-    const googleContainer = document.getElementById('google-signin-btn-container');
-    if (googleContainer) googleContainer.innerHTML = '';
   }
 }
 
@@ -3316,7 +3312,7 @@ function updateUserStatusUI() {
   const btnStatusLogin = document.getElementById('btn-status-login');
   if (btnStatusLogin) {
     btnStatusLogin.addEventListener('click', () => {
-      showLockOverlay('signin');
+      openAuthModal();
     });
   }
 
@@ -3326,7 +3322,7 @@ function updateUserStatusUI() {
       e.stopPropagation();
       if (!userProfile) {
         alert('Please sign in with Google first to purchase Premium!');
-        showLockOverlay('signin');
+        openAuthModal();
         return;
       }
       openMockCheckout();
@@ -3385,7 +3381,7 @@ function updateUserStatusUI() {
       const loginBtn = document.getElementById('header-login-btn');
       if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-          showLockOverlay('signin');
+          openAuthModal();
         });
       }
     }
@@ -3649,6 +3645,21 @@ function setupScenariosAndChat() {
   if (btnUpgrade) {
     btnUpgrade.addEventListener('click', () => {
       openMockCheckout();
+    });
+  }
+
+  // Decoupled Global Auth Modal triggers
+  const btnCloseAuth = document.getElementById('btn-close-auth');
+  if (btnCloseAuth) {
+    btnCloseAuth.addEventListener('click', () => {
+      closeAuthModal();
+    });
+  }
+
+  const btnLockSignin = document.getElementById('btn-lock-signin');
+  if (btnLockSignin) {
+    btnLockSignin.addEventListener('click', () => {
+      openAuthModal();
     });
   }
 

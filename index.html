@@ -384,6 +384,19 @@
         </div>
       </div>
 
+      <!-- Global Authentication Modal -->
+      <div id="global-auth-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass">
+          <button id="btn-close-auth" class="btn-close-auth">✕</button>
+          <span class="auth-icon">👤</span>
+          <h3 id="auth-title">Sign In</h3>
+          <p id="auth-message">Sign in with Google to save your progress, manage your plan, or unlock unlimited queries for the AI tutor.</p>
+          <div id="global-google-signin-btn-container" class="google-signin-btn-container">
+            <!-- Google auth button will render here -->
+          </div>
+        </div>
+      </div>
+
       <!-- Floating AI Chatbot Widget -->
       <div id="ai-chat-widget" class="ai-chat-widget">
         <!-- Floating chat bubble button -->
@@ -431,11 +444,9 @@
             <div class="lock-card">
               <span id="lock-icon" class="lock-icon">🔒</span>
               <h4 id="lock-title">Daily Limit Reached</h4>
-              <p id="lock-message">Guests are limited to 2 queries per day. Sign in with Google to continue, or buy Premium for unlimited access.</p>
-              <div id="google-signin-btn-container" class="google-signin-btn-container">
-                <!-- Google auth button will render here -->
-              </div>
-              <button id="btn-upgrade-premium" class="btn btn-primary mt-2 w-100 hidden">Buy 1-Month Premium ($5)</button>
+              <p id="lock-message">Guests are limited to 2 queries per day. Sign in to continue, or upgrade your plan.</p>
+              <button id="btn-lock-signin" class="btn btn-primary w-100">Sign In</button>
+              <button id="btn-upgrade-premium" class="btn btn-secondary mt-2 w-100 hidden">Upgrade Plan</button>
             </div>
           </div>
 
