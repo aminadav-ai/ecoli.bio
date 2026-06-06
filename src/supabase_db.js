@@ -1,10 +1,9 @@
 import crypto from 'crypto';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-
 // Helper to make fetch calls to Supabase REST API
 async function supabaseFetch(path, options = {}) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_KEY;
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase is not configured in .env');
   }

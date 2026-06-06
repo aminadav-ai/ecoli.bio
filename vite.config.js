@@ -138,10 +138,13 @@ function calculateBounds(concentrations, parameters) {
 }
 
 export default defineConfig(({ mode }) => {
-  // Load env variables to ensure Telegram credentials are available on process.env
+  // Load env variables to ensure credentials are available on process.env
   const env = loadEnv(mode, process.cwd(), '');
-  process.env.TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
-  process.env.TELEGRAM_CHAT_ID = env.TELEGRAM_CHAT_ID;
+  for (const [key, value] of Object.entries(env)) {
+    if (key) {
+      process.env[key] = value;
+    }
+  }
 
   const handleTrackVisit = async (req, res, next) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
