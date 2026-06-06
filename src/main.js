@@ -3977,6 +3977,10 @@ function appendUserMessage(text) {
 
   const div = document.createElement('div');
   div.className = 'message message-user';
+  div.setAttribute('dir', 'auto');
+  if (/[\u0590-\u05FF]/.test(text)) {
+    div.classList.add('hebrew-text');
+  }
   div.textContent = text;
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -4096,6 +4100,10 @@ function appendModelMessage(text) {
   const div = document.createElement('div');
   div.className = 'message message-model';
   div.style.whiteSpace = 'pre-wrap';
+  div.setAttribute('dir', 'auto');
+  if (/[\u0590-\u05FF]/.test(text)) {
+    div.classList.add('hebrew-text');
+  }
   
   // Set parsed HTML (with bold/italic)
   div.innerHTML = parseMarkdownOnly(text);
