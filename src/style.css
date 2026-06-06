@@ -2809,8 +2809,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
   position: absolute;
   bottom: 68px;
   right: 0;
-  width: 440px;
-  height: 580px;
+  width: 500px;
+  height: calc(100vh - 180px);
+  max-height: 700px;
+  min-height: 400px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -2818,6 +2820,51 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4), inset 0 0 1px rgba(255, 255, 255, 0.2);
   animation: chat-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: left;
+}
+
+/* Floating Chat Actions */
+.chat-floating-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+}
+.chat-floating-actions .chat-header-btn {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.chat-floating-actions .chat-header-btn:hover {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+.chat-floating-actions .close-btn {
+  color: #f87171;
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.chat-floating-actions .close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 @keyframes chat-slide-in {
@@ -2926,6 +2973,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .chat-messages {
   flex: 1;
   padding: 16px;
+  padding-top: 48px; /* Offset for floating actions */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -3442,6 +3490,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
   letter-spacing: 0.3px;
   color: #fbbf24;
   margin-top: 4px;
+}
+
+.user-dropdown-limits {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
 .dropdown-divider {

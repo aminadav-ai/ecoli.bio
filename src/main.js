@@ -3344,8 +3344,6 @@ function updateUserStatusUI() {
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
 
-  if (!statusBar) return;
-
   // Identify user in Microsoft Clarity for session replay matching
   if (userProfile && typeof clarity === 'function') {
     clarity("identify", userProfile.email, userProfile.name);
@@ -3355,10 +3353,15 @@ function updateUserStatusUI() {
   const userTierContainer = document.getElementById('user-tier-container');
   if (userTierContainer) {
     if (userProfile) {
-      const tierText = userProfile.isPremium 
-        ? (userProfile.premiumTier === 2 ? 'Premium Pro' : 'Premium Basic') 
-        : 'Free Plan';
-      userTierContainer.textContent = tierText;
+      const tierName = userProfile.isPremium 
+        ? (userProfile.premiumTier === 2 ? 'Pro' : 'Basic') 
+        : 'Free';
+      const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
+      
+      userTierContainer.innerHTML = `
+        <span>${tierName}: ${currentLimit.remaining} left</span>
+        ${showUpgrade ? `<button id="header-tier-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
+      `;
       userTierContainer.className = `user-tier-container tier-${userProfile.isPremium ? (userProfile.premiumTier === 2 ? 'pro' : 'basic') : 'free'}`;
       
       if (!userTierContainer.dataset.hasListener) {
@@ -3370,7 +3373,7 @@ function updateUserStatusUI() {
       }
     } else {
       userTierContainer.className = 'user-tier-container hidden';
-      userTierContainer.textContent = '';
+      userTierContainer.innerHTML = '';
     }
   }
 
@@ -3386,58 +3389,61 @@ function updateUserStatusUI() {
     }
   }
   
-  // 1. Update AI Chat Status Bar (Limits only, no user name / logout btn)
-  if (userProfile) {
-    const isPremium = userProfile.isPremium;
-    if (isPremium) {
-      const tierName = userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic';
-      if (userProfile.premiumTier === 2) {
-        statusBar.innerHTML = `
-          <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
-        `;
+  // 1. Update AI Chat Status Bar (if it exists)
+  if (statusBar) {
+    if (userProfile) {
+      const isPremium = userProfile.isPremium;
+      if (isPremium) {
+        const tierName = userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic';
+        if (userProfile.premiumTier === 2) {
+          statusBar.innerHTML = `
+            <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
+          `;
+        } else {
+          statusBar.innerHTML = `
+            <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
+          `;
+        }
       } else {
         statusBar.innerHTML = `
-          <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
+          <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
         `;
       }
     } else {
       statusBar.innerHTML = `
-        <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
+        <span>Sign in to use the AI Metabolic Assistant</span>
+        <button id="btn-status-login" class="chat-status-login-btn">Sign in</button>
       `;
     }
-  } else {
-    statusBar.innerHTML = `
-      <span>Sign in to use the AI Metabolic Assistant</span>
-      <button id="btn-status-login" class="chat-status-login-btn">Sign in</button>
-    `;
+    
+    const btnStatusLogin = document.getElementById('btn-status-login');
+    if (btnStatusLogin) {
+      btnStatusLogin.addEventListener('click', () => {
+        openAuthModal();
+      });
+    }
+
+    const btnStatusUpgrade = document.getElementById('btn-status-upgrade');
+    if (btnStatusUpgrade) {
+      btnStatusUpgrade.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!userProfile) {
+          alert('Please sign in with Google first to purchase Premium!');
+          openAuthModal();
+          return;
+        }
+        openMockCheckout();
+      });
+    }
   }
   
-  const btnStatusLogin = document.getElementById('btn-status-login');
-  if (btnStatusLogin) {
-    btnStatusLogin.addEventListener('click', () => {
-      openAuthModal();
-    });
-  }
-
-  const btnStatusUpgrade = document.getElementById('btn-status-upgrade');
-  if (btnStatusUpgrade) {
-    btnStatusUpgrade.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!userProfile) {
-        alert('Please sign in with Google first to purchase Premium!');
-        openAuthModal();
-        return;
-      }
-      openMockCheckout();
-    });
-  }
-
   // 2. Update Top Header User Profile Badge / Dropdown
   const headerProfileContainer = document.getElementById('user-profile-header-container');
   if (headerProfileContainer) {
     if (userProfile) {
       const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
       const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
+      const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
       headerProfileContainer.innerHTML = `
         <div class="user-badge" id="user-profile-badge">
           <div class="user-avatar">${initial}</div>
@@ -3448,7 +3454,11 @@ function updateUserStatusUI() {
           <div class="user-dropdown-info">
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
-            <div class="user-dropdown-tier">${tierText}</div>
+            <div class="user-dropdown-tier" style="display: flex; align-items: center; gap: 6px;">
+              <span>${tierText}</span>
+              ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
+            </div>
+            <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -3458,6 +3468,7 @@ function updateUserStatusUI() {
       const badge = document.getElementById('user-profile-badge');
       const dropdown = document.getElementById('user-profile-dropdown');
       const logoutBtn = document.getElementById('header-logout-btn');
+      const dropdownUpgradeBtn = document.getElementById('dropdown-upgrade-btn');
       
       if (badge && dropdown) {
         badge.addEventListener('click', (e) => {
@@ -3475,6 +3486,13 @@ function updateUserStatusUI() {
         logoutBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           handleLogout();
+        });
+      }
+
+      if (dropdownUpgradeBtn) {
+        dropdownUpgradeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMockCheckout();
         });
       }
     } else {

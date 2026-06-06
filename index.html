@@ -434,29 +434,16 @@
 
         <!-- Chat drawer/panel (hidden by default) -->
         <div id="ai-chat-drawer" class="ai-chat-drawer glass hidden">
-          <div class="chat-header">
-            <div class="chat-title-group">
-              <span class="chat-logo">🤖</span>
-              <div>
-                <h3>AI Assistant</h3>
-                <span class="chat-status">Online • Analyzing map</span>
-              </div>
-            </div>
-            <div class="chat-header-actions">
-              <button id="ai-chat-context-btn" class="chat-header-btn" title="Show simulation context">👁️ Context</button>
-              <button id="ai-chat-close" class="chat-header-btn close-btn">✕</button>
-            </div>
+          <!-- Floating Chat Actions (replaced header to save space) -->
+          <div class="chat-floating-actions">
+            <button id="ai-chat-context-btn" class="chat-header-btn" title="Show simulation context">👁️ Context</button>
+            <button id="ai-chat-close" class="chat-header-btn close-btn">✕</button>
           </div>
 
           <!-- Collapsible context preview -->
           <div id="ai-chat-context-panel" class="chat-context-panel hidden">
             <h4>Simulation context sent to AI:</h4>
             <pre id="ai-chat-context-json" class="code-font"></pre>
-          </div>
-
-          <!-- User status bar (limits/login info) -->
-          <div id="ai-chat-status-bar" class="chat-status-bar">
-            Loading status...
           </div>
 
           <!-- Messages list -->
