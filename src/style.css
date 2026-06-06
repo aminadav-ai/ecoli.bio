@@ -3696,3 +3696,43 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-bottom: none;
 }
 
+/* User Tier Badge Container */
+.user-tier-container {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(8px);
+  color: #94a3b8;
+  margin-right: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.user-tier-container.hidden {
+  display: none !important;
+}
+
+/* Tier specific styles */
+.user-tier-container.tier-free {
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.05);
+}
+
+.user-tier-container.tier-basic {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.user-tier-container.tier-pro {
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.2);
+  background: rgba(168, 85, 247, 0.05);
+}
+

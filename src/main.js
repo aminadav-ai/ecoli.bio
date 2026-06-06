@@ -3293,6 +3293,21 @@ function updateUserStatusUI() {
   
   if (!statusBar) return;
 
+  // Update User Tier Badge in Top Header
+  const userTierContainer = document.getElementById('user-tier-container');
+  if (userTierContainer) {
+    if (userProfile) {
+      const tierText = userProfile.isPremium 
+        ? (userProfile.premiumTier === 2 ? 'Premium Pro' : 'Premium Basic') 
+        : 'Free Plan';
+      userTierContainer.textContent = tierText;
+      userTierContainer.className = `user-tier-container tier-${userProfile.isPremium ? (userProfile.premiumTier === 2 ? 'pro' : 'basic') : 'free'}`;
+    } else {
+      userTierContainer.className = 'user-tier-container hidden';
+      userTierContainer.textContent = '';
+    }
+  }
+
   // Update Reports Button Visibility
   const adminReportsContainer = document.getElementById('admin-reports-container');
   if (adminReportsContainer) {
