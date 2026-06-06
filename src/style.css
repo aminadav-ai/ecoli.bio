@@ -3777,3 +3777,28 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background-color: rgba(239, 68, 68, 0.15);
 }
 
+.chat-status-login-btn {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  border: none;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-left: 8px;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+}
+
+.chat-status-login-btn:hover {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.5);
+  transform: translateY(-0.5px);
+  color: #ffffff;
+}
+
+.chat-status-login-btn:active {
+  transform: translateY(0.5px);
+}
+

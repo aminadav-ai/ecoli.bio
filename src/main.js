@@ -3350,7 +3350,7 @@ function updateUserStatusUI() {
   } else {
     statusBar.innerHTML = `
       <span>Guest: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
-      <button id="btn-status-login" class="chat-logout-btn" style="color: #38bdf8;">Sign in to get more</button>
+      <button id="btn-status-login" class="chat-status-login-btn">Sign in to get more</button>
     `;
   }
   
