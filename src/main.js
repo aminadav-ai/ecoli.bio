@@ -3239,6 +3239,17 @@ function showLockOverlay(mode) {
   const btnUpgrade = document.getElementById('btn-upgrade-premium');
   const inputContainer = document.querySelector('.chat-input-container');
 
+  if (mode === 'signin') {
+    const chatDrawer = document.getElementById('ai-chat-drawer');
+    const chatTrigger = document.getElementById('ai-chat-trigger');
+    if (chatDrawer) {
+      chatDrawer.classList.remove('hidden');
+    }
+    if (chatTrigger) {
+      chatTrigger.classList.remove('animate-bounce');
+    }
+  }
+
   if (!lockOverlay) return;
 
   lockOverlay.classList.remove('hidden');
