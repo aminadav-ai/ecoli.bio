@@ -2942,11 +2942,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .message {
   max-width: 85%;
-  padding: 10px 12px;
+  padding: 10px 32px 10px 12px;
   border-radius: 12px;
   font-size: 12px;
   line-height: 1.5;
   word-break: break-word;
+  position: relative;
 }
 
 .message-user {
@@ -3813,5 +3814,64 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .chat-status-login-btn:active {
   transform: translateY(0.5px);
+}
+
+/* Copy button inside chat messages */
+.chat-message-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  user-select: none;
+  padding: 0;
+}
+
+.message:hover .chat-message-copy-btn {
+  opacity: 1;
+}
+
+.chat-message-copy-btn:hover {
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.chat-message-copy-btn:active {
+  transform: scale(0.95);
+}
+
+/* User message copy button adjustments */
+.message-user .chat-message-copy-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.message-user .chat-message-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Hebrew RTL Adjustments */
+.message.hebrew-text {
+  padding: 10px 12px 10px 32px !important;
+}
+
+.message.hebrew-text .chat-message-copy-btn {
+  right: auto;
+  left: 8px;
 }
 

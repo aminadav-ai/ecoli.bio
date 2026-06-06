@@ -4347,6 +4347,41 @@ Please evaluate my answer for biological correctness based on the current metabo
   }
 }
 
+function addCopyButton(messageElement, textToCopy) {
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'chat-message-copy-btn';
+  copyBtn.innerHTML = `
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  `;
+  copyBtn.title = 'Copy message';
+
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      copyBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: #22c55e;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+      setTimeout(() => {
+        copyBtn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        `;
+      }, 1500);
+    }).catch(err => {
+      console.error('Failed to copy text:', err);
+    });
+  });
+
+  messageElement.appendChild(copyBtn);
+}
+
 function appendUserMessage(text) {
   const chatMessages = document.getElementById('ai-chat-messages');
   if (!chatMessages) return;
@@ -4358,6 +4393,10 @@ function appendUserMessage(text) {
     div.classList.add('hebrew-text');
   }
   div.textContent = text;
+  
+  // Add copy button
+  addCopyButton(div, text);
+
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -4486,6 +4525,9 @@ function appendModelMessage(text) {
   
   // Add interactive click handlers to any detected reaction/metabolite IDs
   makeElementsClickable(div);
+  
+  // Add copy button (copies the raw unparsed markdown response)
+  addCopyButton(div, text);
   
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
