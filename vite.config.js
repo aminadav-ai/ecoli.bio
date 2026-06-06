@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
-import { trackVisit } from './tracker.js';
+import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb } from './src/supabase_db.js';
 
 // Load static bounds once on startup
@@ -147,10 +147,7 @@ export default defineConfig(({ mode }) => {
   }
 
   const handleTrackVisit = async (req, res, next) => {
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    if (url.pathname === '/' || url.pathname === '/index.html') {
-      trackVisit(req).catch(err => console.error('[Vite Dev Server] Visit tracking error:', err));
-    }
+    trackVisit(req).catch(err => console.error('[Vite Dev Server] Visit tracking error:', err));
     next();
   };
 
@@ -448,6 +445,9 @@ export default defineConfig(({ mode }) => {
         if (limitCheck.user) {
           await incrementUserQuestions(limitCheck.user.email);
         }
+
+        // Track user's AI chat query in Telegram background
+        trackChatQuery(req, message).catch(err => console.error('[Vite Dev Server] Chat tracking error:', err));
 
         const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getUserByToken } from './src/supabase_db.js';
 
 const activeSessions = new Map(); // key: ip + ua, value: timestamp
 const recentVisits = []; // list of timestamps of visits in the last 10 minutes
@@ -51,16 +52,87 @@ export async function sendTelegramMessage(text) {
     if (!res.ok) {
       const errText = await res.text();
       console.error(`[Server] Telegram API error: ${res.status} - ${errText}`);
+    } else {
+      console.log(`[Telegram Bot] Message sent successfully.`);
     }
   } catch (err) {
     console.error('[Server] Failed to send Telegram message:', err);
   }
 }
 
+// Check if a path is suspicious (potential security scanning)
+export function isSuspiciousPath(urlPath) {
+  if (!urlPath) return false;
+  const pathLower = urlPath.toLowerCase();
+
+  // Exclude legitimate admin API routes
+  if (pathLower.startsWith('/api/admin/')) {
+    return false;
+  }
+
+  const suspiciousPatterns = [
+    '.env',
+    '.git',
+    '.php',
+    'wp-',
+    'phpmyadmin',
+    'xmlrpc',
+    '/admin',
+    '/administrator',
+    '/config',
+    '.bak',
+    '.sql',
+    '.zip',
+    '.tar',
+    '.rar',
+    '.tgz',
+    'dump',
+    'db_backup',
+    'composer.json',
+    'package.json'
+  ];
+
+  return suspiciousPatterns.some(pattern => pathLower.includes(pattern));
+}
+
+// Check if path should be completely ignored for normal visit notifications
+export function shouldIgnorePath(urlPath) {
+  if (!urlPath) return true;
+  const pathLower = urlPath.toLowerCase();
+
+  // Suspicious paths must NEVER be ignored
+  if (isSuspiciousPath(urlPath)) {
+    return false;
+  }
+
+  // Ignore high frequency / internal endpoints
+  if (
+    pathLower === '/api/solve-fba' ||
+    pathLower === '/api/auth/heartbeat' ||
+    pathLower === '/api/auth/status'
+  ) {
+    return true;
+  }
+
+  // Ignore standard static asset extensions
+  const ignoredExtensions = [
+    '.js', '.css', '.png', '.jpg', '.jpeg', '.gif',
+    '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot',
+    '.map', '.json', '.txt'
+  ];
+
+  if (ignoredExtensions.some(ext => pathLower.endsWith(ext))) {
+    return true;
+  }
+
+  return false;
+}
+
 // Log visit to visits.log
 function logVisitToFile(visit) {
   const dateStr = new Date(visit.timestamp).toISOString();
-  const line = `${dateStr} - IP: ${visit.ip} - Device: ${visit.device} - Referer: ${visit.referer}\n`;
+  const isSuspicious = visit.suspicious ? ' [SUSPICIOUS SCAN]' : '';
+  const line = `${dateStr} - IP: ${visit.ip} - Device: ${visit.device} - Referer: ${visit.referer} - Path: ${visit.method || 'GET'} ${visit.path || '/'}${isSuspicious}\n`;
   fs.appendFile(path.resolve('visits.log'), line, (err) => {
     if (err) {
       console.error('[Server] Failed to write to visits.log:', err);
@@ -142,9 +214,44 @@ export async function trackVisit(req) {
 
   const ua = req.headers['user-agent'] || '';
   const referer = req.headers['referer'] || 'Direct/Unknown';
-  const sessionKey = `${ip}::${ua}`;
+  const device = parseUserAgent(ua);
+
+  // Get path from request url
+  const urlStr = req.url || '';
+  const urlPath = urlStr.split('?')[0] || '/';
+
+  // 1. Check if the path is suspicious (potential scan)
+  const isSuspicious = isSuspiciousPath(urlPath);
+  if (isSuspicious) {
+    const visit = {
+      timestamp: now,
+      ip,
+      device,
+      referer,
+      path: urlPath,
+      method: req.method || 'GET',
+      suspicious: true
+    };
+    logVisitToFile(visit);
+    console.warn(`[Suspicious Scan] New scan attempt from ${ip} (${device}), method: ${req.method || 'GET'}, url: ${urlStr}`);
+
+    // Send immediate Warning alert bypassing session cooldown
+    const alertText = `⚠️ <b>Попытка сканирования сайта (Подозрительный запрос)!</b>\n\n` +
+                      `<b>Запрос:</b> <code>${req.method || 'GET'} ${urlStr}</code>\n` +
+                      `<b>IP:</b> <code>${ip}</code>\n` +
+                      `<b>Устройство:</b> <code>${device}</code>\n` +
+                      `<b>Реферер:</b> <code>${referer}</code>`;
+    await sendTelegramMessage(alertText);
+    return;
+  }
+
+  // 2. Ignore static assets and high-frequency internal APIs
+  if (shouldIgnorePath(urlPath)) {
+    return;
+  }
 
   // Check cooldown to de-duplicate visits from the same browser session
+  const sessionKey = `${ip}::${ua}`;
   const lastSeen = activeSessions.get(sessionKey);
   if (lastSeen && (now - lastSeen < COOLDOWN_MS)) {
     activeSessions.set(sessionKey, now);
@@ -154,17 +261,18 @@ export async function trackVisit(req) {
   // Register new session
   activeSessions.set(sessionKey, now);
 
-  const device = parseUserAgent(ua);
   const visit = {
     timestamp: now,
     ip,
     device,
-    referer
+    referer,
+    path: urlPath,
+    method: req.method || 'GET'
   };
 
   // Log to local file and server console
   logVisitToFile(visit);
-  console.log(`[Visit] New connection from ${ip} (${device}), Referer: ${referer}`);
+  console.log(`[Visit] New connection from ${ip} (${device}), path: ${req.method || 'GET'} ${urlPath}, Referer: ${referer}`);
 
   // Maintain recent visits within 10-minute window
   recentVisits.push(now);
@@ -193,10 +301,51 @@ export async function trackVisit(req) {
       }
     } else {
       const text = `🔔 <b>Новый посетитель на сайте!</b>\n\n` +
-                   `IP: <code>${ip}</code>\n` +
-                   `Устройство: <code>${device}</code>\n` +
-                   `Реферер: <code>${referer}</code>`;
+                   `<b>Путь:</b> <code>${req.method || 'GET'} ${urlPath}</code>\n` +
+                   `<b>IP:</b> <code>${ip}</code>\n` +
+                   `<b>Устройство:</b> <code>${device}</code>\n` +
+                   `<b>Реферер:</b> <code>${referer}</code>`;
       await sendTelegramMessage(text);
     }
   }
+}
+
+// Track a user chat query to AI assistant
+export async function trackChatQuery(req, message) {
+  const now = Date.now();
+  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
+  if (ip && ip.includes(',')) {
+    ip = ip.split(',')[0].trim();
+  }
+
+  const ua = req.headers['user-agent'] || '';
+  const device = parseUserAgent(ua);
+
+  // Extract user email if logged in
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+  let email = 'Guest (Не авторизован)';
+  if (token) {
+    const user = await getUserByToken(token);
+    if (user && user.email) {
+      email = user.email;
+    }
+  }
+
+  // Escape HTML characters to prevent Telegram API errors
+  const safeMessage = (message || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  console.log(`[Chat Query] Tracking query from ${email}: "${message}"`);
+
+  const text = `💬 <b>Запрос к ИИ чату!</b>\n\n` +
+               `<b>Пользователь:</b> <code>${email}</code>\n` +
+               `<b>IP:</b> <code>${ip}</code>\n` +
+               `<b>Устройство:</b> <code>${device}</code>\n\n` +
+               `<b>Вопрос:</b>\n<blockquote>${safeMessage}</blockquote>`;
+
+  await sendTelegramMessage(text);
 }

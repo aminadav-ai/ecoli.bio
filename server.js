@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
-import { trackVisit } from './tracker.js';
+import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb } from './src/supabase_db.js';
 
 // Load env variables from .env file locally if it exists
@@ -260,6 +260,9 @@ app.post('/api/chat', async (req, res) => {
       await incrementUserQuestions(limitCheck.user.email);
     }
 
+    // Track user's AI chat query in Telegram background
+    trackChatQuery(req, message).catch(err => console.error('[Server] Chat tracking error:', err));
+
     const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 
 
@@ -441,11 +444,9 @@ app.post('/api/payments/simulate', async (req, res) => {
 });
 
 
-// Middleware to track visits
+// Middleware to track visits (including potential scanner requests)
 app.use((req, res, next) => {
-  if (req.path === '/' || req.path === '/index.html') {
-    trackVisit(req).catch(err => console.error('[Server] Visit tracking error:', err));
-  }
+  trackVisit(req).catch(err => console.error('[Server] Visit tracking error:', err));
   next();
 });
 
