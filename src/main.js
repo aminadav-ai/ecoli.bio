@@ -3804,6 +3804,10 @@ function setupScenariosAndChat() {
   // Global click outside closes chat
   document.addEventListener('click', () => {
     if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
+      const chatMessages = document.getElementById('ai-chat-messages');
+      if (chatMessages) {
+        lastChatScrollTop = chatMessages.scrollTop;
+      }
       chatDrawer.classList.add('hidden');
     }
   });
