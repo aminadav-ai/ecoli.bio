@@ -3740,8 +3740,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
   cursor: pointer;
 }
 #user-tier-container:hover {
-  opacity: 0.85;
-  filter: brightness(1.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+#user-tier-container.tier-free:hover {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+#user-tier-container.tier-basic:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+#user-tier-container.tier-pro:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
 .auto-renew-checkbox-group {
