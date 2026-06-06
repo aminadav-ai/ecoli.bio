@@ -307,7 +307,7 @@ export async function trackVisit(req) {
 }
 
 // Track a user chat query to AI assistant
-export async function trackChatQuery(req, message) {
+export async function trackChatQuery(req, message, usageMetadata = null) {
   const now = Date.now();
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
   if (ip && ip.includes(',')) {
@@ -335,13 +335,25 @@ export async function trackChatQuery(req, message) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  console.log(`[Chat Query] Tracking query from ${email}: "${message}"`);
+  let tokensInfo = '';
+  if (usageMetadata) {
+    const promptTokens = usageMetadata.promptTokenCount || 0;
+    const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+    const totalTokens = usageMetadata.totalTokenCount || 0;
+    tokensInfo = `\n\n<b>Токены:</b>\n` +
+                 `• Вопрос: <b>${promptTokens}</b>\n` +
+                 `• Ответ: <b>${candidatesTokens}</b>\n` +
+                 `• Всего: <b>${totalTokens}</b>`;
+  }
+
+  console.log(`[Chat Query] Tracking query from ${email}: "${message}"${usageMetadata ? ` (Tokens: ${usageMetadata.totalTokenCount})` : ''}`);
 
   const text = `💬 <b>Запрос к ИИ чату!</b>\n\n` +
                `<b>Пользователь:</b> <code>${email}</code>\n` +
                `<b>IP:</b> <code>${ip}</code>\n` +
                `<b>Устройство:</b> <code>${device}</code>\n\n` +
-               `<b>Вопрос:</b>\n<blockquote>${safeMessage}</blockquote>`;
+               `<b>Вопрос:</b>\n<blockquote>${safeMessage}</blockquote>` +
+               tokensInfo;
 
   await sendTelegramMessage(text);
 }

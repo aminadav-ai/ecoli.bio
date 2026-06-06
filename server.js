@@ -260,9 +260,6 @@ app.post('/api/chat', async (req, res) => {
       await incrementUserQuestions(limitCheck.user.email);
     }
 
-    // Track user's AI chat query in Telegram background
-    trackChatQuery(req, message).catch(err => console.error('[Server] Chat tracking error:', err));
-
     const identifier = limitCheck.user ? `user:${limitCheck.user.email}` : `guest:${guestId || ip || 'unknown'}`;
     // Save user's question to Supabase history
     await saveChatMessage(identifier, 'user', message, context);
@@ -314,6 +311,10 @@ Instructions:
 
     const data = await response.json();
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
+    const usageMetadata = data.usageMetadata;
+
+    // Track user's AI chat query in Telegram background (now with token counts!)
+    trackChatQuery(req, message, usageMetadata).catch(err => console.error('[Server] Chat tracking error:', err));
     
     // Save model's reply to Supabase history
     await saveChatMessage(identifier, 'model', reply);
