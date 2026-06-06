@@ -3343,8 +3343,13 @@ function updateUserStatusUI() {
   const statusBar = document.getElementById('ai-chat-status-bar');
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
-  
+
   if (!statusBar) return;
+
+  // Identify user in Microsoft Clarity for session replay matching
+  if (userProfile && typeof clarity === 'function') {
+    clarity("identify", userProfile.email, userProfile.name);
+  }
 
   // Update User Tier Badge in Top Header
   const userTierContainer = document.getElementById('user-tier-container');
