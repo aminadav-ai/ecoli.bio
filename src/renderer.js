@@ -800,6 +800,16 @@ export class PixiRenderer {
     const mapCenterY = (minY + maxY) / 2;
 
     if (startupAnimation && smooth) {
+      let targetX = mapCenterX;
+      let targetY = mapCenterY;
+
+      // Find the MDH reaction badge coordinate
+      const mdhRxn = this.reactions.find(r => r.biggId === 'MDH');
+      if (mdhRxn && mdhRxn.labelX && mdhRxn.labelY) {
+        targetX = mdhRxn.labelX;
+        targetY = mdhRxn.labelY;
+      }
+
       // End zoom level should be zoomed in (closer)
       // clampedFitZoom is the scale to fit the whole map (e.g. ~0.3).
       // We zoom in by a factor of 3.3 (so zoom target is e.g. ~1.0).
@@ -807,8 +817,8 @@ export class PixiRenderer {
       this.targetZoom = Math.max(0.15, Math.min(1.8, clampedFitZoom * 3.3));
       
       const usableCenterX = this.getUsableCenterX();
-      this.targetPosition.x = usableCenterX - mapCenterX * this.targetZoom;
-      this.targetPosition.y = this.app.renderer.height / 2 - mapCenterY * this.targetZoom;
+      this.targetPosition.x = usableCenterX - targetX * this.targetZoom;
+      this.targetPosition.y = this.app.renderer.height / 2 - targetY * this.targetZoom;
 
       // Start zoomed out (where the whole map fits the screen)
       this.zoom = clampedFitZoom;
