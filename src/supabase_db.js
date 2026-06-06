@@ -22,7 +22,7 @@ async function supabaseFetch(path, options = {}) {
 }
 
 // Get user profile by session token
-async function getUserByToken(token) {
+export async function getUserByToken(token) {
   if (!token) return null;
   try {
     const res = await supabaseFetch(`user_sessions?token=eq.${encodeURIComponent(token)}`);
@@ -185,11 +185,24 @@ export async function verifyGoogleTokenAndLogin(credential) {
   const users = await userRes.json();
   const user = users[0] || { email, name };
 
+  const visits = (user.visits || 0) + 1;
+  const lastVisit = new Date().toISOString();
+
+  await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      visits,
+      last_visit: lastVisit
+    })
+  });
+
   return {
     token,
     user: {
       email: user.email,
       name: user.name,
+      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until
@@ -252,6 +265,7 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
     user: user ? {
       email: user.email,
       name: user.name,
+      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium,
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until
@@ -302,4 +316,91 @@ export async function simulatePremiumPayment(token, tier) {
     premiumUntil: premiumUntil.toISOString(),
     premiumTier: chosenTier
   };
+}
+
+// 6. Increment user visits/login count
+export async function incrementUserVisits(email) {
+  try {
+    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
+    const users = await userRes.json();
+    if (users.length > 0) {
+      const u = users[0];
+      const visits = (u.visits || 0) + 1;
+      const lastVisit = new Date().toISOString();
+
+      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visits,
+          last_visit: lastVisit
+        })
+      });
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Failed to increment user visits:', err);
+  }
+}
+
+// 7. Increment user asked questions count
+export async function incrementUserQuestions(email) {
+  try {
+    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
+    const users = await userRes.json();
+    if (users.length > 0) {
+      const u = users[0];
+      const questions = (u.questions || 0) + 1;
+
+      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questions
+        })
+      });
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Failed to increment user questions:', err);
+  }
+}
+
+// 8. Increment user active session seconds spent
+export async function incrementUserTimeSpent(email, seconds) {
+  try {
+    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
+    const users = await userRes.json();
+    if (users.length > 0) {
+      const u = users[0];
+      const secondsSpent = (u.seconds_spent || 0) + seconds;
+
+      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seconds_spent: secondsSpent
+        })
+      });
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Failed to increment user time spent:', err);
+  }
+}
+
+// 9. Fetch and format all user statistics for admin report
+export async function getAllUsersFromDb() {
+  const res = await supabaseFetch('users');
+  const dbUsers = await res.json();
+  
+  return dbUsers.map(u => {
+    return {
+      email: u.email,
+      name: u.name,
+      created_at: u.created_at,
+      premium_tier: u.premium_tier,
+      visits: u.visits || 0,
+      last_visit: u.last_visit || u.created_at || null,
+      questions: u.questions || 0,
+      hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2))
+    };
+  });
 }

@@ -982,6 +982,15 @@ function setupUIListeners() {
         if (chevron) chevron.style.transform = 'rotate(0deg)';
       }
     }
+    const reportsDropdown = document.getElementById('reports-dropdown');
+    if (reportsDropdown && !e.target.closest('.reports-container')) {
+      reportsDropdown.classList.add('hidden');
+      const btn = document.getElementById('reports-dropdown-btn');
+      if (btn) {
+        const chevron = btn.querySelector('.chevron-icon');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+      }
+    }
   });
 
 
@@ -3135,7 +3144,7 @@ let currentLimit = { max: 5, count: 0, remaining: 5 };
 let userProfile = null;
 let googleAuthInitialized = false;
 
-async function checkAuthStatus() {
+async function checkAuthStatus(isVisit = false) {
   const token = localStorage.getItem('userToken');
   try {
     const headers = { 
@@ -3145,7 +3154,8 @@ async function checkAuthStatus() {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const res = await fetch('/api/auth/status', { headers });
+    const url = isVisit ? '/api/auth/status?visit=true' : '/api/auth/status';
+    const res = await fetch(url, { headers });
     if (res.ok) {
       const data = await res.json();
       userProfile = data.user;
@@ -3203,7 +3213,7 @@ async function handleGoogleCredentialResponse(response) {
       const data = await res.json();
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
-      await checkAuthStatus();
+      await checkAuthStatus(true);
       closeAuthModal();
     } else {
       const err = await res.json();
@@ -3282,6 +3292,18 @@ function updateUserStatusUI() {
   const inputContainer = document.querySelector('.chat-input-container');
   
   if (!statusBar) return;
+
+  // Update Reports Button Visibility
+  const adminReportsContainer = document.getElementById('admin-reports-container');
+  if (adminReportsContainer) {
+    if (userProfile && userProfile.isAdmin) {
+      adminReportsContainer.classList.remove('hidden');
+    } else {
+      adminReportsContainer.classList.add('hidden');
+      const reportsDropdown = document.getElementById('reports-dropdown');
+      if (reportsDropdown) reportsDropdown.classList.add('hidden');
+    }
+  }
   
   // 1. Update AI Chat Status Bar (Limits only, no user name / logout btn)
   if (userProfile) {
@@ -3664,7 +3686,95 @@ function setupScenariosAndChat() {
   }
 
   // Initial Auth & Limit checks
-  checkAuthStatus();
+  checkAuthStatus(true);
+
+  // Admin Reports Dropdown & Modal setup
+  const reportsDropdownBtn = document.getElementById('reports-dropdown-btn');
+  const reportsDropdownElement = document.getElementById('reports-dropdown');
+  const reportUsersOpt = document.getElementById('report-users-opt');
+  const reportsModal = document.getElementById('reports-modal');
+  const closeReportsModal = document.getElementById('close-reports-modal');
+  const reportsTableBody = document.getElementById('reports-table-body');
+
+  if (reportsDropdownBtn && reportsDropdownElement) {
+    reportsDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      reportsDropdownElement.classList.toggle('hidden');
+      const chevron = reportsDropdownBtn.querySelector('.chevron-icon');
+      if (chevron) {
+        const isHidden = reportsDropdownElement.classList.contains('hidden');
+        chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+      }
+    });
+  }
+
+  if (reportUsersOpt && reportsModal && reportsTableBody) {
+    reportUsersOpt.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (reportsDropdownElement) reportsDropdownElement.classList.add('hidden');
+      const chevron = reportsDropdownBtn ? reportsDropdownBtn.querySelector('.chevron-icon') : null;
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+
+      reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
+      reportsModal.classList.remove('hidden');
+
+      try {
+        const token = localStorage.getItem('userToken');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch('/api/admin/reports/users', { headers });
+        if (res.ok) {
+          const users = await res.json();
+          if (users.length === 0) {
+            reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
+          } else {
+            reportsTableBody.innerHTML = users.map(u => {
+              const lastVisitStr = u.last_visit ? new Date(u.last_visit).toLocaleString() : 'Never';
+              return `
+                <tr>
+                  <td>${u.email || ''}</td>
+                  <td>${u.name || ''}</td>
+                  <td>${u.visits || 0}</td>
+                  <td>${lastVisitStr}</td>
+                  <td>${u.questions || 0}</td>
+                  <td>${u.hours_spent || 0} hrs</td>
+                </tr>
+              `;
+            }).join('');
+          }
+        } else {
+          const err = await res.json();
+          reportsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${err.error || 'Failed to load report data.'}</td></tr>`;
+        }
+      } catch (err) {
+        console.error('Failed to load user reports:', err);
+        reportsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #ef4444;">Error: Failed to fetch data from server.</td></tr>';
+      }
+    });
+  }
+
+  if (closeReportsModal && reportsModal) {
+    closeReportsModal.addEventListener('click', () => {
+      reportsModal.classList.add('hidden');
+    });
+  }
+
+  // Heartbeat Loop (every 60 seconds)
+  setInterval(async () => {
+    const token = localStorage.getItem('userToken');
+    if (token && userProfile) {
+      try {
+        await fetch('/api/auth/heartbeat', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.error('[Heartbeat] Failed to send active heartbeat:', err);
+      }
+    }
+  }, 60000);
 }
 
 function selectScenario(scenarioId) {

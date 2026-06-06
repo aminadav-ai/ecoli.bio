@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb } from './src/supabase_db.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -273,8 +273,13 @@ export default defineConfig(({ mode }) => {
         const guestId = req.headers['x-guest-id'];
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
         const timeZone = req.headers['x-timezone'];
-        
-        const status = await getUserStatus(token, ip, guestId, timeZone);
+
+        const visit = url.searchParams.get('visit') === 'true';
+        let status = await getUserStatus(token, ip, guestId, timeZone);
+        if (visit && status.loggedIn && status.user) {
+          await incrementUserVisits(status.user.email);
+          status = await getUserStatus(token, ip, guestId, timeZone);
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(status));
       } catch (err) {
@@ -293,6 +298,46 @@ export default defineConfig(({ mode }) => {
         res.end(JSON.stringify({ success: true }));
       } catch (err) {
         console.error('Vite Logout error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/auth/heartbeat' && req.method === 'POST') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        if (token) {
+          const user = await getUserByToken(token);
+          if (user) {
+            await incrementUserTimeSpent(user.email, 60);
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (err) {
+        console.error('Vite Heartbeat error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    } else if (url.pathname === '/api/admin/reports/users' && req.method === 'GET') {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        if (!token) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized.' }));
+          return;
+        }
+        const user = await getUserByToken(token);
+        if (!user || user.email !== 'fbhcdbhf@gmail.com') {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Forbidden.' }));
+          return;
+        }
+        const users = await getAllUsersFromDb();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(users));
+      } catch (err) {
+        console.error('Vite Admin Users report error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -367,6 +412,10 @@ export default defineConfig(({ mode }) => {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Limit Reached' }));
           return;
+        }
+
+        if (limitCheck.user) {
+          await incrementUserQuestions(limitCheck.user.email);
         }
 
         const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.

@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb } from './src/supabase_db.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -256,6 +256,10 @@ app.post('/api/chat', async (req, res) => {
       return res.status(403).json({ error: 'Limit Reached' });
     }
 
+    if (limitCheck.user) {
+      await incrementUserQuestions(limitCheck.user.email);
+    }
+
     const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 
 
@@ -333,8 +337,13 @@ app.get('/api/auth/status', async (req, res) => {
     const guestId = req.headers['x-guest-id'];
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     const timeZone = req.headers['x-timezone'];
+    const visit = req.query.visit === 'true';
     
-    const status = await getUserStatus(token, ip, guestId, timeZone);
+    let status = await getUserStatus(token, ip, guestId, timeZone);
+    if (visit && status.loggedIn && status.user) {
+      await incrementUserVisits(status.user.email);
+      status = await getUserStatus(token, ip, guestId, timeZone);
+    }
     return res.json(status);
   } catch (err) {
     console.error('Auth Status error:', err);
@@ -352,6 +361,42 @@ app.post('/api/auth/logout', async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     console.error('Logout error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/heartbeat', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (token) {
+      const user = await getUserByToken(token);
+      if (user) {
+        await incrementUserTimeSpent(user.email, 60);
+      }
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Heartbeat error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/reports/users', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+    const user = await getUserByToken(token);
+    if (!user || user.email !== 'fbhcdbhf@gmail.com') {
+      return res.status(403).json({ error: 'Forbidden.' });
+    }
+    const users = await getAllUsersFromDb();
+    return res.json(users);
+  } catch (err) {
+    console.error('Admin Users report error:', err);
     return res.status(500).json({ error: err.message });
   }
 });

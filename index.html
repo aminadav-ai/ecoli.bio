@@ -60,6 +60,16 @@
             </div>
           </div>
 
+          <!-- Admin Reports Container -->
+          <div id="admin-reports-container" class="reports-container hidden">
+            <button id="reports-dropdown-btn" class="btn btn-secondary header-btn">
+              Reports <span class="chevron-icon">▼</span>
+            </button>
+            <div id="reports-dropdown" class="reports-dropdown glass hidden">
+              <button id="report-users-opt" class="dropdown-item">Users</button>
+            </div>
+          </div>
+
           <!-- User Profile Container -->
           <div id="user-profile-header-container" class="user-profile-container"></div>
         </div>
@@ -459,6 +469,35 @@
       </div>
     </div>
     
+    <!-- Reports Modal -->
+    <div id="reports-modal" class="modal-overlay hidden">
+      <div class="reports-modal-card glass">
+        <div class="modal-header">
+          <h3>Users Usage Report</h3>
+          <button id="close-reports-modal" class="close-modal-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="table-container">
+            <table class="reports-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Visits</th>
+                  <th>Last Visit</th>
+                  <th>Questions Used</th>
+                  <th>Hours Spent</th>
+                </tr>
+              </thead>
+              <tbody id="reports-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Entry Script -->
     <script type="module" src="/src/main.js"></script>
   </body>
