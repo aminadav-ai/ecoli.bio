@@ -436,17 +436,20 @@ export default defineConfig(({ mode }) => {
         const timeZone = req.headers['x-timezone'];
 
         const limitCheck = await checkLimitAndIncrement(ip, guestId, token, timeZone);
+        if (!limitCheck.user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Authentication required. Please sign in.' }));
+          return;
+        }
         if (!limitCheck.allowed) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Limit Reached' }));
           return;
         }
 
-        if (limitCheck.user) {
-          await incrementUserQuestions(limitCheck.user.email);
-        }
+        await incrementUserQuestions(limitCheck.user.email);
 
-        const identifier = limitCheck.user ? `user:${limitCheck.user.email}` : `guest:${guestId || ip || 'unknown'}`;
+        const identifier = `user:${limitCheck.user.email}`;
         // Save user's question to Supabase history
         await saveChatMessage(identifier, 'user', message, context);
 

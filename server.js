@@ -252,15 +252,16 @@ app.post('/api/chat', async (req, res) => {
     const timeZone = req.headers['x-timezone'];
 
     const limitCheck = await checkLimitAndIncrement(ip, guestId, token, timeZone);
+    if (!limitCheck.user) {
+      return res.status(401).json({ error: 'Authentication required. Please sign in.' });
+    }
     if (!limitCheck.allowed) {
       return res.status(403).json({ error: 'Limit Reached' });
     }
 
-    if (limitCheck.user) {
-      await incrementUserQuestions(limitCheck.user.email);
-    }
+    await incrementUserQuestions(limitCheck.user.email);
 
-    const identifier = limitCheck.user ? `user:${limitCheck.user.email}` : `guest:${guestId || ip || 'unknown'}`;
+    const identifier = `user:${limitCheck.user.email}`;
     // Save user's question to Supabase history
     await saveChatMessage(identifier, 'user', message, context);
 

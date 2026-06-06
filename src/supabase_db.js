@@ -66,22 +66,20 @@ function getLocalDateString(date, timeZone) {
 export async function checkLimitAndIncrement(ip, guestId, authToken, timeZone) {
   const user = await getUserByToken(authToken);
   
-  let limitMax = 2; // Default Guest limit
-  const isPremium = user && isPremiumActive(user);
-
-  if (user) {
-    if (isPremium) {
-      const tier = user.premium_tier || 1;
-      limitMax = tier === 2 ? 500 : 100;
-    } else {
-      limitMax = 5; // Authorized Free limit
-    }
+  if (!user) {
+    return { allowed: false, isPremium: false, user: null, remaining: 0 };
   }
 
-  // Use user email if logged in, otherwise guest ID or IP
-  const identifier = user 
-    ? `user:${user.email}` 
-    : `guest:${guestId || ip || 'unknown'}`;
+  const isPremium = isPremiumActive(user);
+  let limitMax = 5; // Authorized Free limit
+
+  if (isPremium) {
+    const tier = user.premium_tier || 1;
+    limitMax = tier === 2 ? 500 : 100;
+  }
+
+  // Use user email since they are logged in
+  const identifier = `user:${user.email}`;
 
   try {
     const res = await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`);

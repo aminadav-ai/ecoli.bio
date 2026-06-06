@@ -3307,6 +3307,7 @@ function showLockOverlay(mode) {
   const lockMessage = document.getElementById('lock-message');
   const lockIcon = document.getElementById('lock-icon');
   const btnUpgrade = document.getElementById('btn-upgrade-premium');
+  const btnLockSignin = document.getElementById('btn-lock-signin');
   const inputContainer = document.querySelector('.chat-input-container');
 
   if (!lockOverlay) return;
@@ -3314,11 +3315,18 @@ function showLockOverlay(mode) {
   lockOverlay.classList.remove('hidden');
   if (inputContainer) inputContainer.classList.add('hidden');
 
-  if (mode === 'limit_guest') {
+  if (mode === 'auth_required') {
+    if (lockIcon) lockIcon.textContent = '🔒';
+    if (lockTitle) lockTitle.textContent = 'Sign In to Use Chat';
+    if (lockMessage) lockMessage.textContent = 'The AI Metabolic Assistant is available only to registered users. Please sign in to continue.';
+    if (btnUpgrade) btnUpgrade.classList.add('hidden');
+    if (btnLockSignin) btnLockSignin.classList.remove('hidden');
+  } else if (mode === 'limit_guest') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
     if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Sign in to continue, or upgrade your plan.';
     if (btnUpgrade) btnUpgrade.classList.add('hidden');
+    if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_user') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
@@ -3327,6 +3335,7 @@ function showLockOverlay(mode) {
       btnUpgrade.classList.remove('hidden');
       btnUpgrade.textContent = 'Upgrade Plan';
     }
+    if (btnLockSignin) btnLockSignin.classList.add('hidden');
   }
 }
 
@@ -3393,8 +3402,8 @@ function updateUserStatusUI() {
     }
   } else {
     statusBar.innerHTML = `
-      <span>Guest: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
-      <button id="btn-status-login" class="chat-status-login-btn">Sign in to get more</button>
+      <span>Sign in to use the AI Metabolic Assistant</span>
+      <button id="btn-status-login" class="chat-status-login-btn">Sign in</button>
     `;
   }
   
@@ -3476,17 +3485,16 @@ function updateUserStatusUI() {
     }
   }
   
-  const limitsExceeded = currentLimit.remaining <= 0;
-  
-  if (limitsExceeded) {
-    if (userProfile) {
+  if (!userProfile) {
+    showLockOverlay('auth_required');
+  } else {
+    const limitsExceeded = currentLimit.remaining <= 0;
+    if (limitsExceeded) {
       showLockOverlay('limit_user');
     } else {
-      showLockOverlay('limit_guest');
+      if (lockOverlay) lockOverlay.classList.add('hidden');
+      if (inputContainer) inputContainer.classList.remove('hidden');
     }
-  } else {
-    if (lockOverlay) lockOverlay.classList.add('hidden');
-    if (inputContainer) inputContainer.classList.remove('hidden');
   }
 }
 
@@ -4227,6 +4235,9 @@ async function sendChatMessage() {
       if (res.status === 403) {
         appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
         await checkAuthStatus();
+      } else if (res.status === 401) {
+        appendModelMessage(`System: Authentication required. Please sign in.`);
+        await checkAuthStatus();
       } else {
         const err = await res.json();
         appendModelMessage(`Error: ${err.error || 'Failed to send query to AI.'}`);
@@ -4319,6 +4330,9 @@ Please evaluate my answer for biological correctness based on the current metabo
     } else {
       if (res.status === 403) {
         appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
+        await checkAuthStatus();
+      } else if (res.status === 401) {
+        appendModelMessage(`System: Authentication required. Please sign in.`);
         await checkAuthStatus();
       } else {
         const err = await res.json();
