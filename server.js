@@ -249,8 +249,9 @@ app.post('/api/chat', async (req, res) => {
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     const guestId = req.headers['x-guest-id'];
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const timeZone = req.headers['x-timezone'];
 
-    const limitCheck = await checkLimitAndIncrement(ip, guestId, token);
+    const limitCheck = await checkLimitAndIncrement(ip, guestId, token, timeZone);
     if (!limitCheck.allowed) {
       return res.status(403).json({ error: 'Limit Reached' });
     }
@@ -335,8 +336,9 @@ app.get('/api/auth/status', async (req, res) => {
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     const guestId = req.headers['x-guest-id'];
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const timeZone = req.headers['x-timezone'];
     
-    const status = await getUserStatus(token, ip, guestId);
+    const status = await getUserStatus(token, ip, guestId, timeZone);
     return res.json(status);
   } catch (err) {
     console.error('Auth Status error:', err);

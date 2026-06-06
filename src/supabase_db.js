@@ -48,8 +48,23 @@ export function isPremiumActive(user) {
   return new Date(user.premium_until) > new Date();
 }
 
+// Helper to get local date string for timezone comparison
+function getLocalDateString(date, timeZone) {
+  if (!timeZone) return null;
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date);
+  } catch (err) {
+    return null;
+  }
+}
+
 // 1. Check message limits & increment
-export async function checkLimitAndIncrement(ip, guestId, authToken) {
+export async function checkLimitAndIncrement(ip, guestId, authToken, timeZone) {
   const user = await getUserByToken(authToken);
   
   let limitMax = 2; // Default Guest limit
@@ -77,14 +92,29 @@ export async function checkLimitAndIncrement(ip, guestId, authToken) {
     if (records.length > 0) {
       const record = records[0];
       const lastReset = new Date(record.last_reset);
-      const diffHrs = (now - lastReset) / (1000 * 60 * 60);
+      const activeTz = record.timezone || timeZone;
+      
+      let shouldReset = false;
+      if (activeTz) {
+        const resetDateStr = getLocalDateString(lastReset, activeTz);
+        const nowDateStr = getLocalDateString(now, activeTz);
+        if (resetDateStr && nowDateStr) {
+          shouldReset = (resetDateStr !== nowDateStr);
+        } else {
+          const diffHrs = (now - lastReset) / (1000 * 60 * 60);
+          shouldReset = (diffHrs >= 24);
+        }
+      } else {
+        const diffHrs = (now - lastReset) / (1000 * 60 * 60);
+        shouldReset = (diffHrs >= 24);
+      }
 
-      if (diffHrs >= 24) {
-        // Reset limit
+      if (shouldReset) {
+        // Reset limit & store current timezone
         await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ count: 1, last_reset: now.toISOString() })
+          body: JSON.stringify({ count: 1, last_reset: now.toISOString(), timezone: timeZone || 'UTC' })
         });
         return { allowed: true, isPremium, user, remaining: limitMax - 1 };
       } else {
@@ -101,14 +131,14 @@ export async function checkLimitAndIncrement(ip, guestId, authToken) {
         }
       }
     } else {
-      // Create first limit entry
+      // Create first limit entry & store current timezone
       await supabaseFetch('chat_limits', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates'
         },
-        body: JSON.stringify({ identifier, count: 1, last_reset: now.toISOString() })
+        body: JSON.stringify({ identifier, count: 1, last_reset: now.toISOString(), timezone: timeZone || 'UTC' })
       });
       return { allowed: true, isPremium, user, remaining: limitMax - 1 };
     }
@@ -169,7 +199,7 @@ export async function verifyGoogleTokenAndLogin(credential) {
 }
 
 // 3. Get session status, user profile & remaining limits
-export async function getUserStatus(token, ip, guestId) {
+export async function getUserStatus(token, ip, guestId, timeZone) {
   const user = await getUserByToken(token);
   
   let limitMax = 2; // Default Guest limit
@@ -192,8 +222,24 @@ export async function getUserStatus(token, ip, guestId) {
     if (records.length > 0) {
       const record = records[0];
       const lastReset = new Date(record.last_reset);
-      const diffHrs = (new Date() - lastReset) / (1000 * 60 * 60);
-      if (diffHrs < 24) {
+      const activeTz = record.timezone || timeZone;
+      
+      let isExpired = false;
+      if (activeTz) {
+        const resetDateStr = getLocalDateString(lastReset, activeTz);
+        const nowDateStr = getLocalDateString(new Date(), activeTz);
+        if (resetDateStr && nowDateStr) {
+          isExpired = (resetDateStr !== nowDateStr);
+        } else {
+          const diffHrs = (new Date() - lastReset) / (1000 * 60 * 60);
+          isExpired = (diffHrs >= 24);
+        }
+      } else {
+        const diffHrs = (new Date() - lastReset) / (1000 * 60 * 60);
+        isExpired = (diffHrs >= 24);
+      }
+
+      if (!isExpired) {
         count = record.count;
       }
     }

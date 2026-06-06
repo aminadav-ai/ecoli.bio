@@ -269,8 +269,9 @@ export default defineConfig(({ mode }) => {
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const guestId = req.headers['x-guest-id'];
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        const timeZone = req.headers['x-timezone'];
         
-        const status = await getUserStatus(token, ip, guestId);
+        const status = await getUserStatus(token, ip, guestId, timeZone);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(status));
       } catch (err) {
@@ -356,8 +357,9 @@ export default defineConfig(({ mode }) => {
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const guestId = req.headers['x-guest-id'];
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        const timeZone = req.headers['x-timezone'];
 
-        const limitCheck = await checkLimitAndIncrement(ip, guestId, token);
+        const limitCheck = await checkLimitAndIncrement(ip, guestId, token, timeZone);
         if (!limitCheck.allowed) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Limit Reached' }));

@@ -3129,7 +3129,10 @@ let googleAuthInitialized = false;
 async function checkAuthStatus() {
   const token = localStorage.getItem('userToken');
   try {
-    const headers = { 'x-guest-id': guestId };
+    const headers = { 
+      'x-guest-id': guestId,
+      'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -3829,7 +3832,8 @@ async function sendChatMessage() {
 
     const headers = {
       'Content-Type': 'application/json',
-      'x-guest-id': guestId
+      'x-guest-id': guestId,
+      'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
     if (userToken) {
       headers['Authorization'] = `Bearer ${userToken}`;
@@ -3923,7 +3927,8 @@ Please evaluate my answer for biological correctness based on the current metabo
 
     const headers = {
       'Content-Type': 'application/json',
-      'x-guest-id': guestId
+      'x-guest-id': guestId,
+      'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
     if (userToken) {
       headers['Authorization'] = `Bearer ${userToken}`;
