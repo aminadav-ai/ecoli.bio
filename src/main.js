@@ -2055,16 +2055,50 @@ function drawGrowthSparkline() {
   }
   maxVal = Math.max(0.2, maxVal);
 
-  const plotH = h - 6;
-  const plotW = w - 6;
+  const leftMargin = 32;
+  const rightMargin = 4;
+  const topPad = 6;
+  const bottomPad = 6;
 
+  const plotH = h - (topPad + bottomPad);
+  const plotW = w - (leftMargin + rightMargin);
+
+  // Draw dashed baseline guides
+  growthCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  growthCtx.lineWidth = 1;
+  growthCtx.setLineDash([2, 2]);
+
+  // Top guide
+  growthCtx.beginPath();
+  growthCtx.moveTo(leftMargin, topPad);
+  growthCtx.lineTo(w - rightMargin, topPad);
+  growthCtx.stroke();
+
+  // Bottom guide
+  growthCtx.beginPath();
+  growthCtx.moveTo(leftMargin, h - bottomPad);
+  growthCtx.lineTo(w - rightMargin, h - bottomPad);
+  growthCtx.stroke();
+
+  // Clear line dash for drawing the curve
+  growthCtx.setLineDash([]);
+
+  // Draw Y-axis labels on the left
+  growthCtx.fillStyle = '#64748b';
+  growthCtx.font = '8px "JetBrains Mono", monospace';
+  growthCtx.textBaseline = 'middle';
+  growthCtx.textAlign = 'right';
+  growthCtx.fillText(maxVal.toFixed(2), leftMargin - 4, topPad);
+  growthCtx.fillText(minVal.toFixed(2), leftMargin - 4, h - bottomPad);
+
+  // Draw the trend sparkline curve
   growthCtx.strokeStyle = '#34d399';
   growthCtx.lineWidth = 1.5;
   growthCtx.beginPath();
 
   growthHistory.forEach((val, i) => {
-    const x = (i / (maxGrowthPoints - 1)) * plotW + 3;
-    const y = h - 3 - ((val - minVal) / (maxVal - minVal)) * plotH;
+    const x = leftMargin + (i / (maxGrowthPoints - 1)) * plotW;
+    const y = topPad + (1 - (val - minVal) / (maxVal - minVal)) * plotH;
 
     if (i === 0) {
       growthCtx.moveTo(x, y);
@@ -2074,20 +2108,22 @@ function drawGrowthSparkline() {
   });
   growthCtx.stroke();
 
+  // Fill gradient area below the curve
   const lastIdx = growthHistory.length - 1;
-  const grad = growthCtx.createLinearGradient(0, 3, 0, h - 3);
+  const grad = growthCtx.createLinearGradient(0, topPad, 0, h - bottomPad);
   grad.addColorStop(0, 'rgba(52, 211, 153, 0.12)');
   grad.addColorStop(1, 'rgba(52, 211, 153, 0.0)');
 
   growthCtx.fillStyle = grad;
-  growthCtx.lineTo((lastIdx / (maxGrowthPoints - 1)) * plotW + 3, h - 3);
-  growthCtx.lineTo(3, h - 3);
+  growthCtx.lineTo(leftMargin + (lastIdx / (maxGrowthPoints - 1)) * plotW, h - bottomPad);
+  growthCtx.lineTo(leftMargin, h - bottomPad);
   growthCtx.closePath();
   growthCtx.fill();
 
+  // Draw the last value point marker
   const lastVal = growthHistory[lastIdx];
-  const lastX = (lastIdx / (maxGrowthPoints - 1)) * plotW + 3;
-  const lastY = h - 3 - ((lastVal - minVal) / (maxVal - minVal)) * plotH;
+  const lastX = leftMargin + (lastIdx / (maxGrowthPoints - 1)) * plotW;
+  const lastY = topPad + (1 - (lastVal - minVal) / (maxVal - minVal)) * plotH;
 
   growthCtx.fillStyle = '#34d399';
   growthCtx.beginPath();
