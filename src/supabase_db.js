@@ -204,7 +204,8 @@ export async function verifyGoogleTokenAndLogin(credential) {
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
-      autoRenew: !!user.auto_renew
+      autoRenew: !!user.auto_renew,
+      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0
     }
   };
 }
@@ -268,7 +269,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       isPremium,
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
-      autoRenew: !!user.auto_renew
+      autoRenew: !!user.auto_renew,
+      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0
     } : null,
     limit: {
       max: limitMax,
@@ -469,5 +471,21 @@ export async function getChatHistory(identifier, limit = 50) {
   } catch (err) {
     console.warn('[Supabase DB] Failed to load chat history (make sure chat_history table is created in Supabase):', err.message);
     return [];
+  }
+}
+
+// 13. Update user O2 preference
+export async function updateUserO2Preference(email, o2Val) {
+  try {
+    await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        o2_preference: o2Val
+      })
+    });
+  } catch (err) {
+    console.error('[Supabase DB] Failed to update O2 preference:', err);
+    throw err;
   }
 }

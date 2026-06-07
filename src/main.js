@@ -359,6 +359,16 @@ async function bootstrap() {
   // 2. Initialize simulation engine
   simulation = new Simulation(mapData);
 
+  // Restore saved oxygen preference
+  const savedO2 = localStorage.getItem('global_o2_e');
+  if (savedO2 !== null) {
+    const o2Val = parseFloat(savedO2);
+    if (!isNaN(o2Val) && simulation.metabolites['o2_e']) {
+      simulation.metabolites['o2_e'].concentration = o2Val;
+      simulation.metabolites['o2_e'].targetConcentration = o2Val;
+    }
+  }
+
   // 3. Initialize visual renderer
   const canvasElement = document.getElementById('pixi-canvas');
   renderer = new PixiRenderer(
@@ -604,6 +614,10 @@ function setupUIListeners() {
       if (simulation && simulation.metabolites['o2_e']) {
         simulation.metabolites['o2_e'].concentration = val;
         simulation.metabolites['o2_e'].targetConcentration = val;
+        if (!activeScenarioId) {
+          localStorage.setItem('global_o2_e', val);
+          saveO2PreferenceToDb(val);
+        }
         updateFbaBounds(performance.now());
       }
     });
@@ -3381,6 +3395,15 @@ async function checkAuthStatus(isVisit = false) {
       googleClientId = data.googleClientId;
       
       updateUserStatusUI();
+
+      if (userProfile && userProfile.o2Preference !== undefined && userProfile.o2Preference !== null) {
+        const dbO2 = parseFloat(userProfile.o2Preference);
+        if (!isNaN(dbO2) && simulation && simulation.metabolites['o2_e']) {
+          simulation.metabolites['o2_e'].concentration = dbO2;
+          simulation.metabolites['o2_e'].targetConcentration = dbO2;
+          localStorage.setItem('global_o2_e', dbO2);
+        }
+      }
       
       if (googleClientId && !googleAuthInitialized) {
         initGoogleAuth(googleClientId);
@@ -3461,6 +3484,27 @@ async function handleLogout() {
   userToken = null;
   userProfile = null;
   await checkAuthStatus();
+}
+
+async function saveO2PreferenceToDb(val) {
+  if (!userProfile) return;
+  const token = localStorage.getItem('userToken');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/user/preferences', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ o2Preference: val })
+    });
+    if (!res.ok) {
+      console.warn('[Preferences] Failed to save O2 preference to server:', res.statusText);
+    }
+  } catch (err) {
+    console.error('[Preferences] Error saving O2 preference:', err);
+  }
 }
 
 function openAuthModal() {
@@ -4294,6 +4338,11 @@ function exitActiveScenario() {
 
   // Keep the current simulation state for continued exploration, just refresh FBA bounds
   if (simulation) {
+    if (simulation.metabolites['o2_e']) {
+      const val = simulation.metabolites['o2_e'].concentration;
+      localStorage.setItem('global_o2_e', val);
+      saveO2PreferenceToDb(val);
+    }
     updateFbaBounds(performance.now());
   }
 }

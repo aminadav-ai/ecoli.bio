@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory } from './src/supabase_db.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
 import { solveFba } from './src/fba_solver_core.js';
 
 // Load env variables from .env file locally if it exists
@@ -330,6 +330,28 @@ app.post('/api/payments/simulate', async (req, res) => {
   } catch (err) {
     console.error('Payment simulation error:', err);
     return res.status(400).json({ error: err.message });
+  }
+});
+
+app.patch('/api/user/preferences', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+    const user = await getUserByToken(token);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid token.' });
+    }
+    const { o2Preference } = req.body || {};
+    if (o2Preference !== undefined && o2Preference !== null) {
+      await updateUserO2Preference(user.email, parseFloat(o2Preference));
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Preferences update error:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
