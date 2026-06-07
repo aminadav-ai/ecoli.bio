@@ -276,8 +276,7 @@ app.post('/api/auth/heartbeat', async (req, res) => {
         secondsSpent = await incrementUserTimeSpent(user.email, 60);
       }
     }
-    const hoursSpent = secondsSpent !== null ? parseFloat((secondsSpent / 3600).toFixed(2)) : 0.0;
-    return res.json({ success: true, hoursSpent });
+    return res.json({ success: true, secondsSpent: secondsSpent || 0 });
   } catch (err) {
     console.error('Heartbeat error:', err);
     return res.status(500).json({ error: err.message });

@@ -174,9 +174,8 @@ export default defineConfig(({ mode }) => {
             secondsSpent = await incrementUserTimeSpent(user.email, 60);
           }
         }
-        const hoursSpent = secondsSpent !== null ? parseFloat((secondsSpent / 3600).toFixed(2)) : 0.0;
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, hoursSpent }));
+        res.end(JSON.stringify({ success: true, secondsSpent: secondsSpent || 0 }));
       } catch (err) {
         console.error('Vite Heartbeat error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

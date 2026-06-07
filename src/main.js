@@ -3699,6 +3699,12 @@ function updateUserStatusUI() {
       const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
       const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
       const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
+      
+      const totalSecs = userProfile.secondsSpent || 0;
+      const hours = Math.floor(totalSecs / 3600);
+      const minutes = Math.floor((totalSecs % 3600) / 60);
+      const formattedTime = `${hours}:${String(minutes).padStart(2, '0')}`;
+
       headerProfileContainer.innerHTML = `
         <div class="user-badge" id="user-profile-badge">
           <div class="user-avatar">${initial}</div>
@@ -3714,7 +3720,7 @@ function updateUserStatusUI() {
               ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
             </div>
             <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
-            <div class="user-dropdown-hours" style="margin-top: 4px; font-size: 0.85em; opacity: 0.8;">Simulation time: ${userProfile.hoursSpent || 0} hours</div>
+            <div class="user-dropdown-hours" style="margin-top: 4px; font-size: 0.85em; opacity: 0.8;">Simulation time: ${formattedTime}</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -4201,8 +4207,8 @@ function setupScenariosAndChat() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.hoursSpent !== undefined) {
-            userProfile.hoursSpent = data.hoursSpent;
+          if (data.secondsSpent !== undefined) {
+            userProfile.secondsSpent = data.secondsSpent;
             updateUserStatusUI();
           }
         }
