@@ -90,6 +90,14 @@ function calculateBounds(concentrations, parameters) {
       continue;
     }
 
+    // Special handling for oxygen exchange based on extracellular oxygen concentration
+    if (rxnId === 'EX_o2_e') {
+      const o2Conc = concentrations['o2_e'] !== undefined ? concentrations['o2_e'] : 0.2;
+      const maxO2Uptake = 18.5;
+      bounds[rxnId] = { lowerBound: -maxO2Uptake * o2Conc, upperBound: 1000.0 };
+      continue;
+    }
+
     // Default Vmax and Km parameters (client simulation defaults)
     let defaultVmax = 10.0;
     let defaultKm = 0.8;

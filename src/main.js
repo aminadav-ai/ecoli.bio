@@ -4081,8 +4081,10 @@ function startScenario(scenarioId) {
 
   // Focus map camera on relevant pathway of the scenario
   if (renderer) {
-    if (scenarioId === 'oxygen_switch' || scenarioId === 'metabolic_jam') {
-      // Focus on lower glycolysis and TCA entry
+    if (scenarioId === 'oxygen_switch') {
+      // Focus closely on the PDH and PFL pathway area (pyruvate, acetyl-CoA, formate)
+      renderer.focusOnPathway(new Set(['pyr_c', 'accoa_c', 'for_c']));
+    } else if (scenarioId === 'metabolic_jam') {
       renderer.fitMapToScreen(true);
     } else if (scenarioId === 'warburg_effect') {
       renderer.fitMapToScreen(true);
