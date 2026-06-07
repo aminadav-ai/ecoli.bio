@@ -3302,20 +3302,6 @@ const SCENARIOS = {
     controls: [
       { id: 'glc__D_e', name: 'Glucose Concentration (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 2.0 }
     ]
-  },
-  warburg_effect: {
-    id: 'warburg_effect',
-    title: '3. Warburg Effect',
-    desc: 'Goal: Demonstrate overflow metabolism (similar to the Warburg effect in cancer cells). When the rate of glycolysis exceeds the capacity of respiration, excess carbon is excreted as lactate, even in the presence of oxygen.',
-    objectives: [
-      { id: 'reduce_resp', text: 'Limit Vmax of respiration (CYTBO3_4pp) to 5.0 or below', check: () => simulation.reactions['CYTBO3_4pp'] && simulation.reactions['CYTBO3_4pp'].vMax <= 5.01 },
-      { id: 'increase_glc', text: 'Increase glucose concentration (glc__D_e >= 20.0)', check: () => simulation.metabolites['glc__D_e'] && simulation.metabolites['glc__D_e'].concentration >= 19.9 },
-      { id: 'observe_lac_flux', text: 'Observe excretion of lactate into the medium (EX_lac__D_e flux > 1.0)', check: () => simulation.reactions['EX_lac__D_e'] && simulation.reactions['EX_lac__D_e'].flux > 1.0 }
-    ],
-    reflection: 'Why do cancer cells switch to lactic acid fermentation even under aerobic conditions? What is the advantage of this adaptation for rapid division?',
-    controls: [
-      { id: 'glc__D_e', name: 'Glucose Concentration (glc__D_e)', min: 1.0, max: 30.0, step: 1.0, value: 10.0 }
-    ]
   }
 };
 
@@ -4315,8 +4301,6 @@ function startScenario(scenarioId) {
         renderer.focusOnCoordinates(2000, 4400, 0.85);
       }
     } else if (scenarioId === 'metabolic_jam') {
-      renderer.fitMapToScreen(true);
-    } else if (scenarioId === 'warburg_effect') {
       renderer.fitMapToScreen(true);
     }
   }
