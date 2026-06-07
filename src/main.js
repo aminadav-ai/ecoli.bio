@@ -4301,7 +4301,21 @@ function startScenario(scenarioId) {
         renderer.focusOnCoordinates(2000, 4400, 0.85);
       }
     } else if (scenarioId === 'metabolic_jam') {
-      renderer.fitMapToScreen(true);
+      // Focus closely on the average center of PDH, PFL and PYK to frame pyruvate region on screen
+      let sumX = 0, sumY = 0, count = 0;
+      const targetIds = ['PDH', 'PFL', 'PYK'];
+      renderer.reactions.forEach(rxn => {
+        if (targetIds.includes(rxn.biggId) && rxn.labelX && rxn.labelY) {
+          sumX += rxn.labelX;
+          sumY += rxn.labelY;
+          count++;
+        }
+      });
+      if (count > 0) {
+        renderer.focusOnCoordinates(sumX / count, sumY / count, 0.75);
+      } else {
+        renderer.focusOnCoordinates(2000, 4400, 0.85);
+      }
     }
   }
 
@@ -4358,19 +4372,7 @@ function checkScenarioObjectives() {
     }
   }
 
-  // Handle Scenario 2 specific visual effect (pyruvate bottleneck jam)
-  if (activeScenarioId === 'metabolic_jam' && renderer) {
-    const pyrConc = simulation.metabolites['pyr_c'] ? simulation.metabolites['pyr_c'].concentration : 0;
-    if (pyrConc > 8.0) {
-      if (!renderer.flashingMetaboliteIds.has('pyr_c')) {
-        renderer.flashingMetaboliteIds.add('pyr_c');
-      }
-    } else {
-      if (renderer.flashingMetaboliteIds.has('pyr_c')) {
-        renderer.flashingMetaboliteIds.delete('pyr_c');
-      }
-    }
-  }
+
 
   let allCompletedAfter = Object.values(scenarioObjectivesStatus).every(v => v === true);
 

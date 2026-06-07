@@ -475,7 +475,9 @@ export class Simulation {
         target = Math.max(0.1, Math.min(target, 150.0));
         
         metab.targetConcentration = target;
-        metab.concentration = target;
+        // Smooth changes using first-order lag (exponential smoothing) to prevent square-wave oscillations
+        const smoothingFactor = Math.min(1.0, 5.0 * dt);
+        metab.concentration += (target - metab.concentration) * smoothingFactor;
       }
     }
   }
