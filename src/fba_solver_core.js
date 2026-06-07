@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Simulation } from './simulation.js';
 
 const staticBoundsPath = path.resolve('src/static_bounds.json');
 let staticBounds = {};
@@ -8,6 +9,59 @@ if (fs.existsSync(staticBoundsPath)) {
 }
 
 export { staticBounds };
+
+// Load Escher map JSON data for server-side Simulation
+const mapDataPath = path.resolve('public/iJO1366.Central metabolism.json');
+let escherMapData = null;
+if (fs.existsSync(mapDataPath)) {
+  escherMapData = JSON.parse(fs.readFileSync(mapDataPath, 'utf8'));
+} else {
+  console.error(`[Solver] Escher map file not found at ${mapDataPath}`);
+}
+
+const userSimulations = new Map();
+let referenceNormalFluxes = null;
+
+function getOrCreateSimulation(guestId) {
+  const id = guestId || 'default_user';
+  if (!userSimulations.has(id)) {
+    if (escherMapData) {
+      const sim = new Simulation(escherMapData);
+      if (referenceNormalFluxes) {
+        sim.normalFluxes = { ...referenceNormalFluxes };
+      }
+      userSimulations.set(id, sim);
+    } else {
+      console.error('[Solver] Map data not loaded. Cannot initialize Simulation on server.');
+      return null;
+    }
+  } else {
+    const sim = userSimulations.get(id);
+    if (Object.keys(sim.normalFluxes).length === 0 && referenceNormalFluxes) {
+      sim.normalFluxes = { ...referenceNormalFluxes };
+    }
+  }
+  return userSimulations.get(id);
+}
+
+function ensureReferenceNormalFluxes(highsInstance, staticLpHeader) {
+  if (referenceNormalFluxes) return;
+  if (!highsInstance) return;
+
+  try {
+    const refConcentrations = { 'o2_e': 1.0, 'glc__D_e': 10.0 };
+    // Call solveFba with skipSimTick to avoid infinite loop/recursion
+    const refResult = solveFba(highsInstance, staticLpHeader, refConcentrations, {}, { skipSimTick: true });
+    if (refResult.status === 'Optimal' && escherMapData) {
+      const refSim = new Simulation(escherMapData);
+      refSim.updateFluxes(refResult.fluxes, refResult.biomass_flux);
+      referenceNormalFluxes = { ...refSim.normalFluxes };
+      console.log('[Solver] Pre-calculated referenceNormalFluxes successfully on server.');
+    }
+  } catch (e) {
+    console.error('[Solver] Failed to pre-calculate referenceNormalFluxes:', e);
+  }
+}
 
 export function calculateBounds(concentrations, parameters) {
   const bounds = {};
@@ -20,7 +74,7 @@ export function calculateBounds(concentrations, parameters) {
   ];
   
   // Define coupled checkpoints
-  const coupledCheckpoints = new Set(['GLCptspp', 'PFK', 'PYK', 'CS', 'ICDHyr', 'SUCDi']);
+  const coupledCheckpoints = new Set([]);
   
   // Stoichiometry needed for kinetic bounds calculation
   const reactionSubstrates = {
@@ -158,7 +212,14 @@ export function calculateBounds(concentrations, parameters) {
   return { bounds, repressed };
 }
 
-export function solveFba(highsInstance, staticLpHeader, concentrations, parameters) {
+export function solveFba(highsInstance, staticLpHeader, concentrations, parameters, options = {}) {
+  const { guestId, reset, scenario, skipSimTick } = options;
+
+  // Make sure reference normal fluxes are initialized on server
+  if (!skipSimTick) {
+    ensureReferenceNormalFluxes(highsInstance, staticLpHeader);
+  }
+
   const { bounds, repressed } = calculateBounds(concentrations, parameters);
 
   const boundsLines = [];
@@ -179,32 +240,80 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
     "output_flag": false
   });
 
-  if (sol.Status === 'Optimal') {
+  let fluxes = {};
+  let biomassFlux = 0.0;
+  let isDead = true;
+  let status = sol.Status;
+
+  if (status === 'Optimal') {
     const columns = sol.Columns;
-    const fluxes = {};
     for (const colName of Object.keys(columns)) {
       if (colName.startsWith('R_')) {
         const rxnId = colName.substring(2);
         fluxes[rxnId] = columns[colName].Primal;
       }
     }
-    const biomassFlux = columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0;
-    const isDead = biomassFlux < 0.005;
-
-    return {
-      status: sol.Status,
-      fluxes,
-      biomass_flux: biomassFlux,
-      is_dead: isDead,
-      repressed
-    };
-  } else {
-    return {
-      status: sol.Status,
-      fluxes: {},
-      biomass_flux: 0.0,
-      is_dead: true,
-      repressed
-    };
+    biomassFlux = columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0;
+    isDead = biomassFlux < 0.005;
   }
+
+  const result = {
+    status,
+    fluxes,
+    biomass_flux: biomassFlux,
+    is_dead: isDead,
+    repressed
+  };
+
+  if (skipSimTick) {
+    return result;
+  }
+
+  const sim = getOrCreateSimulation(guestId);
+  if (sim) {
+    if (reset) {
+      sim.reset();
+    }
+    if (scenario) {
+      sim.applyScenario(scenario);
+    }
+
+    if (concentrations) {
+      if (concentrations.o2_e !== undefined) {
+        sim.metabolites['o2_e'].concentration = concentrations.o2_e;
+        sim.metabolites['o2_e'].targetConcentration = concentrations.o2_e;
+      }
+      if (concentrations.glc__D_e !== undefined) {
+        sim.metabolites['glc__D_e'].concentration = concentrations.glc__D_e;
+        sim.metabolites['glc__D_e'].targetConcentration = concentrations.glc__D_e;
+      }
+    }
+
+    // Reset enzyme parameters to defaults, then apply active user tweaks
+    for (const rxn of Object.values(sim.reactions)) {
+      rxn.vMax = rxn.defaultVmax;
+      rxn.km = rxn.defaultKm;
+    }
+    if (parameters) {
+      for (const [rxnId, param] of Object.entries(parameters)) {
+        if (sim.reactions[rxnId]) {
+          if (param.vMax !== undefined) sim.reactions[rxnId].vMax = param.vMax;
+          if (param.km !== undefined) sim.reactions[rxnId].km = param.km;
+        }
+      }
+    }
+
+    if (status === 'Optimal') {
+      sim.updateFluxes(fluxes, biomassFlux);
+      sim.tick(1.0);
+    }
+
+    const calculatedConcentrations = {};
+    for (const [mId, metab] of Object.entries(sim.metabolites)) {
+      calculatedConcentrations[mId] = metab.concentration;
+    }
+    result.concentrations = calculatedConcentrations;
+  }
+
+  return result;
 }

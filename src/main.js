@@ -421,15 +421,18 @@ async function bootstrap() {
  * High-precision Game Loop matching 60fps rendering with a semi-fixed 20Hz simulation step.
  */
 let isFetchingBounds = false;
-async function updateFbaBounds(currentTime) {
+async function updateFbaBounds(currentTime, forceOptions = {}) {
   if (isFetchingBounds || !simulation) return;
   isFetchingBounds = true;
 
   try {
-    // Collect current concentrations
+    // Collect ONLY environmental concentrations (o2_e, glc__D_e)
     const concentrations = {};
-    for (const [mId, metab] of Object.entries(simulation.metabolites)) {
-      concentrations[mId] = metab.concentration;
+    if (simulation.metabolites['o2_e']) {
+      concentrations['o2_e'] = simulation.metabolites['o2_e'].concentration;
+    }
+    if (simulation.metabolites['glc__D_e']) {
+      concentrations['glc__D_e'] = simulation.metabolites['glc__D_e'].concentration;
     }
 
     // Collect customized reaction parameters (Vmax/Km)
@@ -443,12 +446,27 @@ async function updateFbaBounds(currentTime) {
       }
     }
 
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-guest-id': guestId
+    };
+    const token = localStorage.getItem('userToken');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const requestBody = { concentrations, parameters };
+    if (forceOptions.reset) {
+      requestBody.reset = true;
+    }
+    if (forceOptions.scenario) {
+      requestBody.scenario = forceOptions.scenario;
+    }
+
     const res = await fetch('/api/solve-fba', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ concentrations, parameters })
+      headers,
+      body: JSON.stringify(requestBody)
     });
 
     if (res.ok) {
@@ -465,6 +483,21 @@ async function updateFbaBounds(currentTime) {
             overlay.classList.remove('hidden');
           } else {
             overlay.classList.add('hidden');
+          }
+        }
+      }
+
+      // Update metabolite concentrations from server calculation
+      if (data.concentrations) {
+        for (const [mId, conc] of Object.entries(data.concentrations)) {
+          if (simulation.metabolites[mId]) {
+            simulation.metabolites[mId].targetConcentration = conc;
+            if (simulation.metabolites[mId].isBuffered || mId === 'glc__D_e') {
+              simulation.metabolites[mId].concentration = conc;
+            }
+            if (forceOptions.reset || forceOptions.scenario) {
+              simulation.metabolites[mId].concentration = conc;
+            }
           }
         }
       }
@@ -493,7 +526,15 @@ function gameLoop(currentTime) {
   }
   while (accumulatedTime >= simTickRate) {
     if (!isPaused && !isDead) {
-      simulation.tick(speedMultiplier);
+      for (const [id, metab] of Object.entries(simulation.metabolites)) {
+        if (metab.targetConcentration !== undefined) {
+          if (metab.isBuffered || id === 'glc__D_e') {
+            metab.concentration = metab.targetConcentration;
+          } else {
+            metab.concentration += (metab.targetConcentration - metab.concentration) * 0.15;
+          }
+        }
+      }
       
       // Update historical data for concentration chart if inspecting a metabolite
       if (selectedMetaboliteId) {
@@ -565,7 +606,7 @@ function setupUIListeners() {
     console.log('[App] Simulation state reset.');
 
     // Recalculate fluxes immediately on reset
-    updateFbaBounds(performance.now());
+    updateFbaBounds(performance.now(), { reset: true });
 
     // Refresh UI parameters and inputs to default values
     renderPinnedReactions();
@@ -4320,7 +4361,7 @@ function startScenario(scenarioId) {
   }
 
   // Trigger initial solver run
-  updateFbaBounds(performance.now());
+  updateFbaBounds(performance.now(), { scenario: scenarioId });
 }
 
 function exitActiveScenario() {
@@ -4341,7 +4382,7 @@ function exitActiveScenario() {
       localStorage.setItem('global_o2_e', val);
       saveO2PreferenceToDb(val);
     }
-    updateFbaBounds(performance.now());
+    updateFbaBounds(performance.now(), { reset: true });
   }
 }
 

@@ -85,11 +85,18 @@ export default defineConfig(({ mode }) => {
           }
         }
 
+        const guestId = req.headers['x-guest-id'];
         const body = await getPostBody(req);
         const concentrations = body.concentrations || {};
         const parameters = body.parameters || {};
 
-        const result = solveFba(highs, staticLpHeader, concentrations, parameters);
+        const options = {
+          guestId,
+          reset: body.reset,
+          scenario: body.scenario
+        };
+
+        const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {

@@ -59,10 +59,17 @@ app.post('/api/solve-fba', async (req, res) => {
       return res.status(503).json({ error: 'Solver is still initializing' });
     }
 
+    const guestId = req.headers['x-guest-id'];
     const concentrations = req.body.concentrations || {};
     const parameters = req.body.parameters || {};
 
-    const result = solveFba(highs, staticLpHeader, concentrations, parameters);
+    const options = {
+      guestId,
+      reset: req.body.reset,
+      scenario: req.body.scenario
+    };
+
+    const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
     return res.json(result);
   } catch (err) {
     console.error('Error in solve-fba API:', err);
