@@ -22,8 +22,8 @@ async function run() {
     'o2_e': 0.2
   };
 
-  console.log('=== CASE 1: Glucose Present (glc__D_c = 2.0) ===');
-  const concentrations1 = { ...baseConcentrations, 'glc__D_c': 2.0 };
+  console.log('=== CASE 1: Glucose Present (glc__D_e = 10.0) ===');
+  const concentrations1 = { ...baseConcentrations, 'glc__D_e': 10.0 };
   const params1 = {
     'MALS': { vMax: 10.0, km: 0.8 },
     'ICL': { vMax: 10.0, km: 0.8 }
@@ -38,8 +38,8 @@ async function run() {
   console.log(`MALS flux: ${res1.fluxes['MALS']}`);
   console.log(`ICL flux: ${res1.fluxes['ICL']}`);
 
-  console.log('\n=== CASE 2: Glucose Depleted (glc__D_c = 0.0) ===');
-  const concentrations2 = { ...baseConcentrations, 'glc__D_c': 0.0 };
+  console.log('\n=== CASE 2: Glucose Depleted (glc__D_e = 0.0) ===');
+  const concentrations2 = { ...baseConcentrations, 'glc__D_e': 0.0 };
   const params2 = {
     'MALS': { vMax: 10.0, km: 0.8 },
     'ICL': { vMax: 10.0, km: 0.8 }

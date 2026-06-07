@@ -1182,7 +1182,7 @@ function handleReactionSelect(rxn) {
     const vmaxLabel = document.querySelector('label[for="vmax-slider"]');
 
     const isMalsOrIcl = rxn.biggId === 'MALS' || rxn.biggId === 'ICL';
-    const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+    const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
     const isGlucoseRepressed = glcConc > 0.2;
 
     if (vmaxSlider && vmaxVal) {
@@ -1352,7 +1352,7 @@ function renderPinnedReactions() {
     row.id = `pinned-row-${rxnId}`;
     
     const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
-    const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+    const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
     const isGlucoseRepressed = glcConc > 0.2;
     const isRepressed = isMalsOrIcl && isGlucoseRepressed;
 
@@ -1461,7 +1461,7 @@ function updateUIPanelValues() {
     // Dynamic slider locking/repression state for pinned reactions
     const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
     if (isMalsOrIcl && rxn) {
-      const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+      const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
       const isGlucoseRepressed = glcConc > 0.2;
       const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${rxnId}"]`);
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${rxnId}`);
@@ -1536,7 +1536,7 @@ function updateUIPanelValues() {
 
       // Update slider state dynamically (e.g. MALS/ICL repression)
       const isMalsOrIcl = selectedReactionId === 'MALS' || selectedReactionId === 'ICL';
-      const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+      const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
       const isGlucoseRepressed = glcConc > 0.2;
       
       const vmaxSlider = document.getElementById('vmax-slider');

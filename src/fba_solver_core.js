@@ -39,8 +39,8 @@ export function calculateBounds(concentrations, parameters) {
     'SUCDi': ['fum_c']
   };
 
-  // Determine if catabolite repression is active
-  const glcConc = concentrations['glc__D_c'] !== undefined ? concentrations['glc__D_c'] : 2.0;
+  // Determine if catabolite repression is active (based on extracellular glucose)
+  const glcConc = concentrations['glc__D_e'] !== undefined ? concentrations['glc__D_e'] : 10.0;
   const isGlucoseRepressed = glcConc > 0.2;
 
   for (const rxnId of Object.keys(staticBounds)) {
