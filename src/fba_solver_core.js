@@ -130,7 +130,11 @@ export function calculateBounds(concentrations, parameters) {
     } else {
       let lb = orig.lb;
       let ub = orig.ub;
-      if (vMax !== undefined) {
+      
+      const hasOverride = parameters[rxnId] && parameters[rxnId].vMax !== undefined;
+      const isRegulated = rxnId === 'MALS' || rxnId === 'ICL' || rxnId === 'PFL' || rxnId === 'PDH';
+      
+      if (hasOverride || isRegulated) {
         ub = Math.min(ub, vMax);
         if (orig.lb < -1e-5) {
           lb = Math.max(lb, -vMax);

@@ -107,7 +107,11 @@ function calculateBounds(concentrations, parameters) {
     } else {
       let lb = orig.lb;
       let ub = orig.ub;
-      if (vMax !== undefined) {
+      
+      const hasOverride = parameters[rxnId] && parameters[rxnId].vMax !== undefined;
+      const isRegulated = rxnId === 'MALS' || rxnId === 'ICL' || rxnId === 'PFL' || rxnId === 'PDH';
+      
+      if (hasOverride || isRegulated) {
         ub = Math.min(ub, vMax);
         if (orig.lb < -1e-5) {
           lb = Math.max(lb, -vMax);
@@ -143,9 +147,9 @@ async function solveFba(highs, concentrations, parameters) {
       biomass: columns['R_BIOMASS_Ec_iJO1366_core_53p95M']?.Primal || 0.0,
       PDH: columns['R_PDH']?.Primal || 0.0,
       PFL: columns['R_PFL']?.Primal || 0.0,
-      EX_o2_e: columns['R_EX_o2_e']?.Primal || 0.0,
-      EX_ac_e: columns['R_EX_ac_e']?.Primal || 0.0,
-      EX_for_e: columns['R_EX_for_e']?.Primal || 0.0
+      CS: columns['R_CS']?.Primal || 0.0,
+      PTAr: columns['R_PTAr']?.Primal || 0.0,
+      EX_ac_e: columns['R_EX_ac_e']?.Primal || 0.0
     };
   } else {
     return { status: sol.Status, biomass: 0, PDH: 0, PFL: 0 };
@@ -171,13 +175,13 @@ async function run() {
 
   const params = {};
 
-  console.log('=== CASE 1: Anaerobic (o2_e = 0.0) ===');
-  const res1 = await solveFba(highs, { ...baseConcentrations, 'o2_e': 0.0 }, params);
-  console.log(res1);
+  console.log('=== CASE A: Aerobic (o2_e = 1.0) ===');
+  const resA = await solveFba(highs, { ...baseConcentrations, 'o2_e': 1.0 }, params);
+  console.log(resA);
 
-  console.log('\n=== CASE 2: Aerobic (o2_e = 1.0) ===');
-  const res2 = await solveFba(highs, { ...baseConcentrations, 'o2_e': 1.0 }, params);
-  console.log(res2);
+  console.log('\n=== CASE B: Anaerobic (o2_e = 0.0) ===');
+  const resB = await solveFba(highs, { ...baseConcentrations, 'o2_e': 0.0 }, params);
+  console.log(resB);
 }
 
 run().catch(err => {
