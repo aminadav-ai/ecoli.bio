@@ -442,6 +442,7 @@ export class Simulation {
         metab.targetConcentration = metab.concentration;
       } else {
         const J_in = influxes[mId];
+        const J_out = outfluxes[mId];
         const J = J_in;
         const J_normal = this.normalFluxes[mId] || 1.0;
 
@@ -451,8 +452,9 @@ export class Simulation {
           const coeff = rxn.stoichiometry[mId];
           if (coeff) {
             if (coeff < 0 || (coeff > 0 && rxn.reversibility)) {
-              vMaxSum += rxn.vMax;
-              vMaxDefaultSum += rxn.defaultVmax;
+              const weight = Math.abs(rxn.flux);
+              vMaxSum += rxn.vMax * weight;
+              vMaxDefaultSum += rxn.defaultVmax * weight;
             }
           }
         }
@@ -464,6 +466,12 @@ export class Simulation {
 
         const baseline = this.initialConcentrations[mId] || 1.0;
         let target = baseline * (Math.max(0.01, J) / J_normal) / activityRatio;
+        
+        // Apply mismatch factor for bottleneck accumulation
+        if (J_out > 0 && J_in > J_out) {
+          target *= (J_in / J_out);
+        }
+        
         target = Math.max(0.1, Math.min(target, 150.0));
         
         metab.targetConcentration = target;
