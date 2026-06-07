@@ -491,6 +491,13 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       if (data.concentrations) {
         for (const [mId, conc] of Object.entries(data.concentrations)) {
           if (simulation.metabolites[mId]) {
+            // Do NOT overwrite user-controlled environmental parameters (o2_e, glc__D_e)
+            // with stale server responses while dragging sliders. Only sync them on reset/scenario.
+            if (mId === 'o2_e' || mId === 'glc__D_e') {
+              if (!forceOptions.reset && !forceOptions.scenario) {
+                continue;
+              }
+            }
             simulation.metabolites[mId].targetConcentration = conc;
             if (simulation.metabolites[mId].isBuffered || mId === 'glc__D_e') {
               simulation.metabolites[mId].concentration = conc;
