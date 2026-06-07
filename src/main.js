@@ -1185,13 +1185,30 @@ function handleReactionSelect(rxn) {
     const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
     const isGlucoseRepressed = glcConc > 0.2;
 
+    const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
+    const isAerobic = o2Conc > 0.05;
+
+    let isRepressed = false;
+    let lockMessage = '';
+
+    if (isMalsOrIcl && isGlucoseRepressed) {
+      isRepressed = true;
+      lockMessage = '(Repressed by Glucose 🔒)';
+    } else if (rxn.biggId === 'PFL' && isAerobic) {
+      isRepressed = true;
+      lockMessage = '(Repressed by Oxygen 🔒)';
+    } else if (rxn.biggId === 'PDH' && !isAerobic) {
+      isRepressed = true;
+      lockMessage = '(Repressed by Anaerobiosis 🔒)';
+    }
+
     if (vmaxSlider && vmaxVal) {
-      if (isMalsOrIcl && isGlucoseRepressed) {
+      if (isRepressed) {
         vmaxSlider.disabled = true;
         vmaxSlider.value = 0.0;
         vmaxVal.textContent = "0.0 (Repressed)";
         if (vmaxLabel) {
-          vmaxLabel.innerHTML = 'Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">(Repressed by Glucose 🔒)</span>';
+          vmaxLabel.innerHTML = `Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">${lockMessage}</span>`;
         }
       } else {
         vmaxSlider.disabled = false;
@@ -1354,7 +1371,18 @@ function renderPinnedReactions() {
     const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
     const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
     const isGlucoseRepressed = glcConc > 0.2;
-    const isRepressed = isMalsOrIcl && isGlucoseRepressed;
+    
+    const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
+    const isAerobic = o2Conc > 0.05;
+
+    let isRepressed = false;
+    if (isMalsOrIcl && isGlucoseRepressed) {
+      isRepressed = true;
+    } else if (rxnId === 'PFL' && isAerobic) {
+      isRepressed = true;
+    } else if (rxnId === 'PDH' && !isAerobic) {
+      isRepressed = true;
+    }
 
     const vmaxVal = isRepressed ? 0.0 : (rxn.vMax !== undefined ? rxn.vMax : 15.0);
     const fluxVal = rxn.flux !== undefined ? rxn.flux.toFixed(2) : '0.00';
@@ -1459,14 +1487,27 @@ function updateUIPanelValues() {
     }
 
     // Dynamic slider locking/repression state for pinned reactions
-    const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
-    if (isMalsOrIcl && rxn) {
+    if (rxn) {
+      const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
       const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
       const isGlucoseRepressed = glcConc > 0.2;
+      
+      const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
+      const isAerobic = o2Conc > 0.05;
+
+      let isRepressed = false;
+      if (isMalsOrIcl && isGlucoseRepressed) {
+        isRepressed = true;
+      } else if (rxnId === 'PFL' && isAerobic) {
+        isRepressed = true;
+      } else if (rxnId === 'PDH' && !isAerobic) {
+        isRepressed = true;
+      }
+
       const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${rxnId}"]`);
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${rxnId}`);
       if (pinnedSlider && pinnedLabel) {
-        if (isGlucoseRepressed) {
+        if (isRepressed) {
           pinnedSlider.disabled = true;
           pinnedSlider.value = 0.0;
           pinnedLabel.textContent = "0.0 (Repressed)";
@@ -1534,22 +1575,39 @@ function updateUIPanelValues() {
       const absFlux = Math.abs(rxn.flux);
       document.getElementById('rxn-flux-val').textContent = `${rxn.flux.toFixed(2)} mM/s`;
 
-      // Update slider state dynamically (e.g. MALS/ICL repression)
+      // Update slider state dynamically (e.g. MALS/ICL/PFL/PDH repression)
       const isMalsOrIcl = selectedReactionId === 'MALS' || selectedReactionId === 'ICL';
       const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
       const isGlucoseRepressed = glcConc > 0.2;
+      
+      const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
+      const isAerobic = o2Conc > 0.05;
+
+      let isRepressed = false;
+      let lockMessage = '';
+
+      if (isMalsOrIcl && isGlucoseRepressed) {
+        isRepressed = true;
+        lockMessage = '(Repressed by Glucose 🔒)';
+      } else if (selectedReactionId === 'PFL' && isAerobic) {
+        isRepressed = true;
+        lockMessage = '(Repressed by Oxygen 🔒)';
+      } else if (selectedReactionId === 'PDH' && !isAerobic) {
+        isRepressed = true;
+        lockMessage = '(Repressed by Anaerobiosis 🔒)';
+      }
       
       const vmaxSlider = document.getElementById('vmax-slider');
       const vmaxVal = document.getElementById('vmax-val');
       const vmaxLabel = document.querySelector('label[for="vmax-slider"]');
 
       if (vmaxSlider && vmaxVal) {
-        if (isMalsOrIcl && isGlucoseRepressed) {
+        if (isRepressed) {
           vmaxSlider.disabled = true;
           vmaxSlider.value = 0.0;
           vmaxVal.textContent = "0.0 (Repressed)";
           if (vmaxLabel) {
-            vmaxLabel.innerHTML = 'Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">(Repressed by Glucose 🔒)</span>';
+            vmaxLabel.innerHTML = `Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">${lockMessage}</span>`;
           }
         } else {
           vmaxSlider.disabled = false;

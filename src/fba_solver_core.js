@@ -42,6 +42,7 @@ export function calculateBounds(concentrations, parameters) {
   // Determine if catabolite repression is active (based on extracellular glucose)
   const glcConc = concentrations['glc__D_e'] !== undefined ? concentrations['glc__D_e'] : 10.0;
   const isGlucoseRepressed = glcConc > 0.2;
+  const o2Conc = concentrations['o2_e'] !== undefined ? concentrations['o2_e'] : 0.2;
 
   for (const rxnId of Object.keys(staticBounds)) {
     const orig = staticBounds[rxnId];
@@ -54,9 +55,9 @@ export function calculateBounds(concentrations, parameters) {
 
     // Special handling for oxygen exchange based on extracellular oxygen concentration
     if (rxnId === 'EX_o2_e') {
-      const o2Conc = concentrations['o2_e'] !== undefined ? concentrations['o2_e'] : 0.2;
+      const o2ConcVal = concentrations['o2_e'] !== undefined ? concentrations['o2_e'] : 0.2;
       const maxO2Uptake = 18.5;
-      bounds[rxnId] = { lowerBound: -maxO2Uptake * o2Conc, upperBound: 1000.0 };
+      bounds[rxnId] = { lowerBound: -maxO2Uptake * o2ConcVal, upperBound: 1000.0 };
       continue;
     }
 
@@ -85,6 +86,14 @@ export function calculateBounds(concentrations, parameters) {
 
     // Apply Regulatory FBA: MALS and ICL are repressed (vMax = 0.0) when glucose is present
     if ((rxnId === 'MALS' || rxnId === 'ICL') && isGlucoseRepressed) {
+      vMax = 0.0;
+    }
+
+    // Apply Regulatory FBA: PFL repressed by oxygen, PDH repressed anaerobically
+    if (rxnId === 'PFL' && o2Conc > 0.05) {
+      vMax = 0.0;
+    }
+    if (rxnId === 'PDH' && o2Conc <= 0.05) {
       vMax = 0.0;
     }
 
