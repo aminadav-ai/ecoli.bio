@@ -4219,8 +4219,21 @@ function startScenario(scenarioId) {
   // Focus map camera on relevant pathway of the scenario
   if (renderer) {
     if (scenarioId === 'oxygen_switch') {
-      // Focus closely on the PDH and PFL pathway coordinates to avoid duplicate nodes (e.g. multiple pyr_c) zooming out
-      renderer.focusOnCoordinates(2000, 4400, 0.85);
+      // Focus closely on the average center of PFL, PTAr and MDH to frame them all on screen
+      let sumX = 0, sumY = 0, count = 0;
+      const targetIds = ['PFL', 'PTAr', 'MDH'];
+      renderer.reactions.forEach(rxn => {
+        if (targetIds.includes(rxn.biggId) && rxn.labelX && rxn.labelY) {
+          sumX += rxn.labelX;
+          sumY += rxn.labelY;
+          count++;
+        }
+      });
+      if (count > 0) {
+        renderer.focusOnCoordinates(sumX / count, sumY / count, 0.65);
+      } else {
+        renderer.focusOnCoordinates(2000, 4400, 0.85);
+      }
     } else if (scenarioId === 'metabolic_jam') {
       renderer.fitMapToScreen(true);
     } else if (scenarioId === 'warburg_effect') {
