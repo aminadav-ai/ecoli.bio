@@ -3643,6 +3643,20 @@ function updateUserStatusUI() {
       if (reportsDropdown) reportsDropdown.classList.add('hidden');
     }
   }
+
+  // Update AI Chat Context Button Visibility (Admins Only)
+  const contextBtn = document.getElementById('ai-chat-context-btn');
+  const contextPanel = document.getElementById('ai-chat-context-panel');
+  if (contextBtn) {
+    if (userProfile && userProfile.isAdmin) {
+      contextBtn.classList.remove('hidden');
+    } else {
+      contextBtn.classList.add('hidden');
+      if (contextPanel) {
+        contextPanel.classList.add('hidden');
+      }
+    }
+  }
   
   // 1. Update AI Chat Status Bar (if it exists)
   if (statusBar) {
