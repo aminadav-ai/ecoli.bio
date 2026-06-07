@@ -3714,6 +3714,7 @@ function updateUserStatusUI() {
               ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
             </div>
             <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
+            <div class="user-dropdown-hours" style="margin-top: 4px; font-size: 0.85em; opacity: 0.8;">Simulation time: ${userProfile.hoursSpent || 0} hours</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -4194,10 +4195,17 @@ function setupScenariosAndChat() {
     const token = localStorage.getItem('userToken');
     if (token && userProfile) {
       try {
-        await fetch('/api/auth/heartbeat', {
+        const res = await fetch('/api/auth/heartbeat', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hoursSpent !== undefined) {
+            userProfile.hoursSpent = data.hoursSpent;
+            updateUserStatusUI();
+          }
+        }
       } catch (err) {
         console.error('[Heartbeat] Failed to send active heartbeat:', err);
       }

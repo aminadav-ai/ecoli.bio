@@ -205,7 +205,8 @@ export async function verifyGoogleTokenAndLogin(credential) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0
+      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
+      hoursSpent: parseFloat(((user.seconds_spent || 0) / 3600).toFixed(2))
     }
   };
 }
@@ -270,7 +271,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0
+      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
+      hoursSpent: parseFloat(((user.seconds_spent || 0) / 3600).toFixed(2))
     } : null,
     limit: {
       max: limitMax,
@@ -384,10 +386,12 @@ export async function incrementUserTimeSpent(email, seconds) {
           seconds_spent: secondsSpent
         })
       });
+      return secondsSpent;
     }
   } catch (err) {
     console.error('[Supabase DB] Failed to increment user time spent:', err);
   }
+  return null;
 }
 
 // 9. Fetch and format all user statistics for admin report

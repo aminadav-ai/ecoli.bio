@@ -167,14 +167,16 @@ export default defineConfig(({ mode }) => {
       try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        let secondsSpent = null;
         if (token) {
           const user = await getUserByToken(token);
           if (user) {
-            await incrementUserTimeSpent(user.email, 60);
+            secondsSpent = await incrementUserTimeSpent(user.email, 60);
           }
         }
+        const hoursSpent = secondsSpent !== null ? parseFloat((secondsSpent / 3600).toFixed(2)) : 0.0;
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
+        res.end(JSON.stringify({ success: true, hoursSpent }));
       } catch (err) {
         console.error('Vite Heartbeat error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
