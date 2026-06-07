@@ -4218,7 +4218,10 @@ function setupScenariosAndChat() {
       try {
         const res = await fetch('/api/auth/heartbeat', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-guest-id': guestId
+          }
         });
         if (res.ok) {
           const data = await res.json();

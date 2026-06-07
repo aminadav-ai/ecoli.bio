@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Simulation } from './simulation.js';
+import { bulkIncrementUserTimeSpent, clearCachedUser } from './supabase_db.js';
 
 const staticBoundsPath = path.resolve('src/static_bounds.json');
 let staticBounds = {};
@@ -213,7 +214,7 @@ export function calculateBounds(concentrations, parameters) {
 }
 
 export function solveFba(highsInstance, staticLpHeader, concentrations, parameters, options = {}) {
-  const { guestId, reset, scenario, skipSimTick } = options;
+  const { guestId, reset, scenario, skipSimTick, userEmail } = options;
 
   // Make sure reference normal fluxes are initialized on server
   if (!skipSimTick) {
@@ -271,6 +272,9 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
 
   const sim = getOrCreateSimulation(guestId);
   if (sim) {
+    if (userEmail) {
+      sim.userEmail = userEmail;
+    }
     if (reset) {
       sim.reset();
     }
@@ -306,6 +310,18 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
     if (status === 'Optimal') {
       sim.updateFluxes(fluxes, biomassFlux);
       sim.tick(1.0);
+
+      // Track active simulation time spent
+      if (userEmail && !skipSimTick) {
+        const now = Date.now();
+        if (sim.lastSolveTime) {
+          const elapsed = (now - sim.lastSolveTime) / 1000;
+          if (elapsed < 1.5) {
+            sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) + elapsed;
+          }
+        }
+        sim.lastSolveTime = now;
+      }
     }
 
     const calculatedConcentrations = {};
@@ -317,3 +333,27 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
 
   return result;
 }
+
+// Start the periodic active time flush loop (every 60 seconds)
+setInterval(async () => {
+  const emailSecondsMap = new Map();
+  
+  for (const sim of userSimulations.values()) {
+    if (sim.userEmail && sim.activeTimeBuffer >= 1) {
+      const email = sim.userEmail;
+      const seconds = Math.floor(sim.activeTimeBuffer);
+      emailSecondsMap.set(email, (emailSecondsMap.get(email) || 0) + seconds);
+      sim.activeTimeBuffer = sim.activeTimeBuffer - seconds;
+    }
+  }
+
+  if (emailSecondsMap.size === 0) return;
+
+  const pendingUpdates = Array.from(emailSecondsMap.entries()).map(([email, seconds]) => ({
+    email,
+    seconds
+  }));
+
+  console.log(`[Solver] Flushing active simulation time to DB for ${pendingUpdates.length} users:`, pendingUpdates);
+  await bulkIncrementUserTimeSpent(pendingUpdates);
+}, 60000);

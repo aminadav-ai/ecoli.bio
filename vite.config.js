@@ -90,10 +90,15 @@ export default defineConfig(({ mode }) => {
         const concentrations = body.concentrations || {};
         const parameters = body.parameters || {};
 
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(token) : null;
+
         const options = {
           guestId,
           reset: body.reset,
-          scenario: body.scenario
+          scenario: body.scenario,
+          userEmail: user ? user.email : null
         };
 
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
@@ -171,7 +176,7 @@ export default defineConfig(({ mode }) => {
         if (token) {
           const user = await getUserByToken(token);
           if (user) {
-            secondsSpent = await incrementUserTimeSpent(user.email, 60);
+            secondsSpent = user.seconds_spent || 0;
           }
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });

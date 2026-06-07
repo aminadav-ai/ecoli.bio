@@ -21,9 +21,28 @@ async function supabaseFetch(path, options = {}) {
   return response;
 }
 
+const tokenCache = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export function clearCachedUser(email) {
+  if (!email) return;
+  for (const [token, entry] of tokenCache.entries()) {
+    if (entry.user && entry.user.email === email) {
+      tokenCache.delete(token);
+    }
+  }
+}
+
 // Get user profile by session token
 export async function getUserByToken(token) {
   if (!token) return null;
+  const now = Date.now();
+  if (tokenCache.has(token)) {
+    const entry = tokenCache.get(token);
+    if (now - entry.timestamp < CACHE_TTL_MS) {
+      return entry.user;
+    }
+  }
   try {
     const res = await supabaseFetch(`user_sessions?token=eq.${encodeURIComponent(token)}`);
     const sessions = await res.json();
@@ -32,7 +51,9 @@ export async function getUserByToken(token) {
       const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(session.email)}`);
       const users = await userRes.json();
       if (users.length > 0) {
-        return users[0];
+        const user = users[0];
+        tokenCache.set(token, { user, timestamp: now });
+        return user;
       }
     }
   } catch (err) {
@@ -315,6 +336,7 @@ export async function simulatePremiumPayment(token, tier, autoRenew) {
       auto_renew: !!autoRenew
     })
   });
+  clearCachedUser(user.email);
 
   return {
     success: true,
@@ -342,6 +364,7 @@ export async function incrementUserVisits(email) {
           last_visit: lastVisit
         })
       });
+      clearCachedUser(email);
     }
   } catch (err) {
     console.error('[Supabase DB] Failed to increment user visits:', err);
@@ -364,6 +387,7 @@ export async function incrementUserQuestions(email) {
           questions
         })
       });
+      clearCachedUser(email);
     }
   } catch (err) {
     console.error('[Supabase DB] Failed to increment user questions:', err);
@@ -386,6 +410,7 @@ export async function incrementUserTimeSpent(email, seconds) {
           seconds_spent: secondsSpent
         })
       });
+      clearCachedUser(email);
       return secondsSpent;
     }
   } catch (err) {
@@ -488,8 +513,28 @@ export async function updateUserO2Preference(email, o2Val) {
         o2_preference: o2Val
       })
     });
+    clearCachedUser(email);
   } catch (err) {
     console.error('[Supabase DB] Failed to update O2 preference:', err);
     throw err;
+  }
+}
+
+// 14. Bulk increment user active session seconds spent
+export async function bulkIncrementUserTimeSpent(updates) {
+  if (!updates || updates.length === 0) return;
+  try {
+    await supabaseFetch('rpc/bulk_increment_time_spent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates })
+    });
+    for (const item of updates) {
+      if (item.email) {
+        clearCachedUser(item.email);
+      }
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Failed to bulk increment user time spent:', err);
   }
 }

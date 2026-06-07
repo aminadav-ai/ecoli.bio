@@ -59,14 +59,19 @@ app.post('/api/solve-fba', async (req, res) => {
       return res.status(503).json({ error: 'Solver is still initializing' });
     }
 
-    const guestId = req.headers['x-guest-id'];
+    const guestId = req.headers['x-guest-id'] || req.ip;
     const concentrations = req.body.concentrations || {};
     const parameters = req.body.parameters || {};
+
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const user = token ? await getUserByToken(token) : null;
 
     const options = {
       guestId,
       reset: req.body.reset,
-      scenario: req.body.scenario
+      scenario: req.body.scenario,
+      userEmail: user ? user.email : null
     };
 
     const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
@@ -273,7 +278,7 @@ app.post('/api/auth/heartbeat', async (req, res) => {
     if (token) {
       const user = await getUserByToken(token);
       if (user) {
-        secondsSpent = await incrementUserTimeSpent(user.email, 60);
+        secondsSpent = user.seconds_spent || 0;
       }
     }
     return res.json({ success: true, secondsSpent: secondsSpent || 0 });
