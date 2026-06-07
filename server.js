@@ -4,7 +4,7 @@ import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba } from './src/fba_solver_core.js';
+import { solveFba, startActiveTimeFlusher } from './src/fba_solver_core.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -399,4 +399,5 @@ app.get('*any', (req, res, next) => {
 // Start listening
 app.listen(PORT, () => {
   console.log(`[Server] Production Express server is listening on port ${PORT}`);
+  startActiveTimeFlusher();
 });

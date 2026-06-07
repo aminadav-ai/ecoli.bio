@@ -4,7 +4,7 @@ import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba } from './src/fba_solver_core.js';
+import { solveFba, startActiveTimeFlusher } from './src/fba_solver_core.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -472,6 +472,7 @@ ${JSON.stringify(context, null, 2)}
         name: 'fba-solver-middleware',
         configureServer(server) {
           getHighs().catch(() => {}); // start loading solver in the background on dev server startup
+          startActiveTimeFlusher();
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);
@@ -480,6 +481,7 @@ ${JSON.stringify(context, null, 2)}
         },
         configurePreviewServer(server) {
           getHighs().catch(() => {});
+          startActiveTimeFlusher();
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);

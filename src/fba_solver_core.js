@@ -334,26 +334,32 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
   return result;
 }
 
+let activeTimeFlusherIntervalId = null;
+
 // Start the periodic active time flush loop (every 60 seconds)
-setInterval(async () => {
-  const emailSecondsMap = new Map();
-  
-  for (const sim of userSimulations.values()) {
-    if (sim.userEmail && sim.activeTimeBuffer >= 1) {
-      const email = sim.userEmail;
-      const seconds = Math.floor(sim.activeTimeBuffer);
-      emailSecondsMap.set(email, (emailSecondsMap.get(email) || 0) + seconds);
-      sim.activeTimeBuffer = sim.activeTimeBuffer - seconds;
+export function startActiveTimeFlusher() {
+  if (activeTimeFlusherIntervalId) return;
+
+  activeTimeFlusherIntervalId = setInterval(async () => {
+    const emailSecondsMap = new Map();
+    
+    for (const sim of userSimulations.values()) {
+      if (sim.userEmail && sim.activeTimeBuffer >= 1) {
+        const email = sim.userEmail;
+        const seconds = Math.floor(sim.activeTimeBuffer);
+        emailSecondsMap.set(email, (emailSecondsMap.get(email) || 0) + seconds);
+        sim.activeTimeBuffer = sim.activeTimeBuffer - seconds;
+      }
     }
-  }
 
-  if (emailSecondsMap.size === 0) return;
+    if (emailSecondsMap.size === 0) return;
 
-  const pendingUpdates = Array.from(emailSecondsMap.entries()).map(([email, seconds]) => ({
-    email,
-    seconds
-  }));
+    const pendingUpdates = Array.from(emailSecondsMap.entries()).map(([email, seconds]) => ({
+      email,
+      seconds
+    }));
 
-  console.log(`[Solver] Flushing active simulation time to DB for ${pendingUpdates.length} users:`, pendingUpdates);
-  await bulkIncrementUserTimeSpent(pendingUpdates);
-}, 60000);
+    console.log(`[Solver] Flushing active simulation time to DB for ${pendingUpdates.length} users:`, pendingUpdates);
+    await bulkIncrementUserTimeSpent(pendingUpdates);
+  }, 60000);
+}
