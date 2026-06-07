@@ -1086,6 +1086,7 @@ function handleMetaboliteSelect(node) {
     hideInspector();
     return;
   }
+  closeChatDrawer();
 
   selectedMetaboliteId = node.biggId;
   selectedReactionId = null;
@@ -1152,6 +1153,7 @@ function handleMetaboliteSelect(node) {
  * Event handler triggered when a user clicks on a reaction badge in Pixi canvas.
  */
 function handleReactionSelect(rxn) {
+  closeChatDrawer();
   selectedReactionId = rxn.biggId;
   selectedMetaboliteId = null;
   chartHistory = [];
@@ -1245,6 +1247,39 @@ function hideInspector() {
   }
 
   updateOverviewListHighlight();
+}
+
+function openChatDrawer() {
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  const chatTrigger = document.getElementById('ai-chat-trigger');
+  if (chatDrawer) {
+    chatDrawer.classList.remove('hidden');
+    // Hide the reaction/metabolite inspector panel
+    hideInspector();
+  }
+  if (chatTrigger) {
+    chatTrigger.classList.remove('animate-bounce');
+  }
+  // Scroll to bottom or last scroll position
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (chatMessages) {
+    if (lastChatScrollTop !== null) {
+      chatMessages.scrollTop = lastChatScrollTop;
+    } else {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+}
+
+function closeChatDrawer() {
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
+    const chatMessages = document.getElementById('ai-chat-messages');
+    if (chatMessages) {
+      lastChatScrollTop = chatMessages.scrollTop;
+    }
+    chatDrawer.classList.add('hidden');
+  }
 }
 
 /**
@@ -3616,6 +3651,11 @@ function updateUserStatusUI() {
         badge.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.toggle('hidden');
+          const isOpening = !dropdown.classList.contains('hidden');
+          if (isOpening) {
+            closeChatDrawer();
+            hideInspector();
+          }
           const chevron = badge.querySelector('.chevron-icon');
           if (chevron) {
             const isHidden = dropdown.classList.contains('hidden');
@@ -3879,34 +3919,17 @@ function setupScenariosAndChat() {
   if (chatTrigger && chatDrawer) {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      const chatMessages = document.getElementById('ai-chat-messages');
       const isOpening = chatDrawer.classList.contains('hidden');
-      
       if (isOpening) {
-        chatDrawer.classList.remove('hidden');
-        chatTrigger.classList.remove('animate-bounce');
-        if (chatMessages) {
-          if (lastChatScrollTop !== null) {
-            chatMessages.scrollTop = lastChatScrollTop;
-          } else {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-          }
-        }
+        openChatDrawer();
       } else {
-        if (chatMessages) {
-          lastChatScrollTop = chatMessages.scrollTop;
-        }
-        chatDrawer.classList.add('hidden');
+        closeChatDrawer();
       }
     });
 
     chatClose.addEventListener('click', (e) => {
       e.stopPropagation();
-      const chatMessages = document.getElementById('ai-chat-messages');
-      if (chatMessages) {
-        lastChatScrollTop = chatMessages.scrollTop;
-      }
-      chatDrawer.classList.add('hidden');
+      closeChatDrawer();
     });
 
     // Send on button click
@@ -4478,12 +4501,7 @@ Answer: "${answer}"
 Please evaluate my answer for biological correctness based on the current metabolic map parameters, correct me if I am wrong, and explain the biology in detail.`;
 
   // Focus on AI chat and open drawer
-  const chatDrawer = document.getElementById('ai-chat-drawer');
-  const chatTrigger = document.getElementById('ai-chat-trigger');
-  if (chatDrawer && chatDrawer.classList.contains('hidden')) {
-    chatDrawer.classList.remove('hidden');
-    if (chatTrigger) chatTrigger.classList.remove('animate-bounce');
-  }
+  openChatDrawer();
 
   // Clear input
   answerInput.value = '';
