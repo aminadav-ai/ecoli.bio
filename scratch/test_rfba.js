@@ -29,14 +29,16 @@ async function run() {
     'ICL': { vMax: 10.0, km: 0.8 }
   };
   
-  const bounds1 = calculateBounds(concentrations1, params1);
+  const { bounds: bounds1, repressed: repressed1 } = calculateBounds(concentrations1, params1);
   console.log(`MALS calculated bounds: ${JSON.stringify(bounds1['MALS'])}`);
   console.log(`ICL calculated bounds: ${JSON.stringify(bounds1['ICL'])}`);
+  console.log(`Repressed reactions in Case 1: ${JSON.stringify(repressed1)}`);
   
   const res1 = solveFba(highs, staticLpHeader, concentrations1, params1);
   console.log(`FBA solve status: ${res1.status}`);
   console.log(`MALS flux: ${res1.fluxes['MALS']}`);
   console.log(`ICL flux: ${res1.fluxes['ICL']}`);
+  console.log(`Repressed returned from solveFba: ${JSON.stringify(res1.repressed)}`);
 
   console.log('\n=== CASE 2: Glucose Depleted (glc__D_e = 0.0) ===');
   const concentrations2 = { ...baseConcentrations, 'glc__D_e': 0.0 };
@@ -45,9 +47,10 @@ async function run() {
     'ICL': { vMax: 10.0, km: 0.8 }
   };
   
-  const bounds2 = calculateBounds(concentrations2, params2);
+  const { bounds: bounds2, repressed: repressed2 } = calculateBounds(concentrations2, params2);
   console.log(`MALS calculated bounds: ${JSON.stringify(bounds2['MALS'])}`);
   console.log(`ICL calculated bounds: ${JSON.stringify(bounds2['ICL'])}`);
+  console.log(`Repressed reactions in Case 2: ${JSON.stringify(repressed2)}`);
   
   // To verify they can carry flux when derepressed, let's solve FBA.
   // Note: the solver maximizes biomass, so it might or might not use the glyoxylate shunt
@@ -56,6 +59,7 @@ async function run() {
   console.log(`FBA solve status: ${res2.status}`);
   console.log(`MALS flux: ${res2.fluxes['MALS']}`);
   console.log(`ICL flux: ${res2.fluxes['ICL']}`);
+  console.log(`Repressed returned from solveFba Case 2: ${JSON.stringify(res2.repressed)}`);
 }
 
 run().catch(err => {

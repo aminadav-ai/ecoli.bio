@@ -11,6 +11,7 @@ export { staticBounds };
 
 export function calculateBounds(concentrations, parameters) {
   const bounds = {};
+  const repressed = {};
   
   // Define default blocked bypasses
   const defaultBlocked = [
@@ -43,6 +44,16 @@ export function calculateBounds(concentrations, parameters) {
   const glcConc = concentrations['glc__D_e'] !== undefined ? concentrations['glc__D_e'] : 10.0;
   const isGlucoseRepressed = glcConc > 0.2;
   const o2Conc = concentrations['o2_e'] !== undefined ? concentrations['o2_e'] : 0.2;
+
+  if (isGlucoseRepressed) {
+    repressed['MALS'] = { repressed: true, reason: '(Repressed by Glucose 🔒)' };
+    repressed['ICL'] = { repressed: true, reason: '(Repressed by Glucose 🔒)' };
+  }
+  if (o2Conc > 0.05) {
+    repressed['PFL'] = { repressed: true, reason: '(Repressed by Oxygen 🔒)' };
+  } else {
+    repressed['PDH'] = { repressed: true, reason: '(Repressed by Anaerobiosis 🔒)' };
+  }
 
   for (const rxnId of Object.keys(staticBounds)) {
     const orig = staticBounds[rxnId];
@@ -144,11 +155,11 @@ export function calculateBounds(concentrations, parameters) {
     }
   }
 
-  return bounds;
+  return { bounds, repressed };
 }
 
 export function solveFba(highsInstance, staticLpHeader, concentrations, parameters) {
-  const bounds = calculateBounds(concentrations, parameters);
+  const { bounds, repressed } = calculateBounds(concentrations, parameters);
 
   const boundsLines = [];
   for (const [rxnId, b] of Object.entries(bounds)) {
@@ -184,14 +195,16 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
       status: sol.Status,
       fluxes,
       biomass_flux: biomassFlux,
-      is_dead: isDead
+      is_dead: isDead,
+      repressed
     };
   } else {
     return {
       status: sol.Status,
       fluxes: {},
       biomass_flux: 0.0,
-      is_dead: true
+      is_dead: true,
+      repressed
     };
   }
 }

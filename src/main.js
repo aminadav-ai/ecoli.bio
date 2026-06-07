@@ -234,6 +234,7 @@ let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
 let lastBoundsFetchTime = 0;
+let activeRepressions = {};
 
 // Inspection Selection State
 let selectedMetaboliteId = null;
@@ -442,6 +443,7 @@ async function updateFbaBounds(currentTime) {
 
     if (res.ok) {
       const data = await res.json();
+      activeRepressions = data.repressed || {};
       if (data.fluxes) {
         simulation.updateFluxes(data.fluxes, data.biomass_flux);
         isDead = data.is_dead || false;
@@ -591,6 +593,21 @@ function setupUIListeners() {
     speedMultiplier = parseFloat(e.target.value);
     speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
   });
+
+  // Global Oxygen slider
+  const globalO2Slider = document.getElementById('global-o2-slider');
+  const globalO2Val = document.getElementById('global-o2-val');
+  if (globalO2Slider && globalO2Val) {
+    globalO2Slider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      globalO2Val.textContent = val.toFixed(1);
+      if (simulation && simulation.metabolites['o2_e']) {
+        simulation.metabolites['o2_e'].concentration = val;
+        simulation.metabolites['o2_e'].targetConcentration = val;
+        updateFbaBounds(performance.now());
+      }
+    });
+  }
 
   // Label font size slider
   const fontSizeSlider = document.getElementById('font-size-slider');
@@ -1181,26 +1198,9 @@ function handleReactionSelect(rxn) {
     const vmaxVal = document.getElementById('vmax-val');
     const vmaxLabel = document.querySelector('label[for="vmax-slider"]');
 
-    const isMalsOrIcl = rxn.biggId === 'MALS' || rxn.biggId === 'ICL';
-    const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
-    const isGlucoseRepressed = glcConc > 0.2;
-
-    const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
-    const isAerobic = o2Conc > 0.05;
-
-    let isRepressed = false;
-    let lockMessage = '';
-
-    if (isMalsOrIcl && isGlucoseRepressed) {
-      isRepressed = true;
-      lockMessage = '(Repressed by Glucose 🔒)';
-    } else if (rxn.biggId === 'PFL' && isAerobic) {
-      isRepressed = true;
-      lockMessage = '(Repressed by Oxygen 🔒)';
-    } else if (rxn.biggId === 'PDH' && !isAerobic) {
-      isRepressed = true;
-      lockMessage = '(Repressed by Anaerobiosis 🔒)';
-    }
+    const repression = activeRepressions[rxn.biggId];
+    const isRepressed = repression && repression.repressed;
+    const lockMessage = isRepressed ? repression.reason : '';
 
     if (vmaxSlider && vmaxVal) {
       if (isRepressed) {
@@ -1368,21 +1368,8 @@ function renderPinnedReactions() {
     row.className = 'pinned-row';
     row.id = `pinned-row-${rxnId}`;
     
-    const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
-    const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
-    const isGlucoseRepressed = glcConc > 0.2;
-    
-    const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
-    const isAerobic = o2Conc > 0.05;
-
-    let isRepressed = false;
-    if (isMalsOrIcl && isGlucoseRepressed) {
-      isRepressed = true;
-    } else if (rxnId === 'PFL' && isAerobic) {
-      isRepressed = true;
-    } else if (rxnId === 'PDH' && !isAerobic) {
-      isRepressed = true;
-    }
+    const repression = activeRepressions[rxnId];
+    const isRepressed = repression && repression.repressed;
 
     const vmaxVal = isRepressed ? 0.0 : (rxn.vMax !== undefined ? rxn.vMax : 15.0);
     const fluxVal = rxn.flux !== undefined ? rxn.flux.toFixed(2) : '0.00';
@@ -1478,6 +1465,17 @@ function renderPinnedReactions() {
  * Per-frame update of UI texts, progress bars, charts, and inspector dials.
  */
 function updateUIPanelValues() {
+  // Sync global oxygen slider value
+  const globalO2Slider = document.getElementById('global-o2-slider');
+  const globalO2Val = document.getElementById('global-o2-val');
+  if (globalO2Slider && globalO2Val && simulation && simulation.metabolites['o2_e']) {
+    const currentO2 = simulation.metabolites['o2_e'].concentration;
+    if (document.activeElement !== globalO2Slider) {
+      globalO2Slider.value = currentO2;
+      globalO2Val.textContent = currentO2.toFixed(1);
+    }
+  }
+
   // Update live fluxes of pinned reactions
   pinnedReactions.forEach(rxnId => {
     const rxn = simulation.reactions[rxnId];
@@ -1488,21 +1486,8 @@ function updateUIPanelValues() {
 
     // Dynamic slider locking/repression state for pinned reactions
     if (rxn) {
-      const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
-      const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
-      const isGlucoseRepressed = glcConc > 0.2;
-      
-      const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
-      const isAerobic = o2Conc > 0.05;
-
-      let isRepressed = false;
-      if (isMalsOrIcl && isGlucoseRepressed) {
-        isRepressed = true;
-      } else if (rxnId === 'PFL' && isAerobic) {
-        isRepressed = true;
-      } else if (rxnId === 'PDH' && !isAerobic) {
-        isRepressed = true;
-      }
+      const repression = activeRepressions[rxnId];
+      const isRepressed = repression && repression.repressed;
 
       const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${rxnId}"]`);
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${rxnId}`);
@@ -1576,26 +1561,9 @@ function updateUIPanelValues() {
       document.getElementById('rxn-flux-val').textContent = `${rxn.flux.toFixed(2)} mM/s`;
 
       // Update slider state dynamically (e.g. MALS/ICL/PFL/PDH repression)
-      const isMalsOrIcl = selectedReactionId === 'MALS' || selectedReactionId === 'ICL';
-      const glcConc = simulation.metabolites['glc__D_e'] ? simulation.metabolites['glc__D_e'].concentration : 10.0;
-      const isGlucoseRepressed = glcConc > 0.2;
-      
-      const o2Conc = simulation.metabolites['o2_e'] ? simulation.metabolites['o2_e'].concentration : 0.2;
-      const isAerobic = o2Conc > 0.05;
-
-      let isRepressed = false;
-      let lockMessage = '';
-
-      if (isMalsOrIcl && isGlucoseRepressed) {
-        isRepressed = true;
-        lockMessage = '(Repressed by Glucose 🔒)';
-      } else if (selectedReactionId === 'PFL' && isAerobic) {
-        isRepressed = true;
-        lockMessage = '(Repressed by Oxygen 🔒)';
-      } else if (selectedReactionId === 'PDH' && !isAerobic) {
-        isRepressed = true;
-        lockMessage = '(Repressed by Anaerobiosis 🔒)';
-      }
+      const repression = activeRepressions[selectedReactionId];
+      const isRepressed = repression && repression.repressed;
+      const lockMessage = isRepressed ? repression.reason : '';
       
       const vmaxSlider = document.getElementById('vmax-slider');
       const vmaxVal = document.getElementById('vmax-val');
@@ -4256,9 +4224,8 @@ function exitActiveScenario() {
     renderer.flashingMetaboliteIds.clear();
   }
 
-  // Restore wildtype FBA model state
+  // Keep the current simulation state for continued exploration, just refresh FBA bounds
   if (simulation) {
-    simulation.reset();
     updateFbaBounds(performance.now());
   }
 }
