@@ -23,6 +23,7 @@ if (fs.existsSync('.env')) {
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const solveFbaRateLimits = new Map();
 
 app.use(express.json());
 
@@ -60,6 +61,15 @@ app.post('/api/solve-fba', async (req, res) => {
     }
 
     const guestId = req.headers['x-guest-id'] || req.ip;
+    
+    // Rate limit check: max 1 request per 150ms per guestId
+    const now = Date.now();
+    const lastTime = solveFbaRateLimits.get(guestId);
+    if (lastTime && (now - lastTime < 150)) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please wait.' });
+    }
+    solveFbaRateLimits.set(guestId, now);
+
     const concentrations = req.body.concentrations || {};
     const parameters = req.body.parameters || {};
 

@@ -22,6 +22,7 @@ if (fs.existsSync(lpHeaderPath)) {
 // Initialize HiGHS solver lazily
 let highs = null;
 let highsPromise = null;
+const solveFbaRateLimits = new Map();
 
 function getHighs() {
   if (!highsPromise) {
@@ -85,7 +86,17 @@ export default defineConfig(({ mode }) => {
           }
         }
 
-        const guestId = req.headers['x-guest-id'];
+        const guestId = req.headers['x-guest-id'] || 'unknown';
+        
+        // Rate limit check: max 1 request per 150ms per guestId
+        const now = Date.now();
+        const lastTime = solveFbaRateLimits.get(guestId);
+        if (lastTime && (now - lastTime < 150)) {
+          res.writeHead(429, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Rate limit exceeded. Please wait.' }));
+          return;
+        }
+        solveFbaRateLimits.set(guestId, now);
         const body = await getPostBody(req);
         const concentrations = body.concentrations || {};
         const parameters = body.parameters || {};
