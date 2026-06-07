@@ -3237,7 +3237,7 @@ const SCENARIOS = {
     ],
     reflection: 'Why does the atp_c level (or ATP yield) increase when oxygen is supplied, even if the incoming glucose rate remains unchanged?',
     controls: [
-      { id: 'o2_e', name: 'Oxygen Supply (o2_e)', min: 0.0, max: 1.0, step: 0.05, value: 0.0 }
+      { id: 'o2_e', name: 'Oxygen Supply (o2_e)', min: 0.0, max: 1.0, step: 0.05, value: 0.8 }
     ]
   },
   metabolic_jam: {
@@ -4140,6 +4140,15 @@ function startScenario(scenarioId) {
   const scenario = SCENARIOS[scenarioId];
   if (!scenario || !simulation) return;
 
+  // Reset objective statuses and UI checkmarks
+  scenario.objectives.forEach(obj => {
+    scenarioObjectivesStatus[obj.id] = false;
+    const li = document.getElementById(`objective-${obj.id}`);
+    if (li) {
+      li.classList.remove('completed');
+    }
+  });
+
   // Clear flashing sets
   if (renderer) {
     if (!renderer.flashingMetaboliteIds) renderer.flashingMetaboliteIds = new Set();
@@ -4274,19 +4283,24 @@ function checkScenarioObjectives() {
 
   let allCompletedBefore = Object.values(scenarioObjectivesStatus).every(v => v === true);
 
-  scenario.objectives.forEach(obj => {
-    // If objective not completed yet, run checker
+  // Check objectives sequentially: a student cannot complete objective N+1 until objective N is met
+  let canCheck = true;
+  for (let i = 0; i < scenario.objectives.length; i++) {
+    const obj = scenario.objectives[i];
     if (!scenarioObjectivesStatus[obj.id]) {
-      const ok = obj.check();
-      if (ok) {
-        scenarioObjectivesStatus[obj.id] = true;
-        const li = document.getElementById(`objective-${obj.id}`);
-        if (li) {
-          li.classList.add('completed');
+      if (canCheck) {
+        const ok = obj.check();
+        if (ok) {
+          scenarioObjectivesStatus[obj.id] = true;
+          const li = document.getElementById(`objective-${obj.id}`);
+          if (li) {
+            li.classList.add('completed');
+          }
         }
       }
+      canCheck = false; // block checking of any subsequent incomplete objectives
     }
-  });
+  }
 
   // Handle Scenario 2 specific visual effect (pyruvate bottleneck jam)
   if (activeScenarioId === 'metabolic_jam' && renderer) {

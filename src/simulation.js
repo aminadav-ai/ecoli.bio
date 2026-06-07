@@ -313,8 +313,8 @@ export class Simulation {
     this.reset();
     if (scenarioId === 'oxygen_switch') {
       if (this.metabolites['o2_e']) {
-        this.metabolites['o2_e'].concentration = 0.0;
-        this.metabolites['o2_e'].targetConcentration = 0.0;
+        this.metabolites['o2_e'].concentration = 0.8;
+        this.metabolites['o2_e'].targetConcentration = 0.8;
       }
       if (this.metabolites['glc__D_e']) {
         this.metabolites['glc__D_e'].concentration = 10.0;
