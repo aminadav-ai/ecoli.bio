@@ -39,6 +39,10 @@ export function calculateBounds(concentrations, parameters) {
     'SUCDi': ['fum_c']
   };
 
+  // Determine if catabolite repression is active
+  const glcConc = concentrations['glc__D_c'] !== undefined ? concentrations['glc__D_c'] : 2.0;
+  const isGlucoseRepressed = glcConc > 0.2;
+
   for (const rxnId of Object.keys(staticBounds)) {
     const orig = staticBounds[rxnId];
 
@@ -76,8 +80,13 @@ export function calculateBounds(concentrations, parameters) {
 
     // Get current Vmax/Km (overridden by student if present in parameters)
     const param = parameters[rxnId] || {};
-    const vMax = param.vMax !== undefined ? param.vMax : defaultVmax;
+    let vMax = param.vMax !== undefined ? param.vMax : defaultVmax;
     const km = param.km !== undefined ? param.km : defaultKm;
+
+    // Apply Regulatory FBA: MALS and ICL are repressed (vMax = 0.0) when glucose is present
+    if ((rxnId === 'MALS' || rxnId === 'ICL') && isGlucoseRepressed) {
+      vMax = 0.0;
+    }
 
     if (coupledCheckpoints.has(rxnId)) {
       // Check reversibility
@@ -110,7 +119,15 @@ export function calculateBounds(concentrations, parameters) {
         bounds[rxnId] = { lowerBound: 0.0, upperBound: ubForward };
       }
     } else {
-      bounds[rxnId] = { lowerBound: orig.lb, upperBound: orig.ub };
+      let lb = orig.lb;
+      let ub = orig.ub;
+      if (vMax !== undefined) {
+        ub = Math.min(ub, vMax);
+        if (orig.lb < -1e-5) {
+          lb = Math.max(lb, -vMax);
+        }
+      }
+      bounds[rxnId] = { lowerBound: lb, upperBound: ub };
     }
   }
 

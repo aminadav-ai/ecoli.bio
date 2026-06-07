@@ -1179,8 +1179,29 @@ function handleReactionSelect(rxn) {
     // Set slider coordinates
     const vmaxSlider = document.getElementById('vmax-slider');
     const vmaxVal = document.getElementById('vmax-val');
-    vmaxSlider.value = simRxn.vMax;
-    vmaxVal.textContent = simRxn.vMax.toFixed(1);
+    const vmaxLabel = document.querySelector('label[for="vmax-slider"]');
+
+    const isMalsOrIcl = rxn.biggId === 'MALS' || rxn.biggId === 'ICL';
+    const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+    const isGlucoseRepressed = glcConc > 0.2;
+
+    if (vmaxSlider && vmaxVal) {
+      if (isMalsOrIcl && isGlucoseRepressed) {
+        vmaxSlider.disabled = true;
+        vmaxSlider.value = 0.0;
+        vmaxVal.textContent = "0.0 (Repressed)";
+        if (vmaxLabel) {
+          vmaxLabel.innerHTML = 'Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">(Repressed by Glucose 🔒)</span>';
+        }
+      } else {
+        vmaxSlider.disabled = false;
+        vmaxSlider.value = simRxn.vMax;
+        vmaxVal.textContent = simRxn.vMax.toFixed(1);
+        if (vmaxLabel) {
+          vmaxLabel.textContent = 'Maximum Velocity (Vmax)';
+        }
+      }
+    }
 
     const kmSlider = document.getElementById('km-slider');
     const kmVal = document.getElementById('km-val');
@@ -1330,8 +1351,15 @@ function renderPinnedReactions() {
     row.className = 'pinned-row';
     row.id = `pinned-row-${rxnId}`;
     
-    const vmaxVal = rxn.vMax !== undefined ? rxn.vMax : 15.0;
+    const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
+    const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+    const isGlucoseRepressed = glcConc > 0.2;
+    const isRepressed = isMalsOrIcl && isGlucoseRepressed;
+
+    const vmaxVal = isRepressed ? 0.0 : (rxn.vMax !== undefined ? rxn.vMax : 15.0);
     const fluxVal = rxn.flux !== undefined ? rxn.flux.toFixed(2) : '0.00';
+    const disabledAttr = isRepressed ? 'disabled' : '';
+    const labelText = isRepressed ? '0.0 (Repressed)' : vmaxVal.toFixed(1);
     
     row.innerHTML = `
       <div class="pinned-row-header">
@@ -1357,9 +1385,9 @@ function renderPinnedReactions() {
         <div class="pinned-slider-container">
           <span class="pinned-slider-label">
             <span>Vmax:</span>
-            <span id="pinned-vmax-val-${rxnId}" class="code-font">${vmaxVal.toFixed(1)}</span>
+            <span id="pinned-vmax-val-${rxnId}" class="code-font">${labelText}</span>
           </span>
-          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="100.0" step="0.5" value="${vmaxVal}" />
+          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="100.0" step="0.5" value="${vmaxVal}" ${disabledAttr} />
         </div>
       </div>
     `;
@@ -1429,6 +1457,28 @@ function updateUIPanelValues() {
     if (rxn && fluxEl) {
       fluxEl.textContent = `${rxn.flux.toFixed(2)} mM/s`;
     }
+
+    // Dynamic slider locking/repression state for pinned reactions
+    const isMalsOrIcl = rxnId === 'MALS' || rxnId === 'ICL';
+    if (isMalsOrIcl && rxn) {
+      const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+      const isGlucoseRepressed = glcConc > 0.2;
+      const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${rxnId}"]`);
+      const pinnedLabel = document.getElementById(`pinned-vmax-val-${rxnId}`);
+      if (pinnedSlider && pinnedLabel) {
+        if (isGlucoseRepressed) {
+          pinnedSlider.disabled = true;
+          pinnedSlider.value = 0.0;
+          pinnedLabel.textContent = "0.0 (Repressed)";
+        } else {
+          pinnedSlider.disabled = false;
+          if (document.activeElement !== pinnedSlider) {
+            pinnedSlider.value = rxn.vMax;
+            pinnedLabel.textContent = rxn.vMax.toFixed(1);
+          }
+        }
+      }
+    }
   });
 
   // Update left sidebar values and progress bars
@@ -1483,6 +1533,35 @@ function updateUIPanelValues() {
     if (rxn) {
       const absFlux = Math.abs(rxn.flux);
       document.getElementById('rxn-flux-val').textContent = `${rxn.flux.toFixed(2)} mM/s`;
+
+      // Update slider state dynamically (e.g. MALS/ICL repression)
+      const isMalsOrIcl = selectedReactionId === 'MALS' || selectedReactionId === 'ICL';
+      const glcConc = simulation.metabolites['glc__D_c'] ? simulation.metabolites['glc__D_c'].concentration : 2.0;
+      const isGlucoseRepressed = glcConc > 0.2;
+      
+      const vmaxSlider = document.getElementById('vmax-slider');
+      const vmaxVal = document.getElementById('vmax-val');
+      const vmaxLabel = document.querySelector('label[for="vmax-slider"]');
+
+      if (vmaxSlider && vmaxVal) {
+        if (isMalsOrIcl && isGlucoseRepressed) {
+          vmaxSlider.disabled = true;
+          vmaxSlider.value = 0.0;
+          vmaxVal.textContent = "0.0 (Repressed)";
+          if (vmaxLabel) {
+            vmaxLabel.innerHTML = 'Maximum Velocity (Vmax) <span style="color: #f87171; font-size: 0.85em; font-weight: 500;">(Repressed by Glucose 🔒)</span>';
+          }
+        } else {
+          vmaxSlider.disabled = false;
+          if (document.activeElement !== vmaxSlider) {
+            vmaxSlider.value = rxn.vMax;
+            vmaxVal.textContent = rxn.vMax.toFixed(1);
+          }
+          if (vmaxLabel) {
+            vmaxLabel.textContent = 'Maximum Velocity (Vmax)';
+          }
+        }
+      }
 
       // Draw direction bar filling
       const fillBar = document.getElementById('flux-dir-indicator');

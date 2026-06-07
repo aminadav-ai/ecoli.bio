@@ -264,6 +264,28 @@ export class Simulation {
       };
     }
     
+    // 3. Ensure all metabolites defined in initialConcentrations exist in this.metabolites
+    for (const [id, value] of Object.entries(this.initialConcentrations)) {
+      if (!this.metabolites[id]) {
+        const isBuffered = this.bufferedIds.has(id);
+        let type = 'metabolite';
+        if (id === 'glc__D_e' || id === 'glc__D_c') {
+          type = 'substrate';
+        } else if (id.includes('atp_c') || id.includes('adp_c') || id.includes('nad') || id.includes('nadh') || id.includes('coa')) {
+          type = 'cofactor';
+        }
+        
+        this.metabolites[id] = {
+          id: id,
+          name: id,
+          concentration: value,
+          targetConcentration: value,
+          isBuffered: isBuffered,
+          type: type
+        };
+      }
+    }
+    
     // Ensure placeholder reactions exist for UI metrics widgets compatibility
     if (!this.reactions['BIOMASS_Ecoli_core_w_GAM']) {
       this.reactions['BIOMASS_Ecoli_core_w_GAM'] = { id: 'BIOMASS_Ecoli_core_w_GAM', flux: 0.0, stoichiometry: {} };
