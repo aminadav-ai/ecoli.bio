@@ -4082,8 +4082,8 @@ function startScenario(scenarioId) {
   // Focus map camera on relevant pathway of the scenario
   if (renderer) {
     if (scenarioId === 'oxygen_switch') {
-      // Focus closely on the PDH and PFL pathway area (pyruvate, acetyl-CoA, formate)
-      renderer.focusOnPathway(new Set(['pyr_c', 'accoa_c', 'for_c']));
+      // Focus closely on the PDH and PFL pathway coordinates to avoid duplicate nodes (e.g. multiple pyr_c) zooming out
+      renderer.focusOnCoordinates(2000, 4400, 0.85);
     } else if (scenarioId === 'metabolic_jam') {
       renderer.fitMapToScreen(true);
     } else if (scenarioId === 'warburg_effect') {

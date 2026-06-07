@@ -774,6 +774,7 @@ export class PixiRenderer {
    * Fits the entire metabolic map centered inside the viewport canvas.
    */
   fitMapToScreen(smooth = true, startupAnimation = false) {
+    console.log('[MapRenderer] fitMapToScreen called. smooth:', smooth, 'startup:', startupAnimation);
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     
     this.metabNodes.forEach(node => {
@@ -856,6 +857,8 @@ export class PixiRenderer {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     let count = 0;
 
+    console.log('[MapRenderer] focusOnPathway called with:', Array.from(pathwayMetabIds));
+
     this.metabNodes.forEach(node => {
       if (pathwayMetabIds.has(node.biggId)) {
         if (node.x < minX) minX = node.x;
@@ -866,8 +869,10 @@ export class PixiRenderer {
       }
     });
 
+    console.log('[MapRenderer] focusOnPathway count:', count, 'bounds:', { minX, maxX, minY, maxY });
+
     if (count === 0) {
-      // Fallback to full fit
+      console.warn('[MapRenderer] focusOnPathway count is 0, falling back to fitMapToScreen');
       this.fitMapToScreen();
       return;
     }
@@ -880,6 +885,8 @@ export class PixiRenderer {
     const scaleY = (this.app.renderer.height - padding) / boxH;
     
     this.targetZoom = Math.max(0.15, Math.min(1.2, Math.min(scaleX, scaleY)));
+
+    console.log('[MapRenderer] focusOnPathway renderer size:', this.app.renderer.width, 'x', this.app.renderer.height, 'scales:', scaleX, scaleY, 'targetZoom:', this.targetZoom);
 
     const boxCenterX = (minX + maxX) / 2;
     const boxCenterY = (minY + maxY) / 2;
