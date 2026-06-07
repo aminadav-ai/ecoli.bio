@@ -1215,11 +1215,18 @@ export class PixiRenderer {
    * Main rendering update loop called by the controller.
    * Updates metabolites pulsation and draws animated flow particles.
    */
-  renderUpdate(simMetabolites, simReactions, animationFrameCount, isDead = false) {
+  renderUpdate(simMetabolites, simReactions, animationFrameCount, isDead = false, isPaused = false) {
     if (!this.viewport) return;
 
     this.lastSimReactions = simReactions;
     this.updateReactionBadgeHighlight();
+
+    if (this.visualFrameCount === undefined) {
+      this.visualFrameCount = 0;
+    }
+    if (!isPaused && !isDead) {
+      this.visualFrameCount += 1;
+    }
 
     // Update camera layout values dynamically to center focused highlights if needed
     // 1. Draw Metabolites Pulsation
@@ -1352,10 +1359,10 @@ export class PixiRenderer {
           let t;
           if (flux > 0) {
             // Forward flow: start at 0, go to 1
-            t = (animationFrameCount * speedFactor + offset) % 1.0;
+            t = (this.visualFrameCount * speedFactor + offset) % 1.0;
           } else {
             // Reversible flow (backward): start at 1, go to 0
-            t = 1.0 - ((animationFrameCount * speedFactor + offset) % 1.0);
+            t = 1.0 - ((this.visualFrameCount * speedFactor + offset) % 1.0);
           }
 
           // Linearly interpolate coordinates from precalculated path points

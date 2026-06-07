@@ -578,7 +578,8 @@ function gameLoop(currentTime) {
     simulation.metabolites,
     simulation.reactions,
     animationFrameCount,
-    isDead
+    isDead,
+    isPaused
   );
 
   // Update UI panel values (concentrations in lists, sliders, labels, active chart)
