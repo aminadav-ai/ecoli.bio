@@ -124,6 +124,7 @@ app.post('/api/chat', async (req, res) => {
 
     const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
 
+CRITICAL WARNING: The user interacts with a live simulation, meaning that fluxes, growth rates, and concentrations change in real time with every user action. Always look up all values, rates, and statuses from the CURRENT simulation state context below. DO NOT reuse numbers, fluxes (e.g. CYTBO3_4pp, growth rate, etc.) or parameter values from previous messages in the chat history, as they are now stale and incorrect.
 
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
