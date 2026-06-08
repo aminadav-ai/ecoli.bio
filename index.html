@@ -100,22 +100,11 @@
           <div class="header-controls">
             <button id="play-pause-btn" class="btn btn-primary header-btn">⏸ Pause</button>
             <button id="reset-btn" class="btn btn-secondary header-btn">↺ Reset</button>
-            <div class="solver-status-container">
-              <button id="solver-status-badge" class="solver-badge work" title="Click to view changing components">
-                <span class="status-dot"></span>
-                <span class="status-text">WORK</span>
-                <span class="status-pct">100%</span>
-              </button>
-              <div id="solver-details-dropdown" class="solver-dropdown glass hidden">
-                <div class="dropdown-header">
-                  <h3>Solver Activity</h3>
-                  <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
-                </div>
-                <div id="solver-details-body" class="solver-details-body">
-                  <!-- Will be populated dynamically -->
-                </div>
-              </div>
-            </div>
+            <button id="solver-status-badge" class="solver-badge work" title="Click to view changing components">
+              <span class="status-dot"></span>
+              <span class="status-text">WORK</span>
+              <span class="status-pct">100%</span>
+            </button>
           </div>
 
           <!-- Map Settings (Gear) Trigger -->
@@ -152,6 +141,17 @@
           </div>
         </div>
 
+        <!-- Solver Activity Dropdown -->
+        <div id="solver-details-dropdown" class="solver-dropdown glass hidden">
+          <div class="dropdown-header">
+            <h3>Solver Activity</h3>
+            <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
+          </div>
+          <div id="solver-details-body" class="solver-details-body">
+            <!-- Will be populated dynamically -->
+          </div>
+        </div>
+
         <!-- Sidebar Navigation Tabs -->
         <div class="panel-tabs">
           <button id="tab-metrics" class="panel-tab active">Metrics</button>
@@ -182,14 +182,14 @@
             <h2>Environmental Parameters</h2>
             <div class="param-slider">
               <div class="param-label-row">
-                <label for="global-o2-slider">Oxygen Supply (o2_e)</label>
+                <label for="global-o2-slider" class="click-focus-env" data-metab-id="o2_e">Oxygen Supply (o2_e)</label>
                 <span id="global-o2-val" class="code-font">1.0</span>
               </div>
               <input type="range" id="global-o2-slider" min="0.0" max="2.0" step="0.1" value="1.0" />
             </div>
             <div class="param-slider" style="margin-top: 1rem;">
               <div class="param-label-row">
-                <label for="global-glc-slider">Glucose Supply (glc__D_e)</label>
+                <label for="global-glc-slider" class="click-focus-env" data-metab-id="glc__D_e">Glucose Supply (glc__D_e)</label>
                 <span id="global-glc-val" class="code-font">10.0</span>
               </div>
               <input type="range" id="global-glc-slider" min="0.0" max="20.0" step="0.5" value="10.0" />

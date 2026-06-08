@@ -1105,7 +1105,7 @@ function setupUIListeners() {
       settingsDropdown.classList.add('hidden');
     }
     const solverDropdown = document.getElementById('solver-details-dropdown');
-    if (solverDropdown && !e.target.closest('.solver-status-container')) {
+    if (solverDropdown && !e.target.closest('#solver-status-badge') && !e.target.closest('#solver-details-dropdown')) {
       solverDropdown.classList.add('hidden');
     }
     const userDropdown = document.getElementById('user-profile-dropdown');
@@ -1146,6 +1146,19 @@ function setupUIListeners() {
       solverDropdown.classList.add('hidden');
     });
   }
+
+  // Environmental sliders name click to focus
+  document.querySelectorAll('.click-focus-env').forEach(el => {
+    el.addEventListener('click', () => {
+      const metabId = el.getAttribute('data-metab-id');
+      const node = renderer.metabNodes.find(n => n.biggId === metabId);
+      if (node) {
+        renderer.selectMetabolite(node.id);
+        handleMetaboliteSelect(node);
+        renderer.focusOnCoordinates(node.x, node.y, 0.85);
+      }
+    });
+  });
 
 
 }
@@ -1930,7 +1943,8 @@ function populateSolverDetails() {
       list.className = 'solver-details-list';
       currentChangingReactions.slice(0, 15).forEach(rxn => {
         const li = document.createElement('li');
-        li.className = 'solver-details-item';
+        li.className = 'solver-details-item click-focus-rxn';
+        li.setAttribute('data-rxn-id', rxn.id);
         const sign = rxn.delta >= 0 ? '+' : '';
         const deltaClass = rxn.delta >= 0 ? 'delta-up' : 'delta-down';
         li.innerHTML = `
@@ -1958,7 +1972,8 @@ function populateSolverDetails() {
       list.className = 'solver-details-list';
       currentChangingMetabolites.slice(0, 15).forEach(metab => {
         const li = document.createElement('li');
-        li.className = 'solver-details-item';
+        li.className = 'solver-details-item click-focus-metab';
+        li.setAttribute('data-metab-id', metab.id);
         const sign = metab.delta >= 0 ? '+' : '';
         const deltaClass = metab.delta >= 0 ? 'delta-up' : 'delta-down';
         li.innerHTML = `
@@ -1976,6 +1991,32 @@ function populateSolverDetails() {
       metabSection.appendChild(list);
       body.appendChild(metabSection);
     }
+
+    // Add click listeners to focus components on the map
+    body.querySelectorAll('.solver-details-item.click-focus-rxn').forEach(el => {
+      el.addEventListener('click', () => {
+        const rxnId = el.getAttribute('data-rxn-id');
+        const rxn = renderer.reactions.find(r => r.biggId === rxnId);
+        if (rxn) {
+          renderer.selectReaction(rxn.id);
+          handleReactionSelect(rxn);
+          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85);
+        }
+      });
+    });
+
+    body.querySelectorAll('.solver-details-item.click-focus-metab').forEach(el => {
+      el.addEventListener('click', () => {
+        const metabId = el.getAttribute('data-metab-id');
+        const node = renderer.metabNodes.find(n => n.biggId === metabId);
+        if (node) {
+          renderer.selectMetabolite(node.id);
+          handleMetaboliteSelect(node);
+          renderer.focusOnCoordinates(node.x, node.y, 0.85);
+        }
+      });
+    });
+
   } else {
     body.innerHTML = `
       <div class="solver-relax-msg">

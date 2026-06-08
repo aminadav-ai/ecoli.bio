@@ -4000,6 +4000,41 @@ input[type="range"]::-webkit-slider-thumb:hover {
   animation: slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.left-panel .solver-dropdown {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  z-index: 5;
+}
+
+.solver-details-item.click-focus-rxn,
+.solver-details-item.click-focus-metab {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.solver-details-item.click-focus-rxn:hover,
+.solver-details-item.click-focus-metab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.click-focus-env {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.click-focus-env:hover {
+  color: #818cf8 !important;
+}
+
 .solver-details-body {
   overflow-y: auto;
   max-height: 250px;

@@ -348,8 +348,8 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
     for (const [mId, metab] of Object.entries(sim.metabolites)) {
       const oldC = prevConc[mId] !== undefined ? prevConc[mId] : metab.concentration;
       const newC = metab.concentration;
-      // Skip environmental parameters from contributing to 'changing' state
-      if (mId === 'o2_e' || mId === 'glc__D_e') continue;
+      // Skip all extracellular metabolites from contributing to 'changing' state
+      if (mId.endsWith('_e')) continue;
       
       const delta = newC - oldC;
       if (Math.abs(delta) > epsilon) {
