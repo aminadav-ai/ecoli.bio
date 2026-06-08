@@ -555,6 +555,7 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       }
 
       updateSolverStatusUI();
+      updateUserStatusUI();
       
       if (data.fluxes) {
         simulation.updateFluxes(data.fluxes, data.biomass_flux);
