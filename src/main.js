@@ -234,6 +234,8 @@ let isSolverWorking = true;
 let solverHistory = [];
 let currentChangingMetabolites = [];
 let currentChangingReactions = [];
+let accumulatedChangingMetabolites = {};
+let accumulatedChangingReactions = {};
 let animationFrameCount = 0;
 
 let lastBoundsFetchTime = 0;
@@ -501,6 +503,15 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       isSolverWorking = !data.stabilized;
       currentChangingMetabolites = data.changingMetabolites || [];
       currentChangingReactions = data.changingReactions || [];
+
+      // Accumulate changes over time
+      currentChangingReactions.forEach(rxn => {
+        accumulatedChangingReactions[rxn.id] = rxn;
+      });
+      currentChangingMetabolites.forEach(metab => {
+        accumulatedChangingMetabolites[metab.id] = metab;
+      });
+
       updateSolverStatusUI();
       
       if (data.fluxes) {
@@ -642,6 +653,8 @@ function setupUIListeners() {
     simulation.reset();
     chartHistory = [];
     solverHistory = []; // Clear solver history
+    accumulatedChangingReactions = {};
+    accumulatedChangingMetabolites = {};
     isDead = false;
     const overlay = document.getElementById('death-overlay');
     if (overlay) overlay.classList.add('hidden');
@@ -1144,6 +1157,16 @@ function setupUIListeners() {
     solverDetailsCloseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       solverDropdown.classList.add('hidden');
+    });
+  }
+
+  const solverClearBtn = document.getElementById('solver-clear-btn');
+  if (solverClearBtn) {
+    solverClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      accumulatedChangingReactions = {};
+      accumulatedChangingMetabolites = {};
+      populateSolverDetails();
     });
   }
 
@@ -1940,23 +1963,18 @@ function populateSolverDetails() {
   `;
   body.appendChild(loadInfo);
 
-  if (isSolverWorking) {
-    if (currentChangingReactions.length === 0 && currentChangingMetabolites.length === 0) {
-      const emptyText = document.createElement('div');
-      emptyText.className = 'solver-empty-text';
-      emptyText.textContent = 'Solver is calculating fluxes...';
-      body.appendChild(emptyText);
-      return;
-    }
+  const rxns = Object.values(accumulatedChangingReactions);
+  const metabs = Object.values(accumulatedChangingMetabolites);
 
-    if (currentChangingReactions.length > 0) {
+  if (rxns.length > 0 || metabs.length > 0) {
+    if (rxns.length > 0) {
       const rxnSection = document.createElement('div');
       rxnSection.className = 'solver-details-section';
-      rxnSection.innerHTML = `<h4>Changing Reactions (${currentChangingReactions.length})</h4>`;
+      rxnSection.innerHTML = `<h4>Changing Reactions (${rxns.length})</h4>`;
       
       const list = document.createElement('ul');
       list.className = 'solver-details-list';
-      currentChangingReactions.slice(0, 15).forEach(rxn => {
+      rxns.slice(0, 15).forEach(rxn => {
         const li = document.createElement('li');
         li.className = 'solver-details-item click-focus-rxn';
         li.setAttribute('data-rxn-id', rxn.id);
@@ -1968,24 +1986,24 @@ function populateSolverDetails() {
         `;
         list.appendChild(li);
       });
-      if (currentChangingReactions.length > 15) {
+      if (rxns.length > 15) {
         const more = document.createElement('li');
         more.className = 'solver-details-more';
-        more.textContent = `...and ${currentChangingReactions.length - 15} more`;
+        more.textContent = `...and ${rxns.length - 15} more`;
         list.appendChild(more);
       }
       rxnSection.appendChild(list);
       body.appendChild(rxnSection);
     }
 
-    if (currentChangingMetabolites.length > 0) {
+    if (metabs.length > 0) {
       const metabSection = document.createElement('div');
       metabSection.className = 'solver-details-section';
-      metabSection.innerHTML = `<h4>Changing Metabolites (${currentChangingMetabolites.length})</h4>`;
+      metabSection.innerHTML = `<h4>Changing Metabolites (${metabs.length})</h4>`;
       
       const list = document.createElement('ul');
       list.className = 'solver-details-list';
-      currentChangingMetabolites.slice(0, 15).forEach(metab => {
+      metabs.slice(0, 15).forEach(metab => {
         const li = document.createElement('li');
         li.className = 'solver-details-item click-focus-metab';
         li.setAttribute('data-metab-id', metab.id);
@@ -1997,10 +2015,10 @@ function populateSolverDetails() {
         `;
         list.appendChild(li);
       });
-      if (currentChangingMetabolites.length > 15) {
+      if (metabs.length > 15) {
         const more = document.createElement('li');
         more.className = 'solver-details-more';
-        more.textContent = `...and ${currentChangingMetabolites.length - 15} more`;
+        more.textContent = `...and ${metabs.length - 15} more`;
         list.appendChild(more);
       }
       metabSection.appendChild(list);
@@ -2032,15 +2050,31 @@ function populateSolverDetails() {
       });
     });
 
+    // If resting, append a small info block at the bottom
+    if (!isSolverWorking) {
+      const restBadge = document.createElement('div');
+      restBadge.className = 'solver-stabilized-footer';
+      restBadge.innerHTML = `☕ Steady state reached. Solver is resting.`;
+      body.appendChild(restBadge);
+    }
+
   } else {
-    const relaxMsg = document.createElement('div');
-    relaxMsg.className = 'solver-relax-msg';
-    relaxMsg.innerHTML = `
-      <span class="relax-icon">☕</span>
-      <p>System has stabilized into a steady state.</p>
-      <p class="sub-text">The solver is resting and not making API calls until parameters change.</p>
-    `;
-    body.appendChild(relaxMsg);
+    // Both are empty
+    if (isSolverWorking) {
+      const emptyText = document.createElement('div');
+      emptyText.className = 'solver-empty-text';
+      emptyText.textContent = 'Solver is calculating fluxes...';
+      body.appendChild(emptyText);
+    } else {
+      const relaxMsg = document.createElement('div');
+      relaxMsg.className = 'solver-relax-msg';
+      relaxMsg.innerHTML = `
+        <span class="relax-icon">☕</span>
+        <p>System has stabilized into a steady state.</p>
+        <p class="sub-text">The solver is resting and not making API calls until parameters change.</p>
+      `;
+      body.appendChild(relaxMsg);
+    }
   }
 }
 

@@ -253,7 +253,10 @@
       <div id="solver-details-dropdown" class="solver-dropdown glass hidden">
         <div class="dropdown-header">
           <h3>Solver Activity</h3>
-          <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="solver-clear-btn" class="btn-clear-activity" title="Clear accumulated activity">Clear</button>
+            <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
+          </div>
         </div>
         <div id="solver-details-body" class="solver-details-body">
           <!-- Will be populated dynamically -->
