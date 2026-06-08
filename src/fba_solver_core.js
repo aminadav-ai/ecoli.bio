@@ -23,11 +23,24 @@ if (fs.existsSync(mapDataPath)) {
 const userSimulations = new Map();
 let referenceNormalFluxes = null;
 
+// Periodically prune simulations inactive for more than 15 minutes to save RAM
+setInterval(() => {
+  const now = Date.now();
+  const timeout = 15 * 60 * 1000; // 15 minutes
+  for (const [id, sim] of userSimulations.entries()) {
+    if (sim.lastAccessed && (now - sim.lastAccessed > timeout)) {
+      userSimulations.delete(id);
+      console.log(`[Solver] Pruned inactive simulation for guest/user: ${id}`);
+    }
+  }
+}, 60 * 1000); // Check every minute
+
 function getOrCreateSimulation(guestId) {
   const id = guestId || 'default_user';
-  if (!userSimulations.has(id)) {
+  let sim = userSimulations.get(id);
+  if (!sim) {
     if (escherMapData) {
-      const sim = new Simulation(escherMapData);
+      sim = new Simulation(escherMapData);
       if (referenceNormalFluxes) {
         sim.normalFluxes = { ...referenceNormalFluxes };
       }
@@ -37,12 +50,12 @@ function getOrCreateSimulation(guestId) {
       return null;
     }
   } else {
-    const sim = userSimulations.get(id);
     if (Object.keys(sim.normalFluxes).length === 0 && referenceNormalFluxes) {
       sim.normalFluxes = { ...referenceNormalFluxes };
     }
   }
-  return userSimulations.get(id);
+  sim.lastAccessed = Date.now();
+  return sim;
 }
 
 function ensureReferenceNormalFluxes(highsInstance, staticLpHeader) {

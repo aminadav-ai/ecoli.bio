@@ -443,9 +443,42 @@ async function bootstrap() {
   console.log('[App] Metabolic Simulator bootstrapped.');
 }
 
-/**
- * High-precision Game Loop matching 60fps rendering with a semi-fixed 20Hz simulation step.
- */
+// Throttle utility with leading and trailing edge support to rate-limit server calls
+function throttle(func, limit) {
+  let lastFunc;
+  let lastRan;
+  return function(...args) {
+    if (!lastRan) {
+      func(...args);
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(() => {
+        if ((Date.now() - lastRan) >= limit) {
+          func(...args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
+    }
+  };
+}
+
+const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args), 200);
+
+const throttledUpdateVmax = throttle((rxnId, val) => {
+  if (simulation) {
+    simulation.updateParameter(rxnId, 'vMax', val);
+    wakeUpSolver();
+  }
+}, 200);
+
+const throttledUpdateKm = throttle((rxnId, val) => {
+  if (simulation) {
+    simulation.updateParameter(rxnId, 'km', val);
+    wakeUpSolver();
+  }
+}, 200);
+
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
   if (isFetchingBounds || !simulation) return;
@@ -709,7 +742,7 @@ function setupUIListeners() {
           saveO2PreferenceToDb(val);
         }
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        throttledUpdateFbaBounds(performance.now());
       }
     });
   }
@@ -728,7 +761,7 @@ function setupUIListeners() {
           localStorage.setItem('global_glc__D_e', val);
         }
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        throttledUpdateFbaBounds(performance.now());
       }
     });
   }
@@ -955,14 +988,13 @@ function setupUIListeners() {
     const val = parseFloat(e.target.value);
     vmaxVal.textContent = val.toFixed(1);
     if (selectedReactionId) {
-      simulation.updateParameter(selectedReactionId, 'vMax', val);
-      
-      // Update pinned reaction slider if it exists
+      // Update pinned reaction slider if it exists (instant UI feedback)
       const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${selectedReactionId}"]`);
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
       if (pinnedSlider) pinnedSlider.value = val;
       if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
-      wakeUpSolver();
+      
+      throttledUpdateVmax(selectedReactionId, val);
     }
   });
 
@@ -972,8 +1004,7 @@ function setupUIListeners() {
     const val = parseFloat(e.target.value);
     kmVal.textContent = val.toFixed(2);
     if (selectedReactionId) {
-      simulation.updateParameter(selectedReactionId, 'km', val);
-      wakeUpSolver();
+      throttledUpdateKm(selectedReactionId, val);
     }
   });
 
@@ -1655,7 +1686,6 @@ function renderPinnedReactions() {
     slider.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       label.textContent = val.toFixed(1);
-      simulation.updateParameter(rxnId, 'vMax', val);
       
       if (selectedReactionId === rxnId) {
         const vmaxSlider = document.getElementById('vmax-slider');
@@ -1663,7 +1693,7 @@ function renderPinnedReactions() {
         if (vmaxSlider) vmaxSlider.value = val;
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
       }
-      wakeUpSolver();
+      throttledUpdateVmax(rxnId, val);
     });
     
     container.appendChild(row);
@@ -4707,7 +4737,7 @@ function startScenario(scenarioId) {
           simulation.metabolites[ctrl.id].targetConcentration = val;
           // Trigger FBA solver bounds immediately
           wakeUpSolver();
-          updateFbaBounds(performance.now());
+          throttledUpdateFbaBounds(performance.now());
         }
       });
       

@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
@@ -22,6 +23,7 @@ if (fs.existsSync('.env')) {
 }
 
 const app = express();
+app.use(compression());
 const PORT = process.env.PORT || 8080;
 const solveFbaRateLimits = new Map();
 
