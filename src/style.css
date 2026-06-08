@@ -2367,17 +2367,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   flex: none !important;
 }
 
-.speed-control-compact {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.speed-control-compact input[type="range"] {
-  width: 80px;
-}
 
 /* Checkbox styling */
 .ode-settings-section {

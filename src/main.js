@@ -230,7 +230,6 @@ let simulation = null;
 let renderer = null;
 let isPaused = false;
 let isDead = false;
-let speedMultiplier = 1.0;
 let animationFrameCount = 0;
 
 let lastBoundsFetchTime = 0;
@@ -645,13 +644,6 @@ function setupUIListeners() {
     });
   }
 
-  // Speed slider
-  const speedSlider = document.getElementById('speed-slider');
-  const speedVal = document.getElementById('speed-val');
-  speedSlider.addEventListener('input', (e) => {
-    speedMultiplier = parseFloat(e.target.value);
-    speedVal.textContent = `${speedMultiplier.toFixed(1)}x`;
-  });
 
   // Global Oxygen slider
   const globalO2Slider = document.getElementById('global-o2-slider');
