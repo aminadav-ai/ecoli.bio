@@ -759,11 +759,11 @@ export class PixiRenderer {
     });
   }
 
-  getUsableCenterX() {
+  getUsableCenterX(customLeftSpace) {
     if (window.innerWidth <= 768) {
       return this.app.renderer.width / 2;
     }
-    const leftSpace = 420;
+    const leftSpace = customLeftSpace !== undefined ? customLeftSpace : 420;
     const rightPanel = document.getElementById('inspector-panel');
     const rightSpace = (rightPanel && !rightPanel.classList.contains('hidden-panel')) ? 400 : 0;
     return (this.app.renderer.width + leftSpace - rightSpace) / 2;
@@ -900,9 +900,9 @@ export class PixiRenderer {
   /**
    * Smoothly pans and zooms the camera to focus on specific coordinates.
    */
-  focusOnCoordinates(x, y, targetZoom = 0.85) {
+  focusOnCoordinates(x, y, targetZoom = 0.85, customLeftSpace) {
     this.targetZoom = targetZoom;
-    this.targetPosition.x = this.getUsableCenterX() - x * this.targetZoom;
+    this.targetPosition.x = this.getUsableCenterX(customLeftSpace) - x * this.targetZoom;
     this.targetPosition.y = this.app.renderer.height / 2 - y * this.targetZoom;
 
     this.isCameraAnimating = true;

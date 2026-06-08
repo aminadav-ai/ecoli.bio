@@ -2069,8 +2069,7 @@ function populateSolverDetails() {
         const rxn = renderer.reactions.find(r => r.biggId === rxnId);
         if (rxn) {
           renderer.selectReaction(rxn.id);
-          handleReactionSelect(rxn);
-          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85);
+          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85, 760);
         }
       });
     });
@@ -2081,8 +2080,7 @@ function populateSolverDetails() {
         const node = renderer.metabNodes.find(n => n.biggId === metabId);
         if (node) {
           renderer.selectMetabolite(node.id);
-          handleMetaboliteSelect(node);
-          renderer.focusOnCoordinates(node.x, node.y, 0.85);
+          renderer.focusOnCoordinates(node.x, node.y, 0.85, 760);
         }
       });
     });
