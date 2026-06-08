@@ -433,6 +433,9 @@ async function bootstrap() {
     }
   }, 1000);
 
+  // Initialize Scenarios and AI Chat
+  setupScenariosAndChat();
+
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
