@@ -1901,7 +1901,6 @@ function updateSolverStatusUI() {
 
   const dot = badge.querySelector('.status-dot');
   const text = badge.querySelector('.status-text');
-  const pctSpan = badge.querySelector('.status-pct');
 
   if (isSolverWorking) {
     badge.className = 'solver-badge work';
@@ -1911,15 +1910,11 @@ function updateSolverStatusUI() {
     text.textContent = 'RELAX';
   }
 
-  // Calculate percentage of working time in the last 5 minutes (300s)
-  let pct = 0;
-  if (solverHistory.length > 0) {
-    const activeSeconds = solverHistory.reduce((sum, val) => sum + val, 0);
-    pct = Math.round((activeSeconds / solverHistory.length) * 100);
-  } else {
-    pct = isSolverWorking ? 100 : 0;
+  // Auto-update solver details if dropdown is open and active
+  const solverDropdown = document.getElementById('solver-details-dropdown');
+  if (solverDropdown && !solverDropdown.classList.contains('hidden')) {
+    populateSolverDetails();
   }
-  pctSpan.textContent = `${pct}%`;
 }
 
 function populateSolverDetails() {
@@ -1928,9 +1923,29 @@ function populateSolverDetails() {
 
   body.innerHTML = '';
 
+  // Calculate percentage of working time in the last 5 minutes (300s)
+  let pct = 0;
+  if (solverHistory.length > 0) {
+    const activeSeconds = solverHistory.reduce((sum, val) => sum + val, 0);
+    pct = Math.round((activeSeconds / solverHistory.length) * 100);
+  } else {
+    pct = isSolverWorking ? 100 : 0;
+  }
+
+  const loadInfo = document.createElement('div');
+  loadInfo.className = 'solver-load-info';
+  loadInfo.innerHTML = `
+    <span class="load-label">Solver Load</span>
+    <span class="load-val">${pct}%</span>
+  `;
+  body.appendChild(loadInfo);
+
   if (isSolverWorking) {
     if (currentChangingReactions.length === 0 && currentChangingMetabolites.length === 0) {
-      body.innerHTML = `<div class="solver-empty-text">Solver is calculating fluxes...</div>`;
+      const emptyText = document.createElement('div');
+      emptyText.className = 'solver-empty-text';
+      emptyText.textContent = 'Solver is calculating fluxes...';
+      body.appendChild(emptyText);
       return;
     }
 
@@ -2018,13 +2033,14 @@ function populateSolverDetails() {
     });
 
   } else {
-    body.innerHTML = `
-      <div class="solver-relax-msg">
-        <span class="relax-icon">☕</span>
-        <p>System has stabilized into a steady state.</p>
-        <p class="sub-text">The solver is resting and not making API calls until parameters change.</p>
-      </div>
+    const relaxMsg = document.createElement('div');
+    relaxMsg.className = 'solver-relax-msg';
+    relaxMsg.innerHTML = `
+      <span class="relax-icon">☕</span>
+      <p>System has stabilized into a steady state.</p>
+      <p class="sub-text">The solver is resting and not making API calls until parameters change.</p>
     `;
+    body.appendChild(relaxMsg);
   }
 }
 
