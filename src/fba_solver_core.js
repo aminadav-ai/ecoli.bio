@@ -272,6 +272,16 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
 
   const sim = getOrCreateSimulation(guestId);
   if (sim) {
+    // Record state before updates and tick
+    const prevConc = {};
+    for (const [mId, metab] of Object.entries(sim.metabolites)) {
+      prevConc[mId] = metab.concentration;
+    }
+    const prevFlux = {};
+    for (const [rId, rxn] of Object.entries(sim.reactions)) {
+      prevFlux[rId] = rxn.flux;
+    }
+
     if (userEmail) {
       sim.userEmail = userEmail;
     }
@@ -329,6 +339,48 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
       calculatedConcentrations[mId] = metab.concentration;
     }
     result.concentrations = calculatedConcentrations;
+
+    // Compare new state with previous state to detect stabilization
+    const changingMetabolites = [];
+    const changingReactions = [];
+    const epsilon = 1e-4;
+
+    for (const [mId, metab] of Object.entries(sim.metabolites)) {
+      const oldC = prevConc[mId] !== undefined ? prevConc[mId] : metab.concentration;
+      const newC = metab.concentration;
+      // Skip environmental parameters from contributing to 'changing' state
+      if (mId === 'o2_e' || mId === 'glc__D_e') continue;
+      
+      const delta = newC - oldC;
+      if (Math.abs(delta) > epsilon) {
+        changingMetabolites.push({
+          id: mId,
+          name: metab.name || mId,
+          delta: delta
+        });
+      }
+    }
+
+    for (const [rId, rxn] of Object.entries(sim.reactions)) {
+      const oldF = prevFlux[rId] !== undefined ? prevFlux[rId] : rxn.flux;
+      const newF = rxn.flux;
+      const delta = newF - oldF;
+      if (Math.abs(delta) > epsilon) {
+        changingReactions.push({
+          id: rId,
+          name: rxn.name || rId,
+          delta: delta
+        });
+      }
+    }
+
+    // Sort by magnitude of change descending
+    changingMetabolites.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    changingReactions.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+    result.stabilized = (changingMetabolites.length === 0 && changingReactions.length === 0);
+    result.changingMetabolites = changingMetabolites;
+    result.changingReactions = changingReactions;
   }
 
   return result;

@@ -3913,3 +3913,195 @@ input[type="range"]::-webkit-slider-thumb:hover {
   left: 8px;
 }
 
+/* Solver Badge next to Reset Button */
+.solver-status-container {
+  position: relative;
+  display: inline-block;
+}
+
+.solver-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.4);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.solver-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.solver-badge .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.solver-badge.work {
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #f97316;
+}
+
+.solver-badge.work .status-dot {
+  background-color: #f97316;
+  box-shadow: 0 0 8px #f97316;
+  animation: solver-pulse 1.2s infinite alternate;
+}
+
+.solver-badge.relax {
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.solver-badge.relax .status-dot {
+  background-color: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.solver-badge .status-pct {
+  margin-left: auto;
+  opacity: 0.8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+@keyframes solver-pulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Solver Dropdown */
+.solver-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 300px;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.solver-details-body {
+  overflow-y: auto;
+  max-height: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solver-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.solver-details-section h4 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 4px;
+  margin: 0;
+}
+
+.solver-details-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solver-details-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.solver-details-item .item-name {
+  color: #cbd5e1;
+}
+
+.solver-details-item .delta-up {
+  color: #10b981;
+}
+
+.solver-details-item .delta-down {
+  color: #ef4444;
+}
+
+.solver-details-more {
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.solver-relax-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 16px 8px;
+  color: #94a3b8;
+}
+
+.solver-relax-msg .relax-icon {
+  font-size: 28px;
+  animation: solver-float 3s ease-in-out infinite;
+}
+
+.solver-relax-msg p {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.solver-relax-msg .sub-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.solver-empty-text {
+  color: #64748b;
+  font-size: 11px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+@keyframes solver-float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+

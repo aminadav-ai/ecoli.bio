@@ -230,6 +230,10 @@ let simulation = null;
 let renderer = null;
 let isPaused = false;
 let isDead = false;
+let isSolverWorking = true;
+let solverHistory = [];
+let currentChangingMetabolites = [];
+let currentChangingReactions = [];
 let animationFrameCount = 0;
 
 let lastBoundsFetchTime = 0;
@@ -368,6 +372,16 @@ async function bootstrap() {
     }
   }
 
+  // Restore saved glucose preference
+  const savedGlc = localStorage.getItem('global_glc__D_e');
+  if (savedGlc !== null) {
+    const glcVal = parseFloat(savedGlc);
+    if (!isNaN(glcVal) && simulation.metabolites['glc__D_e']) {
+      simulation.metabolites['glc__D_e'].concentration = glcVal;
+      simulation.metabolites['glc__D_e'].targetConcentration = glcVal;
+    }
+  }
+
   // 3. Initialize visual renderer
   const canvasElement = document.getElementById('pixi-canvas');
   renderer = new PixiRenderer(
@@ -408,8 +422,16 @@ async function bootstrap() {
   // Restore saved GEO dataset/analysis state from localStorage
   restoreGeoStateFromLocalStorage();
 
-  // Initialize Scenarios and AI Chat
-  setupScenariosAndChat();
+  // Initialize solver history sampler (every 1s)
+  setInterval(() => {
+    if (!isPaused && !isDead) {
+      solverHistory.push(isSolverWorking ? 1 : 0);
+      if (solverHistory.length > 300) {
+        solverHistory.shift();
+      }
+      updateSolverStatusUI();
+    }
+  }, 1000);
 
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
@@ -471,6 +493,13 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     if (res.ok) {
       const data = await res.json();
       activeRepressions = data.repressed || {};
+      
+      // Update solver status and lists based on FBA result
+      isSolverWorking = !data.stabilized;
+      currentChangingMetabolites = data.changingMetabolites || [];
+      currentChangingReactions = data.changingReactions || [];
+      updateSolverStatusUI();
+      
       if (data.fluxes) {
         simulation.updateFluxes(data.fluxes, data.biomass_flux);
         isDead = data.is_dead || false;
@@ -568,7 +597,9 @@ function gameLoop(currentTime) {
   if (!isPaused && !isDead) {
     if (currentTime - lastBoundsFetchTime >= 250) {
       lastBoundsFetchTime = currentTime;
-      updateFbaBounds(currentTime);
+      if (isSolverWorking) {
+        updateFbaBounds(currentTime);
+      }
     }
   }
 
@@ -607,12 +638,14 @@ function setupUIListeners() {
   const resetHandler = () => {
     simulation.reset();
     chartHistory = [];
+    solverHistory = []; // Clear solver history
     isDead = false;
     const overlay = document.getElementById('death-overlay');
     if (overlay) overlay.classList.add('hidden');
     console.log('[App] Simulation state reset.');
 
     // Recalculate fluxes immediately on reset
+    wakeUpSolver();
     updateFbaBounds(performance.now(), { reset: true });
 
     // Refresh UI parameters and inputs to default values
@@ -659,6 +692,26 @@ function setupUIListeners() {
           localStorage.setItem('global_o2_e', val);
           saveO2PreferenceToDb(val);
         }
+        wakeUpSolver();
+        updateFbaBounds(performance.now());
+      }
+    });
+  }
+
+  // Global Glucose slider
+  const globalGlcSlider = document.getElementById('global-glc-slider');
+  const globalGlcVal = document.getElementById('global-glc-val');
+  if (globalGlcSlider && globalGlcVal) {
+    globalGlcSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      globalGlcVal.textContent = val.toFixed(1);
+      if (simulation && simulation.metabolites['glc__D_e']) {
+        simulation.metabolites['glc__D_e'].concentration = val;
+        simulation.metabolites['glc__D_e'].targetConcentration = val;
+        if (!activeScenarioId) {
+          localStorage.setItem('global_glc__D_e', val);
+        }
+        wakeUpSolver();
         updateFbaBounds(performance.now());
       }
     });
@@ -730,6 +783,8 @@ function setupUIListeners() {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
         console.log(`[App] Spiked ${selectedMetaboliteId} by +${amount} mM`);
+        wakeUpSolver();
+        updateFbaBounds(performance.now());
       }
     });
   });
@@ -739,6 +794,8 @@ function setupUIListeners() {
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
       simulation.deplete(selectedMetaboliteId);
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
+      wakeUpSolver();
+      updateFbaBounds(performance.now());
     }
   });
 
@@ -889,6 +946,7 @@ function setupUIListeners() {
       const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
       if (pinnedSlider) pinnedSlider.value = val;
       if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
+      wakeUpSolver();
     }
   });
 
@@ -899,6 +957,7 @@ function setupUIListeners() {
     kmVal.textContent = val.toFixed(2);
     if (selectedReactionId) {
       simulation.updateParameter(selectedReactionId, 'km', val);
+      wakeUpSolver();
     }
   });
 
@@ -1045,6 +1104,10 @@ function setupUIListeners() {
     if (settingsDropdown && !e.target.closest('.settings-container')) {
       settingsDropdown.classList.add('hidden');
     }
+    const solverDropdown = document.getElementById('solver-details-dropdown');
+    if (solverDropdown && !e.target.closest('.solver-status-container')) {
+      solverDropdown.classList.add('hidden');
+    }
     const userDropdown = document.getElementById('user-profile-dropdown');
     if (userDropdown && !e.target.closest('.user-profile-container')) {
       userDropdown.classList.add('hidden');
@@ -1064,6 +1127,25 @@ function setupUIListeners() {
       }
     }
   });
+
+  // Solver badge dropdown toggle
+  const solverBadge = document.getElementById('solver-status-badge');
+  const solverDropdown = document.getElementById('solver-details-dropdown');
+  const solverDetailsCloseBtn = document.getElementById('solver-details-close-btn');
+
+  if (solverBadge && solverDropdown) {
+    solverBadge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      populateSolverDetails();
+      solverDropdown.classList.toggle('hidden');
+    });
+  }
+  if (solverDetailsCloseBtn && solverDropdown) {
+    solverDetailsCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      solverDropdown.classList.add('hidden');
+    });
+  }
 
 
 }
@@ -1545,6 +1627,7 @@ function renderPinnedReactions() {
         if (vmaxSlider) vmaxSlider.value = val;
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
       }
+      wakeUpSolver();
     });
     
     container.appendChild(row);
@@ -1563,6 +1646,17 @@ function updateUIPanelValues() {
     if (document.activeElement !== globalO2Slider) {
       globalO2Slider.value = currentO2;
       globalO2Val.textContent = currentO2.toFixed(1);
+    }
+  }
+
+  // Sync global glucose slider value
+  const globalGlcSlider = document.getElementById('global-glc-slider');
+  const globalGlcVal = document.getElementById('global-glc-val');
+  if (globalGlcSlider && globalGlcVal && simulation && simulation.metabolites['glc__D_e']) {
+    const currentGlc = simulation.metabolites['glc__D_e'].concentration;
+    if (document.activeElement !== globalGlcSlider) {
+      globalGlcSlider.value = currentGlc;
+      globalGlcVal.textContent = currentGlc.toFixed(1);
     }
   }
 
@@ -1771,6 +1865,126 @@ function updateUIPanelValues() {
       }
     }
   });
+}
+
+/**
+ * Solver Status & Stabilization UI Updates
+ */
+function wakeUpSolver() {
+  if (!isSolverWorking) {
+    isSolverWorking = true;
+    solverHistory.push(1);
+    if (solverHistory.length > 300) {
+      solverHistory.shift();
+    }
+    updateSolverStatusUI();
+  }
+  lastBoundsFetchTime = 0; // Trigger immediately in gameLoop
+}
+
+function updateSolverStatusUI() {
+  const badge = document.getElementById('solver-status-badge');
+  if (!badge) return;
+
+  const dot = badge.querySelector('.status-dot');
+  const text = badge.querySelector('.status-text');
+  const pctSpan = badge.querySelector('.status-pct');
+
+  if (isSolverWorking) {
+    badge.className = 'solver-badge work';
+    text.textContent = 'WORK';
+  } else {
+    badge.className = 'solver-badge relax';
+    text.textContent = 'RELAX';
+  }
+
+  // Calculate percentage of working time in the last 5 minutes (300s)
+  let pct = 0;
+  if (solverHistory.length > 0) {
+    const activeSeconds = solverHistory.reduce((sum, val) => sum + val, 0);
+    pct = Math.round((activeSeconds / solverHistory.length) * 100);
+  } else {
+    pct = isSolverWorking ? 100 : 0;
+  }
+  pctSpan.textContent = `${pct}%`;
+}
+
+function populateSolverDetails() {
+  const body = document.getElementById('solver-details-body');
+  if (!body) return;
+
+  body.innerHTML = '';
+
+  if (isSolverWorking) {
+    if (currentChangingReactions.length === 0 && currentChangingMetabolites.length === 0) {
+      body.innerHTML = `<div class="solver-empty-text">Solver is calculating fluxes...</div>`;
+      return;
+    }
+
+    if (currentChangingReactions.length > 0) {
+      const rxnSection = document.createElement('div');
+      rxnSection.className = 'solver-details-section';
+      rxnSection.innerHTML = `<h4>Changing Reactions (${currentChangingReactions.length})</h4>`;
+      
+      const list = document.createElement('ul');
+      list.className = 'solver-details-list';
+      currentChangingReactions.slice(0, 15).forEach(rxn => {
+        const li = document.createElement('li');
+        li.className = 'solver-details-item';
+        const sign = rxn.delta >= 0 ? '+' : '';
+        const deltaClass = rxn.delta >= 0 ? 'delta-up' : 'delta-down';
+        li.innerHTML = `
+          <span class="item-name" title="${rxn.name}">${rxn.id}</span>
+          <span class="item-delta ${deltaClass}">${sign}${rxn.delta.toFixed(4)}</span>
+        `;
+        list.appendChild(li);
+      });
+      if (currentChangingReactions.length > 15) {
+        const more = document.createElement('li');
+        more.className = 'solver-details-more';
+        more.textContent = `...and ${currentChangingReactions.length - 15} more`;
+        list.appendChild(more);
+      }
+      rxnSection.appendChild(list);
+      body.appendChild(rxnSection);
+    }
+
+    if (currentChangingMetabolites.length > 0) {
+      const metabSection = document.createElement('div');
+      metabSection.className = 'solver-details-section';
+      metabSection.innerHTML = `<h4>Changing Metabolites (${currentChangingMetabolites.length})</h4>`;
+      
+      const list = document.createElement('ul');
+      list.className = 'solver-details-list';
+      currentChangingMetabolites.slice(0, 15).forEach(metab => {
+        const li = document.createElement('li');
+        li.className = 'solver-details-item';
+        const sign = metab.delta >= 0 ? '+' : '';
+        const deltaClass = metab.delta >= 0 ? 'delta-up' : 'delta-down';
+        li.innerHTML = `
+          <span class="item-name" title="${metab.name}">${metab.id}</span>
+          <span class="item-delta ${deltaClass}">${sign}${metab.delta.toFixed(4)}</span>
+        `;
+        list.appendChild(li);
+      });
+      if (currentChangingMetabolites.length > 15) {
+        const more = document.createElement('li');
+        more.className = 'solver-details-more';
+        more.textContent = `...and ${currentChangingMetabolites.length - 15} more`;
+        list.appendChild(more);
+      }
+      metabSection.appendChild(list);
+      body.appendChild(metabSection);
+    }
+  } else {
+    body.innerHTML = `
+      <div class="solver-relax-msg">
+        <span class="relax-icon">☕</span>
+        <p>System has stabilized into a steady state.</p>
+        <p class="sub-text">The solver is resting and not making API calls until parameters change.</p>
+      </div>
+    `;
+  }
 }
 
 /**
@@ -3986,6 +4200,7 @@ function setupScenariosAndChat() {
   if (btnStart) {
     btnStart.addEventListener('click', () => {
       if (activeScenarioId) {
+        wakeUpSolver();
         startScenario(activeScenarioId);
       }
     });
@@ -4327,6 +4542,7 @@ function startScenario(scenarioId) {
           simulation.metabolites[ctrl.id].concentration = val;
           simulation.metabolites[ctrl.id].targetConcentration = val;
           // Trigger FBA solver bounds immediately
+          wakeUpSolver();
           updateFbaBounds(performance.now());
         }
       });
