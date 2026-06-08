@@ -1107,10 +1107,7 @@ function setupUIListeners() {
     if (settingsDropdown && !e.target.closest('.settings-container')) {
       settingsDropdown.classList.add('hidden');
     }
-    const solverDropdown = document.getElementById('solver-details-dropdown');
-    if (solverDropdown && !e.target.closest('#solver-status-badge') && !e.target.closest('#solver-details-dropdown')) {
-      solverDropdown.classList.add('hidden');
-    }
+    // Removed outside click listener for solverDropdown to make it non-modal
     const userDropdown = document.getElementById('user-profile-dropdown');
     if (userDropdown && !e.target.closest('.user-profile-container')) {
       userDropdown.classList.add('hidden');

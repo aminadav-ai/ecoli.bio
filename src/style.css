@@ -4002,32 +4002,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: scale(1.2); opacity: 1; }
 }
 
-/* Solver Dropdown */
+/* Solver Panel (Non-modal Overlay) */
 .solver-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 300px;
+  top: 100px;
+  left: 440px;
+  width: 320px;
   border-radius: 12px;
   padding: 16px;
-  z-index: 100;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 12px;
   animation: slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.left-panel .solver-dropdown {
-  position: relative;
-  top: 0;
-  left: 0;
-  width: 100%;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-  z-index: 5;
 }
 
 .solver-details-item.click-focus-rxn,
