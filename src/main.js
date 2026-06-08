@@ -4182,7 +4182,13 @@ function updateUserStatusUI() {
       const loadSpan = document.getElementById('sidebar-solver-load');
       const usageSpan = document.getElementById('sidebar-solver-usage');
       if (loadSpan) {
-        const loadVal = userProfile.solverLoad !== undefined ? userProfile.solverLoad : 0;
+        let loadVal = 0.0;
+        if (userProfile.possibleSolverTicks > 0) {
+          loadVal = userProfile.solverTicks / userProfile.possibleSolverTicks;
+        }
+        if (userProfile.solverLoad !== undefined) {
+          loadVal = userProfile.solverLoad;
+        }
         loadSpan.textContent = `${(loadVal * 100).toFixed(2)}%`;
       }
       if (usageSpan) {
@@ -4605,6 +4611,7 @@ function setupScenariosAndChat() {
 
   // Heartbeat Loop (every 60 seconds)
   setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
     const token = localStorage.getItem('userToken');
     if (token && userProfile) {
       try {
@@ -4628,6 +4635,10 @@ function setupScenariosAndChat() {
           }
           if (data.possibleSolverTicks !== undefined) {
             userProfile.possibleSolverTicks = data.possibleSolverTicks;
+            needsUIUpdate = true;
+          }
+          if (data.solverLoad !== undefined) {
+            userProfile.solverLoad = data.solverLoad;
             needsUIUpdate = true;
           }
           if (needsUIUpdate) {

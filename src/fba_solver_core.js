@@ -59,6 +59,9 @@ export function getOrCreateSimulation(guestId) {
     }
   }
   sim.lastAccessed = Date.now();
+  if (!sim.lastFlushTime) {
+    sim.lastFlushTime = Date.now();
+  }
   return sim;
 }
 
@@ -338,17 +341,7 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
       sim.updateFluxes(fluxes, biomassFlux);
       sim.tick(1.0);
 
-      // Track active simulation time spent
-      if (userEmail && !skipSimTick) {
-        const now = Date.now();
-        if (sim.lastSolveTime) {
-          const elapsed = (now - sim.lastSolveTime) / 1000;
-          if (elapsed < 1.5) {
-            sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) + elapsed;
-          }
-        }
-        sim.lastSolveTime = now;
-      }
+
 
       // Track solver ticks used
       if (userEmail) {
@@ -416,23 +409,43 @@ export function startActiveTimeFlusher() {
 
   activeTimeFlusherIntervalId = setInterval(async () => {
     const emailStatsMap = new Map();
+    const now = Date.now();
     
     for (const sim of userSimulations.values()) {
       if (sim.userEmail) {
         const email = sim.userEmail;
+        
+        // Calculate elapsed time since last flush
+        const elapsedMs = now - (sim.lastFlushTime || now);
+        const elapsedSeconds = elapsedMs / 1000;
+        
+        // User is active if lastAccessed is within 75 seconds (heartbeat is every 60s)
+        const isActive = sim.lastAccessed && (now - sim.lastAccessed < 75000);
+        
+        if (isActive) {
+          // Accumulate active time and possible ticks (4 potential ticks/sec)
+          sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) + elapsedSeconds;
+          sim.possibleTicksBuffer = (sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4);
+        }
+        
+        // Always advance lastFlushTime so we only measure the next interval
+        sim.lastFlushTime = now;
+        
         const seconds = Math.floor(sim.activeTimeBuffer || 0);
         const ticks = Math.floor(sim.solverTicksBuffer || 0);
+        const possibleTicks = Math.floor(sim.possibleTicksBuffer || 0);
         
-        if (seconds >= 1 || ticks >= 1) {
+        if (seconds >= 1 || ticks >= 1 || possibleTicks >= 1) {
           const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0, possible_ticks: 0 };
           emailStatsMap.set(email, {
             seconds: current.seconds + seconds,
             ticks: current.ticks + ticks,
-            possible_ticks: current.possible_ticks + (seconds * 4)
+            possible_ticks: current.possible_ticks + possibleTicks
           });
           
           if (seconds >= 1) sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) - seconds;
           if (ticks >= 1) sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) - ticks;
+          if (possibleTicks >= 1) sim.possibleTicksBuffer = (sim.possibleTicksBuffer || 0) - possibleTicks;
         }
       }
     }

@@ -115,8 +115,14 @@ export default defineConfig(({ mode }) => {
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
         if (user) {
           const sim = getOrCreateSimulation(guestId);
+          if (sim && !sim.userEmail) {
+            sim.userEmail = user.email;
+          }
+          const now = Date.now();
+          const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
           const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
-          const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) + (sim ? Math.floor(sim.activeTimeBuffer || 0) * 4 : 0);
+          const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
+                                (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
           result.solverTicks = totalActual;
           result.solverLoad = totalPossible > 0 ? (totalActual / totalPossible) : 0.0;
         }
@@ -190,15 +196,26 @@ export default defineConfig(({ mode }) => {
       try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const guestId = req.headers['x-guest-id'];
         let secondsSpent = null;
         let solverTicks = null;
         let possibleSolverTicks = null;
+        let solverLoad = null;
         if (token) {
           const user = await getUserByToken(token);
           if (user) {
-            secondsSpent = user.seconds_spent || 0;
-            solverTicks = user.solver_ticks || 0;
-            possibleSolverTicks = user.possible_solver_ticks || 0;
+            const sim = getOrCreateSimulation(guestId);
+            if (sim) {
+              sim.userEmail = user.email;
+            }
+            const now = Date.now();
+            const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
+            
+            secondsSpent = (user.seconds_spent || 0) + (sim ? Math.floor((sim.activeTimeBuffer || 0) + elapsedSeconds) : 0);
+            solverTicks = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+            possibleSolverTicks = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
+                                  (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
+            solverLoad = possibleSolverTicks > 0 ? (solverTicks / possibleSolverTicks) : 0.0;
           }
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -206,7 +223,8 @@ export default defineConfig(({ mode }) => {
           success: true,
           secondsSpent: secondsSpent || 0,
           solverTicks: solverTicks || 0,
-          possibleSolverTicks: possibleSolverTicks || 0
+          possibleSolverTicks: possibleSolverTicks || 0,
+          solverLoad: solverLoad || 0.0
         }));
       } catch (err) {
         console.error('Vite Heartbeat error:', err);
