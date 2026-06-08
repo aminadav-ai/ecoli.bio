@@ -24,7 +24,7 @@ const userSimulations = new Map();
 let referenceNormalFluxes = null;
 
 // Periodically prune simulations inactive for more than 15 minutes to save RAM
-setInterval(() => {
+const pruneTimer = setInterval(() => {
   const now = Date.now();
   const timeout = 15 * 60 * 1000; // 15 minutes
   for (const [id, sim] of userSimulations.entries()) {
@@ -34,6 +34,10 @@ setInterval(() => {
     }
   }
 }, 60 * 1000); // Check every minute
+
+if (pruneTimer && typeof pruneTimer.unref === 'function') {
+  pruneTimer.unref();
+}
 
 function getOrCreateSimulation(guestId) {
   const id = guestId || 'default_user';
