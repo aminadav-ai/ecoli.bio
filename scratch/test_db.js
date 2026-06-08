@@ -1,43 +1,25 @@
 import fs from 'fs';
 
-function loadEnv() {
-  if (!fs.existsSync('.env')) return;
-  const content = fs.readFileSync('.env', 'utf8');
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const idx = trimmed.indexOf('=');
-    if (idx > 0) {
-      const key = trimmed.substring(0, idx).trim();
-      let val = trimmed.substring(idx + 1).trim();
-      if (val.startsWith('"') && val.endsWith('"')) {
-        val = val.substring(1, val.length - 1);
-      }
-      process.env[key] = val;
-    }
-  }
-}
-
 async function run() {
-  loadEnv();
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase is not configured in .env');
+  const file = 'public/iJO1366.Central metabolism.json';
+  if (!fs.existsSync(file)) {
+    console.error('File does not exist:', file);
     return;
   }
-  const url = `${supabaseUrl}/rest/v1/`;
-  const headers = {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`
-  };
-  try {
-    const response = await fetch(url, { headers });
-    const spec = await response.json();
-    console.log('API response:', spec);
-  } catch (e) {
-    console.error('Fetch error:', e);
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // The structure of Escher map is usually [ { map: ..., reactions: ... } ] or similar
+  const mapData = Array.isArray(data) ? data[1] : data;
+  if (!mapData || !mapData.reactions) {
+    console.error('No reactions found in map data structure. Keys:', Object.keys(data));
+    if (data[0]) {
+      console.log('First element keys:', Object.keys(data[0]));
+    }
+    return;
   }
+  const reactions = Object.values(mapData.reactions).map(r => r.bigg_id);
+  console.log('Total reactions on map:', reactions.length);
+  console.log('Reaction IDs starting with F:', reactions.filter(id => id.toUpperCase().startsWith('F')));
+  console.log('Reaction IDs containing FBA:', reactions.filter(id => id.toUpperCase().includes('FBA')));
 }
 
 run();

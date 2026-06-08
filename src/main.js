@@ -1974,8 +1974,34 @@ function populateSolverDetails() {
     body.appendChild(usageInfo);
   }
 
-  const rxns = Object.values(accumulatedChangingReactions);
-  const metabs = Object.values(accumulatedChangingMetabolites);
+  // Find reference reaction FBA3 for spatial sorting
+  const fba3Rxn = renderer && renderer.reactions ? renderer.reactions.find(r => r.biggId === 'FBA3') : null;
+  const targetX = fba3Rxn ? fba3Rxn.labelX : 0;
+  const targetY = fba3Rxn ? fba3Rxn.labelY : 0;
+
+  const rxns = Object.values(accumulatedChangingReactions)
+    .map(rxn => {
+      const visualRxn = renderer && renderer.reactions ? renderer.reactions.find(r => r.biggId === rxn.id) : null;
+      if (!visualRxn) return null;
+      const dx = visualRxn.labelX - targetX;
+      const dy = visualRxn.labelY - targetY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return { ...rxn, dist };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => a.dist - b.dist);
+
+  const metabs = Object.values(accumulatedChangingMetabolites)
+    .map(metab => {
+      const visualMetab = renderer && renderer.metabNodes ? renderer.metabNodes.find(n => n.biggId === metab.id) : null;
+      if (!visualMetab) return null;
+      const dx = visualMetab.x - targetX;
+      const dy = visualMetab.y - targetY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return { ...metab, dist };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => a.dist - b.dist);
 
   if (rxns.length > 0 || metabs.length > 0) {
     if (rxns.length > 0) {
