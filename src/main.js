@@ -1974,34 +1974,60 @@ function populateSolverDetails() {
     body.appendChild(usageInfo);
   }
 
-  // Find reference reaction FBA3 for spatial sorting
-  const fba3Rxn = renderer && renderer.reactions ? renderer.reactions.find(r => r.biggId === 'FBA3') : null;
-  const targetX = fba3Rxn ? fba3Rxn.labelX : 0;
-  const targetY = fba3Rxn ? fba3Rxn.labelY : 0;
+  // Get all mapped reactions sorted by absolute flux descending
+  const mappedReactions = (renderer && renderer.reactions ? renderer.reactions : [])
+    .map(r => {
+      const flux = (simulation && simulation.reactions[r.biggId]) ? simulation.reactions[r.biggId].flux : 0;
+      return {
+        biggId: r.biggId,
+        x: r.labelX,
+        y: r.labelY,
+        absFlux: Math.abs(flux)
+      };
+    })
+    .sort((a, b) => b.absFlux - a.absFlux);
 
   const rxns = Object.values(accumulatedChangingReactions)
     .map(rxn => {
       const visualRxn = renderer && renderer.reactions ? renderer.reactions.find(r => r.biggId === rxn.id) : null;
       if (!visualRxn) return null;
-      const dx = visualRxn.labelX - targetX;
-      const dy = visualRxn.labelY - targetY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      return { ...rxn, dist };
+      const flux = (simulation && simulation.reactions[rxn.id]) ? simulation.reactions[rxn.id].flux : 0;
+      return { ...rxn, flux };
     })
     .filter(item => item !== null)
-    .sort((a, b) => a.dist - b.dist);
+    .sort((a, b) => Math.abs(b.flux) - Math.abs(a.flux));
 
   const metabs = Object.values(accumulatedChangingMetabolites)
     .map(metab => {
       const visualMetab = renderer && renderer.metabNodes ? renderer.metabNodes.find(n => n.biggId === metab.id) : null;
       if (!visualMetab) return null;
-      const dx = visualMetab.x - targetX;
-      const dy = visualMetab.y - targetY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      return { ...metab, dist };
+
+      // Find the nearest reaction on the map
+      let nearestRxnIndex = -1;
+      let minDistance = Infinity;
+      mappedReactions.forEach((rxn, index) => {
+        const dx = visualMetab.x - rxn.x;
+        const dy = visualMetab.y - rxn.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDistance) {
+          minDistance = dist;
+          nearestRxnIndex = index;
+        }
+      });
+
+      return {
+        ...metab,
+        nearestRxnIndex,
+        minDistance
+      };
     })
     .filter(item => item !== null)
-    .sort((a, b) => a.dist - b.dist);
+    .sort((a, b) => {
+      if (a.nearestRxnIndex !== b.nearestRxnIndex) {
+        return a.nearestRxnIndex - b.nearestRxnIndex;
+      }
+      return a.minDistance - b.minDistance;
+    });
 
   if (rxns.length > 0 || metabs.length > 0) {
     if (rxns.length > 0) {
