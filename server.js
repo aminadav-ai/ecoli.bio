@@ -285,13 +285,15 @@ app.post('/api/auth/heartbeat', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     let secondsSpent = null;
+    let solverTicks = null;
     if (token) {
       const user = await getUserByToken(token);
       if (user) {
         secondsSpent = user.seconds_spent || 0;
+        solverTicks = user.solver_ticks || 0;
       }
     }
-    return res.json({ success: true, secondsSpent: secondsSpent || 0 });
+    return res.json({ success: true, secondsSpent: secondsSpent || 0, solverTicks: solverTicks || 0 });
   } catch (err) {
     console.error('Heartbeat error:', err);
     return res.status(500).json({ error: err.message });

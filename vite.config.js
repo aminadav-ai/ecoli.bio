@@ -184,14 +184,16 @@ export default defineConfig(({ mode }) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         let secondsSpent = null;
+        let solverTicks = null;
         if (token) {
           const user = await getUserByToken(token);
           if (user) {
             secondsSpent = user.seconds_spent || 0;
+            solverTicks = user.solver_ticks || 0;
           }
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, secondsSpent: secondsSpent || 0 }));
+        res.end(JSON.stringify({ success: true, secondsSpent: secondsSpent || 0, solverTicks: solverTicks || 0 }));
       } catch (err) {
         console.error('Vite Heartbeat error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

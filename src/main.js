@@ -1963,6 +1963,17 @@ function populateSolverDetails() {
   `;
   body.appendChild(loadInfo);
 
+  // Display solver usage if user is logged in
+  if (userProfile) {
+    const usageInfo = document.createElement('div');
+    usageInfo.className = 'solver-usage-info';
+    usageInfo.innerHTML = `
+      <span class="usage-label">Solver Usage</span>
+      <span class="usage-val">${userProfile.solverTicks || 0} ticks</span>
+    `;
+    body.appendChild(usageInfo);
+  }
+
   const rxns = Object.values(accumulatedChangingReactions);
   const metabs = Object.values(accumulatedChangingMetabolites);
 
@@ -4523,9 +4534,21 @@ function setupScenariosAndChat() {
         });
         if (res.ok) {
           const data = await res.json();
+          let needsUIUpdate = false;
           if (data.secondsSpent !== undefined) {
             userProfile.secondsSpent = data.secondsSpent;
+            needsUIUpdate = true;
+          }
+          if (data.solverTicks !== undefined) {
+            userProfile.solverTicks = data.solverTicks;
+            needsUIUpdate = true;
+          }
+          if (needsUIUpdate) {
             updateUserStatusUI();
+            const solverDropdown = document.getElementById('solver-details-dropdown');
+            if (solverDropdown && !solverDropdown.classList.contains('hidden')) {
+              populateSolverDetails();
+            }
           }
         }
       } catch (err) {

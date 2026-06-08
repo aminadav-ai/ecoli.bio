@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Simulation } from './simulation.js';
-import { bulkIncrementUserTimeSpent, clearCachedUser } from './supabase_db.js';
+import { bulkIncrementUserStats, clearCachedUser } from './supabase_db.js';
 
 const staticBoundsPath = path.resolve('src/static_bounds.json');
 let staticBounds = {};
@@ -332,6 +332,11 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
         }
         sim.lastSolveTime = now;
       }
+
+      // Track solver ticks used
+      if (userEmail) {
+        sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) + 1;
+      }
     }
 
     const calculatedConcentrations = {};
@@ -393,25 +398,36 @@ export function startActiveTimeFlusher() {
   if (activeTimeFlusherIntervalId) return;
 
   activeTimeFlusherIntervalId = setInterval(async () => {
-    const emailSecondsMap = new Map();
+    const emailStatsMap = new Map();
     
     for (const sim of userSimulations.values()) {
-      if (sim.userEmail && sim.activeTimeBuffer >= 1) {
+      if (sim.userEmail) {
         const email = sim.userEmail;
-        const seconds = Math.floor(sim.activeTimeBuffer);
-        emailSecondsMap.set(email, (emailSecondsMap.get(email) || 0) + seconds);
-        sim.activeTimeBuffer = sim.activeTimeBuffer - seconds;
+        const seconds = Math.floor(sim.activeTimeBuffer || 0);
+        const ticks = Math.floor(sim.solverTicksBuffer || 0);
+        
+        if (seconds >= 1 || ticks >= 1) {
+          const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0 };
+          emailStatsMap.set(email, {
+            seconds: current.seconds + seconds,
+            ticks: current.ticks + ticks
+          });
+          
+          if (seconds >= 1) sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) - seconds;
+          if (ticks >= 1) sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) - ticks;
+        }
       }
     }
 
-    if (emailSecondsMap.size === 0) return;
+    if (emailStatsMap.size === 0) return;
 
-    const pendingUpdates = Array.from(emailSecondsMap.entries()).map(([email, seconds]) => ({
+    const pendingUpdates = Array.from(emailStatsMap.entries()).map(([email, stats]) => ({
       email,
-      seconds
+      seconds: stats.seconds,
+      ticks: stats.ticks
     }));
 
-    console.log(`[Solver] Flushing active simulation time to DB for ${pendingUpdates.length} users:`, pendingUpdates);
-    await bulkIncrementUserTimeSpent(pendingUpdates);
+    console.log(`[Solver] Flushing active simulation stats to DB for ${pendingUpdates.length} users:`, pendingUpdates);
+    await bulkIncrementUserStats(pendingUpdates);
   }, 60000);
 }

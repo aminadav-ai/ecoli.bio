@@ -227,7 +227,8 @@ export async function verifyGoogleTokenAndLogin(credential) {
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
       o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
-      secondsSpent: user.seconds_spent || 0
+      secondsSpent: user.seconds_spent || 0,
+      solverTicks: user.solver_ticks || 0
     }
   };
 }
@@ -293,7 +294,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
       o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
-      secondsSpent: user.seconds_spent || 0
+      secondsSpent: user.seconds_spent || 0,
+      solverTicks: user.solver_ticks || 0
     } : null,
     limit: {
       max: limitMax,
@@ -536,5 +538,24 @@ export async function bulkIncrementUserTimeSpent(updates) {
     }
   } catch (err) {
     console.error('[Supabase DB] Failed to bulk increment user time spent:', err);
+  }
+}
+
+// 15. Bulk increment user active simulation time and solver ticks via RPC
+export async function bulkIncrementUserStats(updates) {
+  if (!updates || updates.length === 0) return;
+  try {
+    await supabaseFetch('rpc/bulk_increment_user_stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates })
+    });
+    for (const item of updates) {
+      if (item.email) {
+        clearCachedUser(item.email);
+      }
+    }
+  } catch (err) {
+    console.error('[Supabase DB] Failed to bulk increment user stats:', err);
   }
 }
