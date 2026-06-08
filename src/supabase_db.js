@@ -228,7 +228,8 @@ export async function verifyGoogleTokenAndLogin(credential) {
       autoRenew: !!user.auto_renew,
       o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
       secondsSpent: user.seconds_spent || 0,
-      solverTicks: user.solver_ticks || 0
+      solverTicks: user.solver_ticks || 0,
+      possibleSolverTicks: user.possible_solver_ticks || 0
     }
   };
 }
@@ -295,7 +296,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       autoRenew: !!user.auto_renew,
       o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
       secondsSpent: user.seconds_spent || 0,
-      solverTicks: user.solver_ticks || 0
+      solverTicks: user.solver_ticks || 0,
+      possibleSolverTicks: user.possible_solver_ticks || 0
     } : null,
     limit: {
       max: limitMax,

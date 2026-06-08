@@ -4,7 +4,7 @@ import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba, startActiveTimeFlusher } from './src/fba_solver_core.js';
+import { solveFba, startActiveTimeFlusher, getOrCreateSimulation } from './src/fba_solver_core.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -113,6 +113,13 @@ export default defineConfig(({ mode }) => {
         };
 
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
+        if (user) {
+          const sim = getOrCreateSimulation(guestId);
+          const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+          const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) + (sim ? Math.floor(sim.activeTimeBuffer || 0) * 4 : 0);
+          result.solverTicks = totalActual;
+          result.solverLoad = totalPossible > 0 ? (totalActual / totalPossible) : 0.0;
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -185,15 +192,22 @@ export default defineConfig(({ mode }) => {
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         let secondsSpent = null;
         let solverTicks = null;
+        let possibleSolverTicks = null;
         if (token) {
           const user = await getUserByToken(token);
           if (user) {
             secondsSpent = user.seconds_spent || 0;
             solverTicks = user.solver_ticks || 0;
+            possibleSolverTicks = user.possible_solver_ticks || 0;
           }
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, secondsSpent: secondsSpent || 0, solverTicks: solverTicks || 0 }));
+        res.end(JSON.stringify({
+          success: true,
+          secondsSpent: secondsSpent || 0,
+          solverTicks: solverTicks || 0,
+          possibleSolverTicks: possibleSolverTicks || 0
+        }));
       } catch (err) {
         console.error('Vite Heartbeat error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

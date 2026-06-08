@@ -545,6 +545,15 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
         accumulatedChangingMetabolites[metab.id] = metab;
       });
 
+      if (userProfile) {
+        if (data.solverTicks !== undefined) {
+          userProfile.solverTicks = data.solverTicks;
+        }
+        if (data.solverLoad !== undefined) {
+          userProfile.solverLoad = data.solverLoad;
+        }
+      }
+
       updateSolverStatusUI();
       
       if (data.fluxes) {
@@ -1976,33 +1985,7 @@ function populateSolverDetails() {
 
   body.innerHTML = '';
 
-  // Calculate percentage of working time in the last 5 minutes (300s)
-  let pct = 0;
-  if (solverHistory.length > 0) {
-    const activeSeconds = solverHistory.reduce((sum, val) => sum + val, 0);
-    pct = Math.round((activeSeconds / solverHistory.length) * 100);
-  } else {
-    pct = isSolverWorking ? 100 : 0;
-  }
 
-  const loadInfo = document.createElement('div');
-  loadInfo.className = 'solver-load-info';
-  loadInfo.innerHTML = `
-    <span class="load-label">Solver Load</span>
-    <span class="load-val">${pct}%</span>
-  `;
-  body.appendChild(loadInfo);
-
-  // Display solver usage if user is logged in
-  if (userProfile) {
-    const usageInfo = document.createElement('div');
-    usageInfo.className = 'solver-usage-info';
-    usageInfo.innerHTML = `
-      <span class="usage-label">Solver Usage</span>
-      <span class="usage-val">${userProfile.solverTicks || 0} ticks</span>
-    `;
-    body.appendChild(usageInfo);
-  }
 
   // Get all mapped reactions sorted by absolute flux descending
   const mappedReactions = (renderer && renderer.reactions ? renderer.reactions : [])
@@ -4189,6 +4172,25 @@ function updateUserStatusUI() {
       if (inputContainer) inputContainer.classList.remove('hidden');
     }
   }
+
+  // 3. Update Solver Stats Panel (Load and Usage)
+  const statsPanel = document.getElementById('solver-stats-panel');
+  if (statsPanel) {
+    if (userProfile) {
+      statsPanel.classList.remove('hidden');
+      const loadSpan = document.getElementById('sidebar-solver-load');
+      const usageSpan = document.getElementById('sidebar-solver-usage');
+      if (loadSpan) {
+        const loadVal = userProfile.solverLoad !== undefined ? userProfile.solverLoad : 0;
+        loadSpan.textContent = `${(loadVal * 100).toFixed(2)}%`;
+      }
+      if (usageSpan) {
+        usageSpan.textContent = `${userProfile.solverTicks || 0} ticks`;
+      }
+    } else {
+      statsPanel.classList.add('hidden');
+    }
+  }
 }
 
 function openMockCheckout() {
@@ -4621,6 +4623,10 @@ function setupScenariosAndChat() {
           }
           if (data.solverTicks !== undefined) {
             userProfile.solverTicks = data.solverTicks;
+            needsUIUpdate = true;
+          }
+          if (data.possibleSolverTicks !== undefined) {
+            userProfile.possibleSolverTicks = data.possibleSolverTicks;
             needsUIUpdate = true;
           }
           if (needsUIUpdate) {

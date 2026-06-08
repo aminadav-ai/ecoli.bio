@@ -4203,3 +4203,41 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: translateY(0px); }
 }
 
+/* Solver Stats Panel on Left Sidebar */
+.solver-stats-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.solver-stats-panel.hidden {
+  display: none !important;
+}
+
+.solver-stat-card {
+  background: rgba(99, 102, 241, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solver-stat-card .stat-label {
+  font-size: 11px;
+  color: #818cf8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.solver-stat-card .stat-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+

@@ -5,7 +5,7 @@ import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
 import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba, startActiveTimeFlusher } from './src/fba_solver_core.js';
+import { solveFba, startActiveTimeFlusher, getOrCreateSimulation } from './src/fba_solver_core.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -87,6 +87,13 @@ app.post('/api/solve-fba', async (req, res) => {
     };
 
     const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
+    if (user) {
+      const sim = getOrCreateSimulation(guestId);
+      const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+      const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) + (sim ? Math.floor(sim.activeTimeBuffer || 0) * 4 : 0);
+      result.solverTicks = totalActual;
+      result.solverLoad = totalPossible > 0 ? (totalActual / totalPossible) : 0.0;
+    }
     return res.json(result);
   } catch (err) {
     console.error('Error in solve-fba API:', err);
@@ -288,14 +295,21 @@ app.post('/api/auth/heartbeat', async (req, res) => {
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     let secondsSpent = null;
     let solverTicks = null;
+    let possibleSolverTicks = null;
     if (token) {
       const user = await getUserByToken(token);
       if (user) {
         secondsSpent = user.seconds_spent || 0;
         solverTicks = user.solver_ticks || 0;
+        possibleSolverTicks = user.possible_solver_ticks || 0;
       }
     }
-    return res.json({ success: true, secondsSpent: secondsSpent || 0, solverTicks: solverTicks || 0 });
+    return res.json({
+      success: true,
+      secondsSpent: secondsSpent || 0,
+      solverTicks: solverTicks || 0,
+      possibleSolverTicks: possibleSolverTicks || 0
+    });
   } catch (err) {
     console.error('Heartbeat error:', err);
     return res.status(500).json({ error: err.message });

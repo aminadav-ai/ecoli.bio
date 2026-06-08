@@ -39,7 +39,7 @@ if (pruneTimer && typeof pruneTimer.unref === 'function') {
   pruneTimer.unref();
 }
 
-function getOrCreateSimulation(guestId) {
+export function getOrCreateSimulation(guestId) {
   const id = guestId || 'default_user';
   let sim = userSimulations.get(id);
   if (!sim) {
@@ -424,10 +424,11 @@ export function startActiveTimeFlusher() {
         const ticks = Math.floor(sim.solverTicksBuffer || 0);
         
         if (seconds >= 1 || ticks >= 1) {
-          const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0 };
+          const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0, possible_ticks: 0 };
           emailStatsMap.set(email, {
             seconds: current.seconds + seconds,
-            ticks: current.ticks + ticks
+            ticks: current.ticks + ticks,
+            possible_ticks: current.possible_ticks + (seconds * 4)
           });
           
           if (seconds >= 1) sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) - seconds;
@@ -441,7 +442,8 @@ export function startActiveTimeFlusher() {
     const pendingUpdates = Array.from(emailStatsMap.entries()).map(([email, stats]) => ({
       email,
       seconds: stats.seconds,
-      ticks: stats.ticks
+      ticks: stats.ticks,
+      possible_ticks: stats.possible_ticks
     }));
 
     console.log(`[Solver] Flushing active simulation stats to DB for ${pendingUpdates.length} users:`, pendingUpdates);
