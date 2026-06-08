@@ -1032,11 +1032,25 @@ export class PixiRenderer {
     });
 
     el.addEventListener('pointermove', (e) => {
-      if (!this.activePointers.has(e.pointerId)) return;
-      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
       const canvasX = e.clientX;
       const canvasY = e.clientY;
+
+      if (!this.activePointers.has(e.pointerId)) {
+        // Handle mouse hover tooltips and grab/pointer cursor
+        const node = this.hitTestMetabolite(canvasX, canvasY);
+        el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
+
+        if (node !== this.hoveredNode) {
+          this.hoveredNode = node;
+          
+          // Custom event to main controller for tooltips
+          const event = new CustomEvent('metabolite-hover', { detail: node });
+          el.dispatchEvent(event);
+        }
+        return;
+      }
+
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       if (this.isPinching && this.activePointers.size === 2) {
         const pointers = Array.from(this.activePointers.values());
@@ -1116,15 +1130,19 @@ export class PixiRenderer {
       } else if (this.isDragging) {
         if (this.activePointers.size === 0) {
           this.isDragging = false;
-          el.style.cursor = 'grab';
           
-          // Clear hover/tooltip on mobile/desktop if we drag and finish on empty space
           const canvasX = e.clientX;
           const canvasY = e.clientY;
           const node = this.hitTestMetabolite(canvasX, canvasY);
+          el.style.cursor = (node || this.hoveredReaction) ? 'pointer' : 'grab';
+          
           if (!node) {
             this.hoveredNode = null;
             const event = new CustomEvent('metabolite-hover', { detail: null });
+            el.dispatchEvent(event);
+          } else {
+            this.hoveredNode = node;
+            const event = new CustomEvent('metabolite-hover', { detail: node });
             el.dispatchEvent(event);
           }
         }
