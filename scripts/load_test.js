@@ -65,8 +65,8 @@ class VirtualUser {
 
   start() {
     this.active = true;
-    // Случайная начальная задержка от 1 до 10 секунд для распределения нагрузки
-    const initialDelay = 1000 + Math.random() * 9000;
+    // Случайная начальная задержка до 60 секунд для плавного распределения нагрузки холодного старта
+    const initialDelay = Math.random() * 60000;
     this.timer = setTimeout(() => this.runLoop(), initialDelay);
   }
 
