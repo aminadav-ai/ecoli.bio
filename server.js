@@ -105,7 +105,16 @@ app.post('/api/solve-fba', async (req, res) => {
       userEmail: user.email
     };
 
+    const clientTimestamp = req.body.lastTimestamp;
     const sim = await getOrCreateSimulation(sessionId, user.email);
+
+    if (sim && clientTimestamp && sim.lastTimestamp && sim.lastTimestamp !== clientTimestamp) {
+      console.log(`[Solver Cache] Stale cache detected for session ${sessionId}. Server: ${sim.lastTimestamp}, Client: ${clientTimestamp}. Reloading from DB.`);
+      const dbState = await getSessionState(sessionId);
+      if (dbState) {
+        deserializeSimulation(sim, dbState);
+      }
+    }
 
     const bufferBefore = sim ? sim.solverTicksBuffer : 0;
     const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
@@ -114,6 +123,7 @@ app.post('/api/solve-fba', async (req, res) => {
     console.log(`[Solver Debug] User: ${user.email}, Session: ${sessionId}, bufferBefore: ${bufferBefore}, bufferAfter: ${bufferAfter}`);
 
     if (sim) {
+      sim.lastTimestamp = Date.now();
       const state = serializeSimulation(sim);
       // Asynchronously upsert state to database (do not await, prevents blocking response)
       upsertSessionState(sessionId, user.email, state).catch(err => {
@@ -132,6 +142,7 @@ app.post('/api/solve-fba', async (req, res) => {
 
     const totalActual = user.solver_ticks || 0;
     result.solverTicks = totalActual;
+    result.lastTimestamp = sim ? sim.lastTimestamp : 0;
     console.log(`[Solver Debug] Returning solverTicks: ${totalActual}`);
 
     return res.json(result);

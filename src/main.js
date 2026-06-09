@@ -513,6 +513,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     }
 
     const requestBody = { concentrations, parameters };
+    if (lastSimulationTimestamp) {
+      requestBody.lastTimestamp = lastSimulationTimestamp;
+    }
     if (forceOptions.reset) {
       requestBody.reset = true;
     }
@@ -529,6 +532,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     if (res.ok) {
       const data = await res.json();
       activeRepressions = data.repressed || {};
+      if (data.lastTimestamp !== undefined) {
+        lastSimulationTimestamp = data.lastTimestamp;
+      }
       
       // Update solver status and lists based on FBA result
       isSolverWorking = !data.stabilized;
@@ -3839,6 +3845,7 @@ if (!sessionId) {
   sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   sessionStorage.setItem('simulationSessionId', sessionId);
 }
+let lastSimulationTimestamp = 0;
 
 let userToken = localStorage.getItem('userToken');
 let googleClientId = window.GOOGLE_CLIENT_ID || null;

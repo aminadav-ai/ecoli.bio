@@ -105,6 +105,10 @@ class VirtualUser {
         reset: false
       };
 
+      if (this.lastTimestamp) {
+        payload.lastTimestamp = this.lastTimestamp;
+      }
+
       const headers = {
         'Content-Type': 'application/json',
         'x-guest-id': this.guestId,
@@ -128,6 +132,10 @@ class VirtualUser {
       if (res.status === 200) {
         stats.success++;
         stats.totalSuccess++;
+        const data = await res.json().catch(() => ({}));
+        if (data.lastTimestamp) {
+          this.lastTimestamp = data.lastTimestamp;
+        }
       } else if (res.status === 429) {
         stats.rateLimits++;
         stats.totalRateLimits++;

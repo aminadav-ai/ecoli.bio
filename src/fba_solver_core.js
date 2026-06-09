@@ -44,7 +44,8 @@ export function serializeSimulation(sim) {
     metabolites: {},
     parameters: {},
     isDead: sim.isDead || false,
-    tickCounter: sim.tickCounter || 0
+    tickCounter: sim.tickCounter || 0,
+    lastTimestamp: sim.lastTimestamp || 0
   };
   for (const [mId, metab] of Object.entries(sim.metabolites)) {
     state.metabolites[mId] = {
@@ -83,6 +84,7 @@ export function deserializeSimulation(sim, state) {
   }
   sim.isDead = !!state.isDead;
   sim.tickCounter = state.tickCounter || 0;
+  sim.lastTimestamp = state.lastTimestamp || 0;
 }
 
 export function getSimulationSync(guestId) {
