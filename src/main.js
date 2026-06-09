@@ -2016,10 +2016,10 @@ function updateSolverStatusUI() {
   const text = badge.querySelector('.status-text');
 
   if (isSolverWorking) {
-    badge.className = 'solver-badge work';
+    badge.className = 'solver-badge work' + (userProfile ? '' : ' hidden');
     text.textContent = 'WORK';
   } else {
-    badge.className = 'solver-badge relax';
+    badge.className = 'solver-badge relax' + (userProfile ? '' : ' hidden');
     text.textContent = 'RELAX';
   }
 
@@ -3890,6 +3890,16 @@ async function checkAuthStatus(isVisit = false) {
             overlay.classList.add('hidden');
           }
         }
+
+        // Set solver status to RELAX and pause client simulation for guests
+        isSolverWorking = false;
+        isPaused = true;
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        if (playPauseBtn) {
+          playPauseBtn.textContent = '▶ Play';
+          playPauseBtn.className = 'btn btn-secondary';
+        }
+        updateSolverStatusUI();
       }
       
       if (googleClientId && !googleAuthInitialized) {
@@ -4242,6 +4252,34 @@ function updateUserStatusUI() {
       }
     } else {
       statsPanel.classList.add('hidden');
+    }
+  }
+
+  // Hide solver status badge for guests
+  const solverStatusBadge = document.getElementById('solver-status-badge');
+  if (solverStatusBadge) {
+    if (userProfile) {
+      solverStatusBadge.classList.remove('hidden');
+    } else {
+      solverStatusBadge.classList.add('hidden');
+    }
+  }
+
+  // Hide play/pause and reset buttons for guests
+  const playPauseBtn = document.getElementById('play-pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  if (playPauseBtn) {
+    if (userProfile) {
+      playPauseBtn.classList.remove('hidden');
+    } else {
+      playPauseBtn.classList.add('hidden');
+    }
+  }
+  if (resetBtn) {
+    if (userProfile) {
+      resetBtn.classList.remove('hidden');
+    } else {
+      resetBtn.classList.add('hidden');
     }
   }
 }
