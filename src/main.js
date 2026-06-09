@@ -864,6 +864,10 @@ function setupUIListeners() {
   // Injections Spikes
   document.querySelectorAll('.btn-inject').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (!userProfile) {
+        openAuthModal();
+        return;
+      }
       if (selectedMetaboliteId) {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
@@ -876,6 +880,10 @@ function setupUIListeners() {
 
   // Deplete metabolite
   document.getElementById('btn-deplete').addEventListener('click', () => {
+    if (!userProfile) {
+      openAuthModal();
+      return;
+    }
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
       simulation.deplete(selectedMetaboliteId);
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
