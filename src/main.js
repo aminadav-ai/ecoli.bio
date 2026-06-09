@@ -4286,6 +4286,20 @@ function updateUserStatusUI() {
     }
   }
 
+  // Hide AI Chat trigger for guests
+  const chatTrigger = document.getElementById('ai-chat-trigger');
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  if (chatTrigger) {
+    if (userProfile) {
+      chatTrigger.classList.remove('hidden');
+    } else {
+      chatTrigger.classList.add('hidden');
+      if (chatDrawer) {
+        chatDrawer.classList.add('hidden');
+      }
+    }
+  }
+
   // Hide play/pause and reset buttons for guests
   const playPauseBtn = document.getElementById('play-pause-btn');
   const resetBtn = document.getElementById('reset-btn');
