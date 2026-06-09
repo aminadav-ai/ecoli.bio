@@ -3811,7 +3811,7 @@ if (!sessionId) {
 }
 
 let userToken = localStorage.getItem('userToken');
-let googleClientId = null;
+let googleClientId = window.GOOGLE_CLIENT_ID || null;
 let currentLimit = { max: 5, count: 0, remaining: 5 };
 let userProfile = null;
 let googleAuthInitialized = false;
@@ -3859,21 +3859,74 @@ async function loadChatHistory() {
 
 async function checkAuthStatus(isVisit = false) {
   const token = localStorage.getItem('userToken');
+
+  // Initialize Google Sign-in if client ID is defined
+  if (googleClientId && !googleAuthInitialized) {
+    initGoogleAuth(googleClientId);
+  }
+
+  if (!token) {
+    // Guest user - immediately configure guest mode locally and load static state
+    console.log('[Auth] Guest user detected (no token). Bypassing /api/auth/status query.');
+    userProfile = null;
+    updateUserStatusUI();
+
+    if (simulation) {
+      try {
+        const guestRes = await fetch('/guest_state.json');
+        if (guestRes.ok) {
+          const guestState = await guestRes.json();
+          if (guestState.concentrations) {
+            for (const [mId, conc] of Object.entries(guestState.concentrations)) {
+              if (simulation.metabolites[mId]) {
+                simulation.metabolites[mId].concentration = conc;
+                simulation.metabolites[mId].targetConcentration = conc;
+              }
+            }
+          }
+          if (guestState.fluxes) {
+            simulation.updateFluxes(guestState.fluxes, guestState.biomass_flux || 0);
+            isDead = guestState.is_dead || false;
+          }
+          
+          const overlay = document.getElementById('death-overlay');
+          if (overlay) {
+            if (isDead) {
+              overlay.classList.remove('hidden');
+            } else {
+              overlay.classList.add('hidden');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch static guest state:', err);
+      }
+    }
+
+    // Set solver status to RELAX and ensure simulation runs (dots flow) for guests
+    isSolverWorking = false;
+    isPaused = false;
+    updateSolverStatusUI();
+    return;
+  }
+
+  // If token is present, verify session with dynamic server endpoint
   try {
     const headers = { 
       'x-guest-id': guestId,
       'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    headers['Authorization'] = `Bearer ${token}`;
+    
     const url = isVisit ? '/api/auth/status?visit=true' : '/api/auth/status';
     const res = await fetch(url, { headers });
     if (res.ok) {
       const data = await res.json();
       userProfile = data.user;
       currentLimit = data.limit;
-      googleClientId = data.googleClientId;
+      if (data.googleClientId) {
+        googleClientId = data.googleClientId;
+      }
       
       updateUserStatusUI();
 
@@ -3886,49 +3939,18 @@ async function checkAuthStatus(isVisit = false) {
         }
       }
       
-      if (!userProfile && simulation) {
-        try {
-          const guestRes = await fetch('/guest_state.json');
-          if (guestRes.ok) {
-            const guestState = await guestRes.json();
-            if (guestState.concentrations) {
-              for (const [mId, conc] of Object.entries(guestState.concentrations)) {
-                if (simulation.metabolites[mId]) {
-                  simulation.metabolites[mId].concentration = conc;
-                  simulation.metabolites[mId].targetConcentration = conc;
-                }
-              }
-            }
-            if (guestState.fluxes) {
-              simulation.updateFluxes(guestState.fluxes, guestState.biomass_flux || 0);
-              isDead = guestState.is_dead || false;
-            }
-            
-            const overlay = document.getElementById('death-overlay');
-            if (overlay) {
-              if (isDead) {
-                overlay.classList.remove('hidden');
-              } else {
-                overlay.classList.add('hidden');
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Failed to fetch static guest state:', err);
-        }
-
-        // Set solver status to RELAX and ensure simulation runs (dots flow) for guests
-        isSolverWorking = false;
-        isPaused = false;
-        updateSolverStatusUI();
-      }
-      
       if (googleClientId && !googleAuthInitialized) {
         initGoogleAuth(googleClientId);
       }
 
       // Load chat history from Supabase
       await loadChatHistory();
+    } else {
+      // Local token is invalid or expired
+      console.warn('[Auth] Token verification failed on server. Logging out locally.');
+      localStorage.removeItem('userToken');
+      // Re-run check as guest
+      await checkAuthStatus(isVisit);
     }
   } catch (err) {
     console.error('Failed to check auth status:', err);
