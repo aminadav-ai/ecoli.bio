@@ -3891,14 +3891,9 @@ async function checkAuthStatus(isVisit = false) {
           }
         }
 
-        // Set solver status to RELAX and pause client simulation for guests
+        // Set solver status to RELAX and ensure simulation runs (dots flow) for guests
         isSolverWorking = false;
-        isPaused = true;
-        const playPauseBtn = document.getElementById('play-pause-btn');
-        if (playPauseBtn) {
-          playPauseBtn.textContent = '▶ Play';
-          playPauseBtn.className = 'btn btn-secondary';
-        }
+        isPaused = false;
         updateSolverStatusUI();
       }
       
