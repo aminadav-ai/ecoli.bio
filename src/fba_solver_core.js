@@ -120,6 +120,8 @@ export async function getOrCreateSimulation(guestId, userEmail) {
         deserializeSimulation(sim, state);
       }
     }
+  } else {
+    sim.lastAccessed = Date.now();
   }
   if (sim && userEmail) {
     sim.userEmail = userEmail;

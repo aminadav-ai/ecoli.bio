@@ -64,6 +64,19 @@ export const pool = new Pool(config);
 const tokenCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// Periodically clean up expired tokens from cache to prevent memory leak
+const tokenCacheCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of tokenCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL_MS) {
+      tokenCache.delete(token);
+    }
+  }
+}, 60 * 1000);
+if (tokenCacheCleanupTimer && typeof tokenCacheCleanupTimer.unref === 'function') {
+  tokenCacheCleanupTimer.unref();
+}
+
 export function clearCachedUser(email) {
   if (!email) return;
   for (const [token, entry] of tokenCache.entries()) {

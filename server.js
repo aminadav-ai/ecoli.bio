@@ -28,6 +28,19 @@ app.use(compression());
 const PORT = process.env.PORT || 8080;
 const solveFbaRateLimits = new Map();
 
+// Periodically clean up rate limit entries older than 1 minute to prevent memory leak
+const rateLimitCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, lastTime] of solveFbaRateLimits.entries()) {
+    if (now - lastTime > 60 * 1000) {
+      solveFbaRateLimits.delete(sessionId);
+    }
+  }
+}, 60 * 1000);
+if (rateLimitCleanupTimer && typeof rateLimitCleanupTimer.unref === 'function') {
+  rateLimitCleanupTimer.unref();
+}
+
 app.use(express.json());
 
 // Load static bounds and LP header once on startup
