@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node scripts/compile_bounds.js",
+    "predev": "node scripts/compile_bounds.js && node scripts/generate_guest_state.js",
     "dev": "vite",
-    "prebuild": "node scripts/compile_bounds.js",
+    "prebuild": "node scripts/compile_bounds.js && node scripts/generate_guest_state.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js"

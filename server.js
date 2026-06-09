@@ -52,7 +52,6 @@ let highs = null;
 highsLoader().then(h => {
   highs = h;
   console.log('[Server] HiGHS solver loaded successfully.');
-  precalculateGuestState(highs, staticLpHeader);
 }).catch(err => {
   console.error('[Server] Failed to load HiGHS solver:', err);
 });
@@ -309,9 +308,7 @@ app.get('/api/auth/status', async (req, res) => {
       await incrementUserVisits(status.user.email);
       status = await getUserStatus(token, ip, guestId, timeZone);
     }
-    if (!status.loggedIn) {
-      status.guestState = getPrecalculatedGuestState();
-    }
+    // guestState is now fetched statically as /guest_state.json
     return res.json(status);
   } catch (err) {
     console.error('Auth Status error:', err);

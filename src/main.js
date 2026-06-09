@@ -3886,27 +3886,35 @@ async function checkAuthStatus(isVisit = false) {
         }
       }
       
-      if (!userProfile && data.guestState && simulation) {
-        if (data.guestState.concentrations) {
-          for (const [mId, conc] of Object.entries(data.guestState.concentrations)) {
-            if (simulation.metabolites[mId]) {
-              simulation.metabolites[mId].concentration = conc;
-              simulation.metabolites[mId].targetConcentration = conc;
+      if (!userProfile && simulation) {
+        try {
+          const guestRes = await fetch('/guest_state.json');
+          if (guestRes.ok) {
+            const guestState = await guestRes.json();
+            if (guestState.concentrations) {
+              for (const [mId, conc] of Object.entries(guestState.concentrations)) {
+                if (simulation.metabolites[mId]) {
+                  simulation.metabolites[mId].concentration = conc;
+                  simulation.metabolites[mId].targetConcentration = conc;
+                }
+              }
+            }
+            if (guestState.fluxes) {
+              simulation.updateFluxes(guestState.fluxes, guestState.biomass_flux || 0);
+              isDead = guestState.is_dead || false;
+            }
+            
+            const overlay = document.getElementById('death-overlay');
+            if (overlay) {
+              if (isDead) {
+                overlay.classList.remove('hidden');
+              } else {
+                overlay.classList.add('hidden');
+              }
             }
           }
-        }
-        if (data.guestState.fluxes) {
-          simulation.updateFluxes(data.guestState.fluxes, data.guestState.biomass_flux || 0);
-          isDead = data.guestState.is_dead || false;
-        }
-        
-        const overlay = document.getElementById('death-overlay');
-        if (overlay) {
-          if (isDead) {
-            overlay.classList.remove('hidden');
-          } else {
-            overlay.classList.add('hidden');
-          }
+        } catch (err) {
+          console.error('Failed to fetch static guest state:', err);
         }
 
         // Set solver status to RELAX and ensure simulation runs (dots flow) for guests

@@ -29,7 +29,6 @@ function getHighs() {
     highsPromise = highsLoader().then(h => {
       highs = h;
       console.log('[Vite Dev Server] HiGHS solver loaded successfully.');
-      precalculateGuestState(highs, staticLpHeader);
       return h;
     }).catch(err => {
       console.error('[Vite Dev Server] Failed to load HiGHS solver:', err);
@@ -209,9 +208,7 @@ export default defineConfig(({ mode }) => {
           await incrementUserVisits(status.user.email);
           status = await getUserStatus(token, ip, guestId, timeZone);
         }
-        if (!status.loggedIn) {
-          status.guestState = getPrecalculatedGuestState();
-        }
+        // guestState is now fetched statically as /guest_state.json
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(status));
       } catch (err) {
