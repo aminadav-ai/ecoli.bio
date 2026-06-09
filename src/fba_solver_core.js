@@ -85,7 +85,7 @@ export function deserializeSimulation(sim, state) {
   sim.tickCounter = state.tickCounter || 0;
 }
 
-export async function getOrCreateSimulation(guestId, userEmail) {
+export function getSimulationSync(guestId) {
   const id = guestId || 'default_user';
   let sim = userSimulations.get(id);
   if (!sim) {
@@ -94,18 +94,9 @@ export async function getOrCreateSimulation(guestId, userEmail) {
       if (referenceNormalFluxes) {
         sim.normalFluxes = { ...referenceNormalFluxes };
       }
-      
-      // Load state from DB
-      if (guestId && guestId !== 'default_user') {
-        const state = await getSessionState(guestId);
-        if (state) {
-          deserializeSimulation(sim, state);
-        }
-      }
-      
       userSimulations.set(id, sim);
     } else {
-      console.error('[Solver] Map data not loaded. Cannot initialize Simulation on server.');
+      console.error('[Solver] Map data not loaded. Cannot initialize Simulation synchronously.');
       return null;
     }
   } else {
@@ -114,7 +105,23 @@ export async function getOrCreateSimulation(guestId, userEmail) {
     }
   }
   sim.lastAccessed = Date.now();
-  if (userEmail) {
+  return sim;
+}
+
+export async function getOrCreateSimulation(guestId, userEmail) {
+  const id = guestId || 'default_user';
+  let sim = userSimulations.get(id);
+  if (!sim) {
+    sim = getSimulationSync(id);
+    if (sim && guestId && guestId !== 'default_user') {
+      // Load state from DB
+      const state = await getSessionState(guestId);
+      if (state) {
+        deserializeSimulation(sim, state);
+      }
+    }
+  }
+  if (sim && userEmail) {
     sim.userEmail = userEmail;
   }
   return sim;
@@ -345,7 +352,7 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
     return result;
   }
 
-  const sim = getOrCreateSimulation(guestId);
+  const sim = getSimulationSync(guestId);
   if (sim) {
     // Record state before updates and tick
     const prevConc = {};
