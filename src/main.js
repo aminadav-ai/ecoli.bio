@@ -481,6 +481,7 @@ const throttledUpdateKm = throttle((rxnId, val) => {
 
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
+  if (!userProfile) return;
   if (isFetchingBounds || !simulation) return;
   isFetchingBounds = true;
 
@@ -687,6 +688,10 @@ function setupUIListeners() {
   // Play/Pause button
   const playPauseBtn = document.getElementById('play-pause-btn');
   playPauseBtn.addEventListener('click', () => {
+    if (!userProfile) {
+      openAuthModal();
+      return;
+    }
     isPaused = !isPaused;
     playPauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
@@ -694,6 +699,10 @@ function setupUIListeners() {
 
   // Reset/Restart handler
   const resetHandler = () => {
+    if (!userProfile) {
+      openAuthModal();
+      return;
+    }
     simulation.reset();
     chartHistory = [];
     solverHistory = []; // Clear solver history
@@ -743,6 +752,14 @@ function setupUIListeners() {
   const globalO2Val = document.getElementById('global-o2-val');
   if (globalO2Slider && globalO2Val) {
     globalO2Slider.addEventListener('input', (e) => {
+      if (!userProfile) {
+        e.preventDefault();
+        const prevVal = (simulation && simulation.metabolites['o2_e']) ? simulation.metabolites['o2_e'].concentration : 0.2;
+        globalO2Slider.value = prevVal;
+        globalO2Val.textContent = prevVal.toFixed(1);
+        openAuthModal();
+        return;
+      }
       const val = parseFloat(e.target.value);
       globalO2Val.textContent = val.toFixed(1);
       if (simulation && simulation.metabolites['o2_e']) {
@@ -763,6 +780,14 @@ function setupUIListeners() {
   const globalGlcVal = document.getElementById('global-glc-val');
   if (globalGlcSlider && globalGlcVal) {
     globalGlcSlider.addEventListener('input', (e) => {
+      if (!userProfile) {
+        e.preventDefault();
+        const prevVal = (simulation && simulation.metabolites['glc__D_e']) ? simulation.metabolites['glc__D_e'].concentration : 10.0;
+        globalGlcSlider.value = prevVal;
+        globalGlcVal.textContent = prevVal.toFixed(1);
+        openAuthModal();
+        return;
+      }
       const val = parseFloat(e.target.value);
       globalGlcVal.textContent = val.toFixed(1);
       if (simulation && simulation.metabolites['glc__D_e']) {
@@ -996,6 +1021,14 @@ function setupUIListeners() {
   const vmaxSlider = document.getElementById('vmax-slider');
   const vmaxVal = document.getElementById('vmax-val');
   vmaxSlider.addEventListener('input', (e) => {
+    if (!userProfile) {
+      e.preventDefault();
+      const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].vMax : 10.0;
+      vmaxSlider.value = prevVal;
+      vmaxVal.textContent = prevVal.toFixed(1);
+      openAuthModal();
+      return;
+    }
     const val = parseFloat(e.target.value);
     vmaxVal.textContent = val.toFixed(1);
     if (selectedReactionId) {
@@ -1012,6 +1045,14 @@ function setupUIListeners() {
   const kmSlider = document.getElementById('km-slider');
   const kmVal = document.getElementById('km-val');
   kmSlider.addEventListener('input', (e) => {
+    if (!userProfile) {
+      e.preventDefault();
+      const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].km : 0.8;
+      kmSlider.value = prevVal;
+      kmVal.textContent = prevVal.toFixed(2);
+      openAuthModal();
+      return;
+    }
     const val = parseFloat(e.target.value);
     kmVal.textContent = val.toFixed(2);
     if (selectedReactionId) {
@@ -1695,6 +1736,14 @@ function renderPinnedReactions() {
     const slider = row.querySelector('.pinned-vmax-slider');
     const label = row.querySelector(`#pinned-vmax-val-${rxnId}`);
     slider.addEventListener('input', (e) => {
+      if (!userProfile) {
+        e.preventDefault();
+        const prevVal = (simulation && simulation.reactions[rxnId]) ? simulation.reactions[rxnId].vMax : 10.0;
+        slider.value = prevVal;
+        label.textContent = prevVal.toFixed(1);
+        openAuthModal();
+        return;
+      }
       const val = parseFloat(e.target.value);
       label.textContent = val.toFixed(1);
       
@@ -3819,6 +3868,30 @@ async function checkAuthStatus(isVisit = false) {
         }
       }
       
+      if (!userProfile && data.guestState && simulation) {
+        if (data.guestState.concentrations) {
+          for (const [mId, conc] of Object.entries(data.guestState.concentrations)) {
+            if (simulation.metabolites[mId]) {
+              simulation.metabolites[mId].concentration = conc;
+              simulation.metabolites[mId].targetConcentration = conc;
+            }
+          }
+        }
+        if (data.guestState.fluxes) {
+          simulation.updateFluxes(data.guestState.fluxes, data.guestState.biomass_flux || 0);
+          isDead = data.guestState.is_dead || false;
+        }
+        
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) {
+          if (isDead) {
+            overlay.classList.remove('hidden');
+          } else {
+            overlay.classList.add('hidden');
+          }
+        }
+      }
+      
       if (googleClientId && !googleAuthInitialized) {
         initGoogleAuth(googleClientId);
       }
@@ -4077,11 +4150,6 @@ function updateUserStatusUI() {
       const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
       const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
       
-      const totalSecs = userProfile.secondsSpent || 0;
-      const hours = Math.floor(totalSecs / 3600);
-      const minutes = Math.floor((totalSecs % 3600) / 60);
-      const formattedTime = `${hours}:${String(minutes).padStart(2, '0')}`;
-
       headerProfileContainer.innerHTML = `
         <div class="user-badge" id="user-profile-badge">
           <div class="user-avatar">${initial}</div>
@@ -4097,7 +4165,6 @@ function updateUserStatusUI() {
               ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
             </div>
             <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
-            <div class="user-dropdown-hours" style="margin-top: 4px; font-size: 0.85em; opacity: 0.8;">Simulation time: ${formattedTime}</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -4164,23 +4231,12 @@ function updateUserStatusUI() {
     }
   }
 
-  // 3. Update Solver Stats Panel (Load and Usage)
+  // 3. Update Solver Stats Panel (Usage)
   const statsPanel = document.getElementById('solver-stats-panel');
   if (statsPanel) {
     if (userProfile) {
       statsPanel.classList.remove('hidden');
-      const loadSpan = document.getElementById('sidebar-solver-load');
       const usageSpan = document.getElementById('sidebar-solver-usage');
-      if (loadSpan) {
-        let loadVal = 0.0;
-        if (userProfile.possibleSolverTicks > 0) {
-          loadVal = userProfile.solverTicks / userProfile.possibleSolverTicks;
-        }
-        if (userProfile.solverLoad !== undefined) {
-          loadVal = userProfile.solverLoad;
-        }
-        loadSpan.textContent = `${(loadVal * 100).toFixed(2)}%`;
-      }
       if (usageSpan) {
         usageSpan.textContent = `${userProfile.solverTicks || 0} ticks`;
       }
@@ -4517,7 +4573,7 @@ function setupScenariosAndChat() {
       const chevron = reportsDropdownBtn ? reportsDropdownBtn.querySelector('.chevron-icon') : null;
       if (chevron) chevron.style.transform = 'rotate(0deg)';
 
-      reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
+      reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
       reportsModal.classList.remove('hidden');
 
       try {
@@ -4530,7 +4586,7 @@ function setupScenariosAndChat() {
         if (res.ok) {
           const users = await res.json();
           if (users.length === 0) {
-            reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
+            reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
           } else {
             reportsTableBody.innerHTML = users.map(u => {
               const lastVisitStr = u.last_visit ? new Date(u.last_visit).toLocaleString() : 'Never';
@@ -4542,7 +4598,6 @@ function setupScenariosAndChat() {
                   <td>${u.visits || 0}</td>
                   <td>${lastVisitStr}</td>
                   <td>${u.questions || 0}</td>
-                  <td>${u.hours_spent || 0} hrs</td>
                   <td>${autoRenewStr}</td>
                   <td style="text-align: center;">
                     <button class="delete-user-btn" data-email="${u.email}" title="Delete User">🗑️</button>
@@ -4692,6 +4747,14 @@ function startScenario(scenarioId) {
       
       // Update simulation concentration on slider change
       input.addEventListener('input', (e) => {
+        if (!userProfile) {
+          e.preventDefault();
+          const prevVal = (simulation && simulation.metabolites[ctrl.id]) ? simulation.metabolites[ctrl.id].concentration : ctrl.value;
+          input.value = prevVal;
+          valSpan.textContent = prevVal;
+          openAuthModal();
+          return;
+        }
         const val = parseFloat(e.target.value);
         valSpan.textContent = val;
         

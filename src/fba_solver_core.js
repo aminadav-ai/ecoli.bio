@@ -463,43 +463,65 @@ export function solveFba(highsInstance, staticLpHeader, concentrations, paramete
   return result;
 }
 
-let activeTimeFlusherIntervalId = null;
+let precalculatedGuestState = null;
 
-// Start the periodic active time flush loop (every 60 seconds)
-export function startActiveTimeFlusher() {
-  if (activeTimeFlusherIntervalId) return;
+export function getPrecalculatedGuestState() {
+  return precalculatedGuestState;
+}
 
-  activeTimeFlusherIntervalId = setInterval(async () => {
-    const emailStatsMap = new Map();
+export function precalculateGuestState(highsInstance, staticLpHeader) {
+  if (!escherMapData) {
+    console.error('[Solver] Map data not loaded. Cannot precalculate guest state.');
+    return;
+  }
+  console.log('[Solver] Precalculating guest stable state (20 simulation ticks)...');
+  try {
+    const sim = new Simulation(escherMapData);
+    sim.reset();
     
-    for (const sim of userSimulations.values()) {
-      if (sim.userEmail) {
-        const email = sim.userEmail;
-        const ticks = Math.floor(sim.solverTicksBuffer || 0);
-        
-        if (ticks >= 1) {
-          const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0, possible_ticks: 0 };
-          emailStatsMap.set(email, {
-            seconds: 0,
-            ticks: current.ticks + ticks,
-            possible_ticks: 0
-          });
-          
-          sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) - ticks;
-        }
+    // Simulate 20 ticks to stabilize
+    for (let i = 0; i < 20; i++) {
+      const concentrations = {
+        o2_e: sim.metabolites['o2_e'].concentration,
+        glc__D_e: sim.metabolites['glc__D_e'].concentration
+      };
+      const res = solveFba(highsInstance, staticLpHeader, concentrations, {}, { skipSimTick: true });
+      if (res.status === 'Optimal') {
+        sim.updateFluxes(res.fluxes, res.biomass_flux);
+        sim.tick(1.0);
       }
     }
+    
+    const finalConcs = {};
+    for (const [mId, metab] of Object.entries(sim.metabolites)) {
+      finalConcs[mId] = metab.concentration;
+    }
+    
+    const finalFluxes = {};
+    for (const [rId, rxn] of Object.entries(sim.reactions)) {
+      finalFluxes[rId] = rxn.flux;
+    }
+    
+    const biomassFlux = sim.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
+    
+    precalculatedGuestState = {
+      status: 'Optimal',
+      fluxes: finalFluxes,
+      biomass_flux: biomassFlux,
+      is_dead: biomassFlux < 0.005,
+      concentrations: finalConcs,
+      repressed: {},
+      stabilized: true,
+      changingMetabolites: [],
+      changingReactions: [],
+      solverTicks: 0
+    };
+    console.log('[Solver] Precalculated guest stable state successfully.');
+  } catch (err) {
+    console.error('[Solver] Failed to precalculate guest stable state:', err);
+  }
+}
 
-    if (emailStatsMap.size === 0) return;
-
-    const pendingUpdates = Array.from(emailStatsMap.entries()).map(([email, stats]) => ({
-      email,
-      seconds: 0,
-      ticks: stats.ticks,
-      possible_ticks: 0
-    }));
-
-    console.log(`[Solver] Flushing active simulation stats to DB for ${pendingUpdates.length} users:`, pendingUpdates);
-    await bulkIncrementUserStats(pendingUpdates);
-  }, 60000);
+export function startActiveTimeFlusher() {
+  return;
 }

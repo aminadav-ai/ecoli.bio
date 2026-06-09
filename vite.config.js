@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState } from './src/supabase_db.js';
-import { solveFba, startActiveTimeFlusher, getOrCreateSimulation, serializeSimulation } from './src/fba_solver_core.js';
+import { pool, clearCachedUser, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState } from './src/supabase_db.js';
+import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -29,6 +29,7 @@ function getHighs() {
     highsPromise = highsLoader().then(h => {
       highs = h;
       console.log('[Vite Dev Server] HiGHS solver loaded successfully.');
+      precalculateGuestState(highs, staticLpHeader);
       return h;
     }).catch(err => {
       console.error('[Vite Dev Server] Failed to load HiGHS solver:', err);
@@ -122,17 +123,38 @@ export default defineConfig(({ mode }) => {
         };
 
         const sim = await getOrCreateSimulation(sessionId, user.email);
+        const dbState = await getSessionState(sessionId);
+        if (dbState && sim) {
+          deserializeSimulation(sim, dbState);
+        }
+
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
 
         if (sim) {
-          // Async state save in background
           const state = serializeSimulation(sim);
-          upsertSessionState(sessionId, user.email, state).catch(err => {
+          try {
+            await upsertSessionState(sessionId, user.email, state);
+          } catch (err) {
             console.error('[Solver] Failed to save session to DB:', err);
-          });
+          }
+
+          const ticks = sim.solverTicksBuffer || 0;
+          if (ticks > 0) {
+            sim.solverTicksBuffer = 0;
+            try {
+              await pool.query(
+                'UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + $1 WHERE email = $2',
+                [ticks, user.email]
+              );
+              clearCachedUser(user.email);
+              user.solver_ticks = (user.solver_ticks || 0) + ticks;
+            } catch (err) {
+              console.error('[Solver] Failed to increment solver ticks in DB:', err);
+            }
+          }
         }
 
-        const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+        const totalActual = user.solver_ticks || 0;
         result.solverTicks = totalActual;
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -179,6 +201,9 @@ export default defineConfig(({ mode }) => {
         if (visit && status.loggedIn && status.user) {
           await incrementUserVisits(status.user.email);
           status = await getUserStatus(token, ip, guestId, timeZone);
+        }
+        if (!status.loggedIn) {
+          status.guestState = getPrecalculatedGuestState();
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(status));

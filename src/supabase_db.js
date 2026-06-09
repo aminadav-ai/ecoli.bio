@@ -384,21 +384,9 @@ export async function incrementUserQuestions(email) {
   }
 }
 
-// 8. Increment user active session seconds spent
+// 8. Increment user active session seconds spent (stubbed out)
 export async function incrementUserTimeSpent(email, seconds) {
-  try {
-    const res = await pool.query(
-      'UPDATE users SET seconds_spent = COALESCE(seconds_spent, 0) + $1 WHERE email = $2 RETURNING seconds_spent',
-      [seconds, email]
-    );
-    clearCachedUser(email);
-    if (res.rows.length > 0) {
-      return res.rows[0].seconds_spent;
-    }
-  } catch (err) {
-    console.error('[Postgres DB] Failed to increment user time spent:', err);
-  }
-  return null;
+  return 0;
 }
 
 // 9. Fetch and format all user statistics for admin report
@@ -416,7 +404,6 @@ export async function getAllUsersFromDb() {
         visits: u.visits || 0,
         last_visit: u.last_visit || u.created_at || null,
         questions: u.questions || 0,
-        hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2)),
         auto_renew: !!u.auto_renew
       };
     });
@@ -489,22 +476,9 @@ export async function updateUserO2Preference(email, o2Val) {
   return true;
 }
 
-// 14. Bulk increment user active session seconds spent
+// 14. Bulk increment user active session seconds spent (stubbed out)
 export async function bulkIncrementUserTimeSpent(updates) {
-  if (!updates || updates.length === 0) return;
-  try {
-    await pool.query(
-      'SELECT bulk_increment_time_spent($1::jsonb)',
-      [JSON.stringify(updates)]
-    );
-    for (const item of updates) {
-      if (item.email) {
-        clearCachedUser(item.email);
-      }
-    }
-  } catch (err) {
-    console.error('[Postgres DB] Failed to bulk increment user time spent:', err);
-  }
+  return;
 }
 
 // 15. Bulk increment user active simulation time and solver ticks via RPC
