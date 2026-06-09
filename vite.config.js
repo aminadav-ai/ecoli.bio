@@ -479,7 +479,6 @@ ${JSON.stringify(context, null, 2)}
         name: 'fba-solver-middleware',
         configureServer(server) {
           getHighs().catch(() => {}); // start loading solver in the background on dev server startup
-          startActiveTimeFlusher();
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);
@@ -488,7 +487,6 @@ ${JSON.stringify(context, null, 2)}
         },
         configurePreviewServer(server) {
           getHighs().catch(() => {});
-          startActiveTimeFlusher();
           server.middlewares.use(handleTrackVisit);
           server.middlewares.use(handleSolveFba);
           server.middlewares.use(handleAuth);

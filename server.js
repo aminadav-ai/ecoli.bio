@@ -412,7 +412,6 @@ initializeDatabase(pool)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`[Server] Production Express server is listening on port ${PORT}`);
-      startActiveTimeFlusher();
     });
   })
   .catch(err => {
