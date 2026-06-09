@@ -475,20 +475,6 @@ function throttle(func, limit) {
 
 const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args), 200);
 
-const throttledUpdateVmax = throttle((rxnId, val) => {
-  if (simulation) {
-    simulation.updateParameter(rxnId, 'vMax', val);
-    wakeUpSolver();
-  }
-}, 200);
-
-const throttledUpdateKm = throttle((rxnId, val) => {
-  if (simulation) {
-    simulation.updateParameter(rxnId, 'km', val);
-    wakeUpSolver();
-  }
-}, 200);
-
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
   if (!userProfile) return;
@@ -775,12 +761,19 @@ function setupUIListeners() {
       if (simulation && simulation.metabolites['o2_e']) {
         simulation.metabolites['o2_e'].concentration = val;
         simulation.metabolites['o2_e'].targetConcentration = val;
+      }
+    });
+
+    globalO2Slider.addEventListener('change', (e) => {
+      if (!userProfile) return;
+      const val = parseFloat(e.target.value);
+      if (simulation && simulation.metabolites['o2_e']) {
         if (!activeScenarioId) {
           localStorage.setItem('global_o2_e', val);
           saveO2PreferenceToDb(val);
         }
         wakeUpSolver();
-        throttledUpdateFbaBounds(performance.now());
+        updateFbaBounds(performance.now());
       }
     });
   }
@@ -803,11 +796,18 @@ function setupUIListeners() {
       if (simulation && simulation.metabolites['glc__D_e']) {
         simulation.metabolites['glc__D_e'].concentration = val;
         simulation.metabolites['glc__D_e'].targetConcentration = val;
+      }
+    });
+
+    globalGlcSlider.addEventListener('change', (e) => {
+      if (!userProfile) return;
+      const val = parseFloat(e.target.value);
+      if (simulation && simulation.metabolites['glc__D_e']) {
         if (!activeScenarioId) {
           localStorage.setItem('global_glc__D_e', val);
         }
         wakeUpSolver();
-        throttledUpdateFbaBounds(performance.now());
+        updateFbaBounds(performance.now());
       }
     });
   }
@@ -1038,45 +1038,67 @@ function setupUIListeners() {
   // Reaction Parameter Tweaks
   const vmaxSlider = document.getElementById('vmax-slider');
   const vmaxVal = document.getElementById('vmax-val');
-  vmaxSlider.addEventListener('input', (e) => {
-    if (!userProfile) {
-      e.preventDefault();
-      const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].vMax : 10.0;
-      vmaxSlider.value = prevVal;
-      vmaxVal.textContent = prevVal.toFixed(1);
-      openAuthModal();
-      return;
-    }
-    const val = parseFloat(e.target.value);
-    vmaxVal.textContent = val.toFixed(1);
-    if (selectedReactionId) {
-      // Update pinned reaction slider if it exists (instant UI feedback)
-      const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${selectedReactionId}"]`);
-      const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
-      if (pinnedSlider) pinnedSlider.value = val;
-      if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
-      
-      throttledUpdateVmax(selectedReactionId, val);
-    }
-  });
+  if (vmaxSlider) {
+    vmaxSlider.addEventListener('input', (e) => {
+      if (!userProfile) {
+        e.preventDefault();
+        const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].vMax : 10.0;
+        vmaxSlider.value = prevVal;
+        vmaxVal.textContent = prevVal.toFixed(1);
+        openAuthModal();
+        return;
+      }
+      const val = parseFloat(e.target.value);
+      vmaxVal.textContent = val.toFixed(1);
+      if (selectedReactionId) {
+        // Update pinned reaction slider if it exists (instant UI feedback)
+        const pinnedSlider = document.querySelector(`.pinned-vmax-slider[data-id="${selectedReactionId}"]`);
+        const pinnedLabel = document.getElementById(`pinned-vmax-val-${selectedReactionId}`);
+        if (pinnedSlider) pinnedSlider.value = val;
+        if (pinnedLabel) pinnedLabel.textContent = val.toFixed(1);
+        
+        if (simulation) {
+          simulation.updateParameter(selectedReactionId, 'vMax', val);
+        }
+      }
+    });
+
+    vmaxSlider.addEventListener('change', (e) => {
+      if (!userProfile) return;
+      if (selectedReactionId) {
+        wakeUpSolver();
+        updateFbaBounds(performance.now());
+      }
+    });
+  }
 
   const kmSlider = document.getElementById('km-slider');
   const kmVal = document.getElementById('km-val');
-  kmSlider.addEventListener('input', (e) => {
-    if (!userProfile) {
-      e.preventDefault();
-      const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].km : 0.8;
-      kmSlider.value = prevVal;
-      kmVal.textContent = prevVal.toFixed(2);
-      openAuthModal();
-      return;
-    }
-    const val = parseFloat(e.target.value);
-    kmVal.textContent = val.toFixed(2);
-    if (selectedReactionId) {
-      throttledUpdateKm(selectedReactionId, val);
-    }
-  });
+  if (kmSlider) {
+    kmSlider.addEventListener('input', (e) => {
+      if (!userProfile) {
+        e.preventDefault();
+        const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].km : 0.8;
+        kmSlider.value = prevVal;
+        kmVal.textContent = prevVal.toFixed(2);
+        openAuthModal();
+        return;
+      }
+      const val = parseFloat(e.target.value);
+      kmVal.textContent = val.toFixed(2);
+      if (selectedReactionId && simulation) {
+        simulation.updateParameter(selectedReactionId, 'km', val);
+      }
+    });
+
+    kmSlider.addEventListener('change', (e) => {
+      if (!userProfile) return;
+      if (selectedReactionId) {
+        wakeUpSolver();
+        updateFbaBounds(performance.now());
+      }
+    });
+  }
 
   // Handle hover tooltips custom event from Pixi Canvas
   const tooltip = document.getElementById('tooltip');
@@ -1771,7 +1793,15 @@ function renderPinnedReactions() {
         if (vmaxSlider) vmaxSlider.value = val;
         if (vmaxValText) vmaxValText.textContent = val.toFixed(1);
       }
-      throttledUpdateVmax(rxnId, val);
+      if (simulation) {
+        simulation.updateParameter(rxnId, 'vMax', val);
+      }
+    });
+
+    slider.addEventListener('change', (e) => {
+      if (!userProfile) return;
+      wakeUpSolver();
+      updateFbaBounds(performance.now());
     });
     
     container.appendChild(row);
@@ -4856,9 +4886,14 @@ function startScenario(scenarioId) {
         if (simulation.metabolites[ctrl.id]) {
           simulation.metabolites[ctrl.id].concentration = val;
           simulation.metabolites[ctrl.id].targetConcentration = val;
-          // Trigger FBA solver bounds immediately
+        }
+      });
+
+      input.addEventListener('change', (e) => {
+        if (!userProfile) return;
+        if (simulation.metabolites[ctrl.id]) {
           wakeUpSolver();
-          throttledUpdateFbaBounds(performance.now());
+          updateFbaBounds(performance.now());
         }
       });
       
