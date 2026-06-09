@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState } from './src/supabase_db.js';
+import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser } from './src/supabase_db.js';
 import { initializeDatabase } from './src/db_init.js';
 import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
