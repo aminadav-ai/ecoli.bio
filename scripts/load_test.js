@@ -63,11 +63,9 @@ class VirtualUser {
     this.timer = null;
   }
 
-  start() {
+  start(delay = 0) {
     this.active = true;
-    // Случайная начальная задержка до 60 секунд для плавного распределения нагрузки холодного старта
-    const initialDelay = Math.random() * 60000;
-    this.timer = setTimeout(() => this.runLoop(), initialDelay);
+    this.timer = setTimeout(() => this.runLoop(), delay);
   }
 
   stop() {
@@ -157,11 +155,13 @@ function adjustUsers(targetCount) {
   const currentCount = users.size;
 
   if (targetCount > currentCount) {
-    // Добавляем пользователей
+    // Добавляем пользователей с шагом в 600мс для предотвращения пиковой нагрузки холодного старта
+    let index = 0;
     for (let i = currentCount + 1; i <= targetCount; i++) {
       const user = new VirtualUser(i, activeToken);
       users.set(i, user);
-      user.start();
+      user.start(index * 600);
+      index++;
     }
   } else if (targetCount < currentCount) {
     // Останавливаем и удаляем лишних
