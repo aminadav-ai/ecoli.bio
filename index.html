@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cellflux.org | Central Metabolism Live Atlas</title>
     
+    <!-- Preload Large Metabolic Map JSON Asset -->
+    <link rel="preload" href="/iJO1366.Central metabolism.json" as="fetch" crossorigin />
+    
     <!-- Premium Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +35,18 @@
   <body>
     <!-- App Container -->
     <div id="app">
+      <!-- Loading Overlay -->
+      <div id="map-loading-overlay" class="map-loading-overlay">
+        <div class="map-loading-content">
+          <div class="brand">
+            <span class="logo">⚡</span>
+            <h1>cellflux.org</h1>
+          </div>
+          <div class="geo-spinner"></div>
+          <div class="map-loading-text">Loading metabolic map...</div>
+        </div>
+      </div>
+
       <!-- Main Canvas Target for PixiJS -->
       <canvas id="pixi-canvas"></canvas>
 

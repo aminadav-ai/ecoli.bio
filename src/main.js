@@ -441,6 +441,16 @@ async function bootstrap() {
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
+
+  // Hide the initial loading overlay
+  const loadingOverlay = document.getElementById('map-loading-overlay');
+  if (loadingOverlay) {
+    loadingOverlay.classList.add('fade-out');
+    // Remove from DOM after transition completes to save resources
+    setTimeout(() => {
+      loadingOverlay.remove();
+    }, 500);
+  }
 }
 
 // Throttle utility with leading and trailing edge support to rate-limit server calls
