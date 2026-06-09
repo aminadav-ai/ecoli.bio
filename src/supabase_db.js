@@ -26,7 +26,17 @@ const connectionString = process.env.DATABASE_URL;
 const config = {};
 
 if (connectionString) {
-  config.connectionString = connectionString;
+  try {
+    const parsedUrl = new URL(connectionString);
+    config.user = decodeURIComponent(parsedUrl.username);
+    config.password = decodeURIComponent(parsedUrl.password);
+    config.host = parsedUrl.hostname;
+    config.port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 5432;
+    config.database = decodeURIComponent(parsedUrl.pathname.substring(1));
+  } catch (err) {
+    console.error('[Postgres DB] Failed to parse DATABASE_URL via URL parser, falling back:', err);
+    config.connectionString = connectionString;
+  }
 } else {
   config.user = process.env.PGUSER;
   config.password = process.env.PGPASSWORD;
@@ -35,10 +45,11 @@ if (connectionString) {
   config.database = process.env.PGDATABASE;
 }
 
-// DigitalOcean databases require SSL connection
-const isRemote = (config.connectionString && config.connectionString.includes('ondigitalocean.com')) || 
-                 (config.host && config.host.includes('ondigitalocean.com'));
-if (isRemote || process.env.PGSSLMODE === 'require') {
+// Enable SSL rejectUnauthorized: false unconditionally for remote databases
+const isLocalhost = (config.host === 'localhost' || config.host === '127.0.0.1') ||
+                    (config.connectionString && (config.connectionString.includes('localhost') || config.connectionString.includes('127.0.0.1')));
+
+if (!isLocalhost) {
   config.ssl = {
     rejectUnauthorized: false
   };
