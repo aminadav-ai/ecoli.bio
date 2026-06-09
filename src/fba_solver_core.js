@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Simulation } from './simulation.js';
-import { bulkIncrementUserStats, clearCachedUser } from './supabase_db.js';
+import { bulkIncrementUserStats, clearCachedUser, getSessionState } from './supabase_db.js';
 
 const staticBoundsPath = path.resolve('src/static_bounds.json');
 let staticBounds = {};
@@ -39,7 +39,53 @@ if (pruneTimer && typeof pruneTimer.unref === 'function') {
   pruneTimer.unref();
 }
 
-export function getOrCreateSimulation(guestId) {
+export function serializeSimulation(sim) {
+  const state = {
+    metabolites: {},
+    parameters: {},
+    isDead: sim.isDead || false,
+    tickCounter: sim.tickCounter || 0
+  };
+  for (const [mId, metab] of Object.entries(sim.metabolites)) {
+    state.metabolites[mId] = {
+      concentration: metab.concentration,
+      targetConcentration: metab.targetConcentration
+    };
+  }
+  for (const [rId, rxn] of Object.entries(sim.reactions)) {
+    if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
+      state.parameters[rId] = {
+        vMax: rxn.vMax,
+        km: rxn.km
+      };
+    }
+  }
+  return state;
+}
+
+export function deserializeSimulation(sim, state) {
+  if (!state) return;
+  if (state.metabolites) {
+    for (const [mId, mState] of Object.entries(state.metabolites)) {
+      if (sim.metabolites[mId]) {
+        sim.metabolites[mId].concentration = mState.concentration;
+        sim.metabolites[mId].targetConcentration = mState.targetConcentration;
+      }
+    }
+  }
+  if (state.parameters) {
+    for (const [rId, rState] of Object.entries(state.parameters)) {
+      if (sim.reactions[rId]) {
+        sim.reactions[rId].vMax = rState.vMax;
+        sim.reactions[rId].km = rState.km;
+      }
+    }
+  }
+  sim.isDead = !!state.isDead;
+  sim.tickCounter = state.tickCounter || 0;
+}
+
+export async function getOrCreateSimulation(guestId, userEmail) {
   const id = guestId || 'default_user';
   let sim = userSimulations.get(id);
   if (!sim) {
@@ -48,6 +94,15 @@ export function getOrCreateSimulation(guestId) {
       if (referenceNormalFluxes) {
         sim.normalFluxes = { ...referenceNormalFluxes };
       }
+      
+      // Load state from DB
+      if (guestId && guestId !== 'default_user') {
+        const state = await getSessionState(guestId);
+        if (state) {
+          deserializeSimulation(sim, state);
+        }
+      }
+      
       userSimulations.set(id, sim);
     } else {
       console.error('[Solver] Map data not loaded. Cannot initialize Simulation on server.');
@@ -59,8 +114,8 @@ export function getOrCreateSimulation(guestId) {
     }
   }
   sim.lastAccessed = Date.now();
-  if (!sim.lastFlushTime) {
-    sim.lastFlushTime = Date.now();
+  if (userEmail) {
+    sim.userEmail = userEmail;
   }
   return sim;
 }
@@ -409,43 +464,21 @@ export function startActiveTimeFlusher() {
 
   activeTimeFlusherIntervalId = setInterval(async () => {
     const emailStatsMap = new Map();
-    const now = Date.now();
     
     for (const sim of userSimulations.values()) {
       if (sim.userEmail) {
         const email = sim.userEmail;
-        
-        // Calculate elapsed time since last flush
-        const elapsedMs = now - (sim.lastFlushTime || now);
-        const elapsedSeconds = elapsedMs / 1000;
-        
-        // User is active if lastAccessed is within 75 seconds (heartbeat is every 60s)
-        const isActive = sim.lastAccessed && (now - sim.lastAccessed < 75000);
-        
-        if (isActive) {
-          // Accumulate active time and possible ticks (4 potential ticks/sec)
-          sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) + elapsedSeconds;
-          sim.possibleTicksBuffer = (sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4);
-        }
-        
-        // Always advance lastFlushTime so we only measure the next interval
-        sim.lastFlushTime = now;
-        
-        const seconds = Math.floor(sim.activeTimeBuffer || 0);
         const ticks = Math.floor(sim.solverTicksBuffer || 0);
-        const possibleTicks = Math.floor(sim.possibleTicksBuffer || 0);
         
-        if (seconds >= 1 || ticks >= 1 || possibleTicks >= 1) {
+        if (ticks >= 1) {
           const current = emailStatsMap.get(email) || { seconds: 0, ticks: 0, possible_ticks: 0 };
           emailStatsMap.set(email, {
-            seconds: current.seconds + seconds,
+            seconds: 0,
             ticks: current.ticks + ticks,
-            possible_ticks: current.possible_ticks + possibleTicks
+            possible_ticks: 0
           });
           
-          if (seconds >= 1) sim.activeTimeBuffer = (sim.activeTimeBuffer || 0) - seconds;
-          if (ticks >= 1) sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) - ticks;
-          if (possibleTicks >= 1) sim.possibleTicksBuffer = (sim.possibleTicksBuffer || 0) - possibleTicks;
+          sim.solverTicksBuffer = (sim.solverTicksBuffer || 0) - ticks;
         }
       }
     }
@@ -454,9 +487,9 @@ export function startActiveTimeFlusher() {
 
     const pendingUpdates = Array.from(emailStatsMap.entries()).map(([email, stats]) => ({
       email,
-      seconds: stats.seconds,
+      seconds: 0,
       ticks: stats.ticks,
-      possible_ticks: stats.possible_ticks
+      possible_ticks: 0
     }));
 
     console.log(`[Solver] Flushing active simulation stats to DB for ${pendingUpdates.length} users:`, pendingUpdates);

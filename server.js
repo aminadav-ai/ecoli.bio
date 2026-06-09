@@ -4,8 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba, startActiveTimeFlusher, getOrCreateSimulation } from './src/fba_solver_core.js';
+import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState } from './src/supabase_db.js';
+import { initializeDatabase } from './src/db_init.js';
+import { solveFba, startActiveTimeFlusher, getOrCreateSimulation, serializeSimulation } from './src/fba_solver_core.js';
 
 // Load env variables from .env file locally if it exists
 if (fs.existsSync('.env')) {
@@ -64,42 +65,47 @@ app.post('/api/solve-fba', async (req, res) => {
 
     const guestId = req.headers['x-guest-id'] || req.ip;
     
-    // Rate limit check: max 1 request per 150ms per guestId
-    const now = Date.now();
-    const lastTime = solveFbaRateLimits.get(guestId);
-    if (lastTime && (now - lastTime < 150)) {
-      return res.status(429).json({ error: 'Rate limit exceeded. Please wait.' });
-    }
-    solveFbaRateLimits.set(guestId, now);
-
-    const concentrations = req.body.concentrations || {};
-    const parameters = req.body.parameters || {};
-
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     const user = token ? await getUserByToken(token) : null;
 
+    if (!user) {
+      return res.status(401).json({ error: 'Пожалуйста, авторизуйтесь для работы с симулятором.' });
+    }
+
+    const sessionId = req.headers['x-session-id'] || 'default_user';
+    const concentrations = req.body.concentrations || {};
+    const parameters = req.body.parameters || {};
+
+    // Rate limit check: max 1 request per 150ms per sessionId
+    const now = Date.now();
+    const lastTime = solveFbaRateLimits.get(sessionId);
+    if (lastTime && (now - lastTime < 150)) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please wait.' });
+    }
+    solveFbaRateLimits.set(sessionId, now);
+
     const options = {
-      guestId,
+      guestId: sessionId,
       reset: req.body.reset,
       scenario: req.body.scenario,
-      userEmail: user ? user.email : null
+      userEmail: user.email
     };
 
+    const sim = await getOrCreateSimulation(sessionId, user.email);
     const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
-    if (user) {
-      const sim = getOrCreateSimulation(guestId);
-      if (sim && !sim.userEmail) {
-        sim.userEmail = user.email;
-      }
-      const now = Date.now();
-      const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
-      const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
-      const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
-                            (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
-      result.solverTicks = totalActual;
-      result.solverLoad = totalPossible > 0 ? (totalActual / totalPossible) : 0.0;
+
+    if (sim) {
+      // Async state save in background
+      const state = serializeSimulation(sim);
+      upsertSessionState(sessionId, user.email, state).catch(err => {
+        console.error('[Solver] Failed to save session to DB:', err);
+      });
     }
+
+    const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+    result.solverTicks = totalActual;
+
     return res.json(result);
   } catch (err) {
     console.error('Error in solve-fba API:', err);
@@ -295,44 +301,6 @@ app.post('/api/auth/logout', async (req, res) => {
   }
 });
 
-app.post('/api/auth/heartbeat', async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    const guestId = req.headers['x-guest-id'];
-    let secondsSpent = null;
-    let solverTicks = null;
-    let possibleSolverTicks = null;
-    let solverLoad = null;
-    if (token) {
-      const user = await getUserByToken(token);
-      if (user) {
-        const sim = getOrCreateSimulation(guestId);
-        if (sim) {
-          sim.userEmail = user.email;
-        }
-        const now = Date.now();
-        const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
-        
-        secondsSpent = (user.seconds_spent || 0) + (sim ? Math.floor((sim.activeTimeBuffer || 0) + elapsedSeconds) : 0);
-        solverTicks = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
-        possibleSolverTicks = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
-                              (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
-        solverLoad = possibleSolverTicks > 0 ? (solverTicks / possibleSolverTicks) : 0.0;
-      }
-    }
-    return res.json({
-      success: true,
-      secondsSpent: secondsSpent || 0,
-      solverTicks: solverTicks || 0,
-      possibleSolverTicks: possibleSolverTicks || 0,
-      solverLoad: solverLoad || 0.0
-    });
-  } catch (err) {
-    console.error('Heartbeat error:', err);
-    return res.status(500).json({ error: err.message });
-  }
-});
 
 app.get('/api/admin/reports/users', async (req, res) => {
   try {
@@ -392,26 +360,8 @@ app.post('/api/payments/simulate', async (req, res) => {
   }
 });
 
-app.patch('/api/user/preferences', async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized.' });
-    }
-    const user = await getUserByToken(token);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid token.' });
-    }
-    const { o2Preference } = req.body || {};
-    if (o2Preference !== undefined && o2Preference !== null) {
-      await updateUserO2Preference(user.email, parseFloat(o2Preference));
-    }
-    return res.json({ success: true });
-  } catch (err) {
-    console.error('Preferences update error:', err);
-    return res.status(500).json({ error: err.message });
-  }
+app.patch('/api/user/preferences', (req, res) => {
+  return res.json({ success: true });
 });
 
 
@@ -433,7 +383,14 @@ app.get('*any', (req, res, next) => {
 });
 
 // Start listening
-app.listen(PORT, () => {
-  console.log(`[Server] Production Express server is listening on port ${PORT}`);
-  startActiveTimeFlusher();
-});
+initializeDatabase(pool)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`[Server] Production Express server is listening on port ${PORT}`);
+      startActiveTimeFlusher();
+    });
+  })
+  .catch(err => {
+    console.error('[Server] Database initialization failed. Exiting.', err);
+    process.exit(1);
+  });

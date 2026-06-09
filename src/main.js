@@ -507,7 +507,8 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
 
     const headers = {
       'Content-Type': 'application/json',
-      'x-guest-id': guestId
+      'x-guest-id': guestId,
+      'x-session-id': sessionId
     };
     const token = localStorage.getItem('userToken');
     if (token) {
@@ -3736,6 +3737,12 @@ if (!guestId) {
   localStorage.setItem('chatGuestId', guestId);
 }
 
+let sessionId = sessionStorage.getItem('simulationSessionId');
+if (!sessionId) {
+  sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  sessionStorage.setItem('simulationSessionId', sessionId);
+}
+
 let userToken = localStorage.getItem('userToken');
 let googleClientId = null;
 let currentLimit = { max: 5, count: 0, remaining: 5 };
@@ -3894,24 +3901,7 @@ async function handleLogout() {
 }
 
 async function saveO2PreferenceToDb(val) {
-  if (!userProfile) return;
-  const token = localStorage.getItem('userToken');
-  if (!token) return;
-  try {
-    const res = await fetch('/api/user/preferences', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ o2Preference: val })
-    });
-    if (!res.ok) {
-      console.warn('[Preferences] Failed to save O2 preference to server:', res.statusText);
-    }
-  } catch (err) {
-    console.error('[Preferences] Error saving O2 preference:', err);
-  }
+  // Disabled as per user request
 }
 
 function openAuthModal() {
@@ -4609,51 +4599,6 @@ function setupScenariosAndChat() {
     });
   }
 
-  // Heartbeat Loop (every 60 seconds)
-  setInterval(async () => {
-    if (document.visibilityState !== 'visible') return;
-    const token = localStorage.getItem('userToken');
-    if (token && userProfile) {
-      try {
-        const res = await fetch('/api/auth/heartbeat', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-guest-id': guestId
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          let needsUIUpdate = false;
-          if (data.secondsSpent !== undefined) {
-            userProfile.secondsSpent = data.secondsSpent;
-            needsUIUpdate = true;
-          }
-          if (data.solverTicks !== undefined) {
-            userProfile.solverTicks = data.solverTicks;
-            needsUIUpdate = true;
-          }
-          if (data.possibleSolverTicks !== undefined) {
-            userProfile.possibleSolverTicks = data.possibleSolverTicks;
-            needsUIUpdate = true;
-          }
-          if (data.solverLoad !== undefined) {
-            userProfile.solverLoad = data.solverLoad;
-            needsUIUpdate = true;
-          }
-          if (needsUIUpdate) {
-            updateUserStatusUI();
-            const solverDropdown = document.getElementById('solver-details-dropdown');
-            if (solverDropdown && !solverDropdown.classList.contains('hidden')) {
-              populateSolverDetails();
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[Heartbeat] Failed to send active heartbeat:', err);
-      }
-    }
-  }, 60000);
 }
 
 function selectScenario(scenarioId) {

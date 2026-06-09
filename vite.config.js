@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference } from './src/supabase_db.js';
-import { solveFba, startActiveTimeFlusher, getOrCreateSimulation } from './src/fba_solver_core.js';
+import { checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState } from './src/supabase_db.js';
+import { solveFba, startActiveTimeFlusher, getOrCreateSimulation, serializeSimulation } from './src/fba_solver_core.js';
 
 // Load static bounds once on startup
 const staticBoundsPath = path.resolve('src/static_bounds.json');
@@ -88,44 +88,53 @@ export default defineConfig(({ mode }) => {
 
         const guestId = req.headers['x-guest-id'] || 'unknown';
         
-        // Rate limit check: max 1 request per 150ms per guestId
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(token) : null;
+
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Пожалуйста, авторизуйтесь для работы с симулятором.' }));
+          return;
+        }
+
+        const sessionId = req.headers['x-session-id'] || 'default_user';
+        
+        // Rate limit check: max 1 request per 150ms per sessionId
         const now = Date.now();
-        const lastTime = solveFbaRateLimits.get(guestId);
+        const lastTime = solveFbaRateLimits.get(sessionId);
         if (lastTime && (now - lastTime < 150)) {
           res.writeHead(429, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Rate limit exceeded. Please wait.' }));
           return;
         }
-        solveFbaRateLimits.set(guestId, now);
+        solveFbaRateLimits.set(sessionId, now);
+
         const body = await getPostBody(req);
         const concentrations = body.concentrations || {};
         const parameters = body.parameters || {};
 
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        const user = token ? await getUserByToken(token) : null;
-
         const options = {
-          guestId,
+          guestId: sessionId,
           reset: body.reset,
           scenario: body.scenario,
-          userEmail: user ? user.email : null
+          userEmail: user.email
         };
 
+        const sim = await getOrCreateSimulation(sessionId, user.email);
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
-        if (user) {
-          const sim = getOrCreateSimulation(guestId);
-          if (sim && !sim.userEmail) {
-            sim.userEmail = user.email;
-          }
-          const now = Date.now();
-          const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
-          const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
-          const totalPossible = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
-                                (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
-          result.solverTicks = totalActual;
-          result.solverLoad = totalPossible > 0 ? (totalActual / totalPossible) : 0.0;
+
+        if (sim) {
+          // Async state save in background
+          const state = serializeSimulation(sim);
+          upsertSessionState(sessionId, user.email, state).catch(err => {
+            console.error('[Solver] Failed to save session to DB:', err);
+          });
         }
+
+        const totalActual = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
+        result.solverTicks = totalActual;
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -192,45 +201,7 @@ export default defineConfig(({ mode }) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
-    } else if (url.pathname === '/api/auth/heartbeat' && req.method === 'POST') {
-      try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        const guestId = req.headers['x-guest-id'];
-        let secondsSpent = null;
-        let solverTicks = null;
-        let possibleSolverTicks = null;
-        let solverLoad = null;
-        if (token) {
-          const user = await getUserByToken(token);
-          if (user) {
-            const sim = getOrCreateSimulation(guestId);
-            if (sim) {
-              sim.userEmail = user.email;
-            }
-            const now = Date.now();
-            const elapsedSeconds = Math.min(75, (now - (sim ? sim.lastFlushTime : now)) / 1000);
-            
-            secondsSpent = (user.seconds_spent || 0) + (sim ? Math.floor((sim.activeTimeBuffer || 0) + elapsedSeconds) : 0);
-            solverTicks = (user.solver_ticks || 0) + (sim ? (sim.solverTicksBuffer || 0) : 0);
-            possibleSolverTicks = (user.possible_solver_ticks ? parseInt(user.possible_solver_ticks, 10) : 0) +
-                                  (sim ? Math.floor((sim.possibleTicksBuffer || 0) + (elapsedSeconds * 4)) : 0);
-            solverLoad = possibleSolverTicks > 0 ? (solverTicks / possibleSolverTicks) : 0.0;
-          }
-        }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          success: true,
-          secondsSpent: secondsSpent || 0,
-          solverTicks: solverTicks || 0,
-          possibleSolverTicks: possibleSolverTicks || 0,
-          solverLoad: solverLoad || 0.0
-        }));
-      } catch (err) {
-        console.error('Vite Heartbeat error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-      }
+
     } else if (url.pathname === '/api/admin/reports/users' && req.method === 'GET') {
       try {
         const authHeader = req.headers['authorization'];
@@ -304,31 +275,8 @@ export default defineConfig(({ mode }) => {
         res.end(JSON.stringify({ error: err.message }));
       }
     } else if (url.pathname === '/api/user/preferences' && req.method === 'PATCH') {
-      try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Unauthorized.' }));
-          return;
-        }
-        const user = await getUserByToken(token);
-        if (!user) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid token.' }));
-          return;
-        }
-        const { o2Preference } = await getPostBody(req);
-        if (o2Preference !== undefined && o2Preference !== null) {
-          await updateUserO2Preference(user.email, parseFloat(o2Preference));
-        }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
-      } catch (err) {
-        console.error('Vite Preferences update error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
     } else {
       next();
     }

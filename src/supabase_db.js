@@ -1,25 +1,50 @@
 import crypto from 'crypto';
+import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
 
-// Helper to make fetch calls to Supabase REST API
-async function supabaseFetch(path, options = {}) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Supabase is not configured in .env');
+// Load env variables from .env file locally if it exists
+const envPath = path.resolve('.env');
+if (fs.existsSync(envPath)) {
+  const envConfig = fs.readFileSync(envPath, 'utf8');
+  for (const line of envConfig.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const parts = trimmed.split('=');
+    const key = parts[0].trim();
+    const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
+    if (key && !(key in process.env)) {
+      process.env[key] = value;
+    }
   }
-  const url = `${supabaseUrl}/rest/v1/${path}`;
-  const headers = {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    ...options.headers
-  };
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-  return response;
 }
+
+const { Pool } = pg;
+
+// Connection pool configuration
+const connectionString = process.env.DATABASE_URL;
+const config = {};
+
+if (connectionString) {
+  config.connectionString = connectionString;
+} else {
+  config.user = process.env.PGUSER;
+  config.password = process.env.PGPASSWORD;
+  config.host = process.env.PGHOST;
+  config.port = process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432;
+  config.database = process.env.PGDATABASE;
+}
+
+// DigitalOcean databases require SSL connection
+const isRemote = (config.connectionString && config.connectionString.includes('ondigitalocean.com')) || 
+                 (config.host && config.host.includes('ondigitalocean.com'));
+if (isRemote || process.env.PGSSLMODE === 'require') {
+  config.ssl = {
+    rejectUnauthorized: false
+  };
+}
+
+export const pool = new Pool(config);
 
 const tokenCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -44,20 +69,24 @@ export async function getUserByToken(token) {
     }
   }
   try {
-    const res = await supabaseFetch(`user_sessions?token=eq.${encodeURIComponent(token)}`);
-    const sessions = await res.json();
-    if (sessions.length > 0) {
-      const session = sessions[0];
-      const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(session.email)}`);
-      const users = await userRes.json();
-      if (users.length > 0) {
-        const user = users[0];
+    const sessionRes = await pool.query(
+      'SELECT email FROM user_sessions WHERE token = $1',
+      [token]
+    );
+    if (sessionRes.rows.length > 0) {
+      const email = sessionRes.rows[0].email;
+      const userRes = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+      if (userRes.rows.length > 0) {
+        const user = userRes.rows[0];
         tokenCache.set(token, { user, timestamp: now });
         return user;
       }
     }
   } catch (err) {
-    console.error('[Supabase DB] Failed to get user by token:', err);
+    console.error('[Postgres DB] Failed to get user by token:', err);
   }
   return null;
 }
@@ -103,8 +132,8 @@ export async function checkLimitAndIncrement(ip, guestId, authToken, timeZone) {
   const identifier = `user:${user.email}`;
 
   try {
-    const res = await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`);
-    const records = await res.json();
+    const res = await pool.query('SELECT * FROM chat_limits WHERE identifier = $1', [identifier]);
+    const records = res.rows;
     const now = new Date();
 
     if (records.length > 0) {
@@ -128,41 +157,32 @@ export async function checkLimitAndIncrement(ip, guestId, authToken, timeZone) {
       }
 
       if (shouldReset) {
-        // Reset limit & store current timezone
-        await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ count: 1, last_reset: now.toISOString(), timezone: timeZone || 'UTC' })
-        });
+        await pool.query(
+          'UPDATE chat_limits SET count = 1, last_reset = $1, timezone = $2 WHERE identifier = $3',
+          [now, timeZone || 'UTC', identifier]
+        );
         return { allowed: true, isPremium, user, remaining: limitMax - 1 };
       } else {
         if (record.count >= limitMax) {
           return { allowed: false, isPremium, user, remaining: 0 };
         } else {
           const newCount = record.count + 1;
-          await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ count: newCount })
-          });
+          await pool.query(
+            'UPDATE chat_limits SET count = $1 WHERE identifier = $2',
+            [newCount, identifier]
+          );
           return { allowed: true, isPremium, user, remaining: limitMax - newCount };
         }
       }
     } else {
-      // Create first limit entry & store current timezone
-      await supabaseFetch('chat_limits', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({ identifier, count: 1, last_reset: now.toISOString(), timezone: timeZone || 'UTC' })
-      });
+      await pool.query(
+        'INSERT INTO chat_limits (identifier, count, last_reset, timezone) VALUES ($1, $2, $3, $4) ON CONFLICT (identifier) DO UPDATE SET count = 1, last_reset = EXCLUDED.last_reset, timezone = EXCLUDED.timezone',
+        [identifier, 1, now, timeZone || 'UTC']
+      );
       return { allowed: true, isPremium, user, remaining: limitMax - 1 };
     }
   } catch (err) {
-    console.error('[Supabase DB] Check limit error:', err);
-    // Safe fallback: allow query if Supabase fails (avoids breaking chatbot if DB goes down)
+    console.error('[Postgres DB] Check limit error:', err);
     return { allowed: true, isPremium, user, remaining: 1 };
   }
 }
@@ -181,40 +201,30 @@ export async function verifyGoogleTokenAndLogin(credential) {
     throw new Error('Email field is missing in Google credential payload.');
   }
 
-  // Create user in Supabase (upsert)
-  await supabaseFetch('users', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify({ email, name })
-  });
+  // Create user in DB (upsert)
+  await pool.query(
+    'INSERT INTO users (email, name) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name',
+    [email, name]
+  );
 
   // Create session UUID
   const token = crypto.randomUUID();
-  await supabaseFetch('user_sessions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, email })
-  });
+  await pool.query(
+    'INSERT INTO user_sessions (token, email) VALUES ($1, $2)',
+    [token, email]
+  );
 
   // Fetch full user record to check premium state
-  const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
-  const users = await userRes.json();
-  const user = users[0] || { email, name };
+  const userRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  const user = userRes.rows[0] || { email, name };
 
   const visits = (user.visits || 0) + 1;
-  const lastVisit = new Date().toISOString();
+  const lastVisit = new Date();
 
-  await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      visits,
-      last_visit: lastVisit
-    })
-  });
+  await pool.query(
+    'UPDATE users SET visits = $1, last_visit = $2 WHERE email = $3',
+    [visits, lastVisit, email]
+  );
 
   return {
     token,
@@ -226,10 +236,7 @@ export async function verifyGoogleTokenAndLogin(credential) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
-      secondsSpent: user.seconds_spent || 0,
-      solverTicks: user.solver_ticks || 0,
-      possibleSolverTicks: user.possible_solver_ticks || 0
+      solverTicks: user.solver_ticks || 0
     }
   };
 }
@@ -253,8 +260,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
   let count = 0;
 
   try {
-    const res = await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`);
-    const records = await res.json();
+    const res = await pool.query('SELECT * FROM chat_limits WHERE identifier = $1', [identifier]);
+    const records = res.rows;
     if (records.length > 0) {
       const record = records[0];
       const lastReset = new Date(record.last_reset);
@@ -280,7 +287,7 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       }
     }
   } catch (err) {
-    console.error('[Supabase DB] Failed to get limit count:', err);
+    console.error('[Postgres DB] Failed to get limit count:', err);
   }
 
   return {
@@ -294,10 +301,7 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      o2Preference: (user.o2_preference !== undefined && user.o2_preference !== null) ? parseFloat(user.o2_preference) : 1.0,
-      secondsSpent: user.seconds_spent || 0,
-      solverTicks: user.solver_ticks || 0,
-      possibleSolverTicks: user.possible_solver_ticks || 0
+      solverTicks: user.solver_ticks || 0
     } : null,
     limit: {
       max: limitMax,
@@ -311,11 +315,9 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
 export async function logoutSession(token) {
   if (!token) return;
   try {
-    await supabaseFetch(`user_sessions?token=eq.${encodeURIComponent(token)}`, {
-      method: 'DELETE'
-    });
+    await pool.query('DELETE FROM user_sessions WHERE token = $1', [token]);
   } catch (err) {
-    console.error('[Supabase DB] Logout session error:', err);
+    console.error('[Postgres DB] Logout session error:', err);
   }
 }
 
@@ -331,15 +333,10 @@ export async function simulatePremiumPayment(token, tier, autoRenew) {
   
   const chosenTier = parseInt(tier, 10) === 2 ? 2 : 1;
 
-  await supabaseFetch(`users?email=eq.${encodeURIComponent(user.email)}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      premium_until: premiumUntil.toISOString(),
-      premium_tier: chosenTier,
-      auto_renew: !!autoRenew
-    })
-  });
+  await pool.query(
+    'UPDATE users SET premium_until = $1, premium_tier = $2, auto_renew = $3 WHERE email = $4',
+    [premiumUntil, chosenTier, !!autoRenew, user.email]
+  );
   clearCachedUser(user.email);
 
   return {
@@ -353,124 +350,94 @@ export async function simulatePremiumPayment(token, tier, autoRenew) {
 // 6. Increment user visits/login count
 export async function incrementUserVisits(email) {
   try {
-    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
-    const users = await userRes.json();
-    if (users.length > 0) {
-      const u = users[0];
-      const visits = (u.visits || 0) + 1;
-      const lastVisit = new Date().toISOString();
-
-      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          visits,
-          last_visit: lastVisit
-        })
-      });
-      clearCachedUser(email);
-    }
+    await pool.query(
+      'UPDATE users SET visits = COALESCE(visits, 0) + 1, last_visit = CURRENT_TIMESTAMP WHERE email = $1',
+      [email]
+    );
+    clearCachedUser(email);
   } catch (err) {
-    console.error('[Supabase DB] Failed to increment user visits:', err);
+    console.error('[Postgres DB] Failed to increment user visits:', err);
   }
 }
 
 // 7. Increment user asked questions count
 export async function incrementUserQuestions(email) {
   try {
-    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
-    const users = await userRes.json();
-    if (users.length > 0) {
-      const u = users[0];
-      const questions = (u.questions || 0) + 1;
-
-      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questions
-        })
-      });
-      clearCachedUser(email);
-    }
+    await pool.query(
+      'UPDATE users SET questions = COALESCE(questions, 0) + 1 WHERE email = $1',
+      [email]
+    );
+    clearCachedUser(email);
   } catch (err) {
-    console.error('[Supabase DB] Failed to increment user questions:', err);
+    console.error('[Postgres DB] Failed to increment user questions:', err);
   }
 }
 
 // 8. Increment user active session seconds spent
 export async function incrementUserTimeSpent(email, seconds) {
   try {
-    const userRes = await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`);
-    const users = await userRes.json();
-    if (users.length > 0) {
-      const u = users[0];
-      const secondsSpent = (u.seconds_spent || 0) + seconds;
-
-      await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          seconds_spent: secondsSpent
-        })
-      });
-      clearCachedUser(email);
-      return secondsSpent;
+    const res = await pool.query(
+      'UPDATE users SET seconds_spent = COALESCE(seconds_spent, 0) + $1 WHERE email = $2 RETURNING seconds_spent',
+      [seconds, email]
+    );
+    clearCachedUser(email);
+    if (res.rows.length > 0) {
+      return res.rows[0].seconds_spent;
     }
   } catch (err) {
-    console.error('[Supabase DB] Failed to increment user time spent:', err);
+    console.error('[Postgres DB] Failed to increment user time spent:', err);
   }
   return null;
 }
 
 // 9. Fetch and format all user statistics for admin report
 export async function getAllUsersFromDb() {
-  const res = await supabaseFetch('users');
-  const dbUsers = await res.json();
-  
-  return dbUsers.map(u => {
-    return {
-      email: u.email,
-      name: u.name,
-      created_at: u.created_at,
-      premium_tier: u.premium_tier,
-      visits: u.visits || 0,
-      last_visit: u.last_visit || u.created_at || null,
-      questions: u.questions || 0,
-      hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2)),
-      auto_renew: !!u.auto_renew
-    };
-  });
+  try {
+    const res = await pool.query('SELECT * FROM users');
+    const dbUsers = res.rows;
+    
+    return dbUsers.map(u => {
+      return {
+        email: u.email,
+        name: u.name,
+        created_at: u.created_at,
+        premium_tier: u.premium_tier,
+        visits: u.visits || 0,
+        last_visit: u.last_visit || u.created_at || null,
+        questions: u.questions || 0,
+        hours_spent: parseFloat(((u.seconds_spent || 0) / 3600).toFixed(2)),
+        auto_renew: !!u.auto_renew
+      };
+    });
+  } catch (err) {
+    console.error('[Postgres DB] Failed to get all users:', err);
+    return [];
+  }
 }
 
 // 10. Delete user and their associated data
 export async function deleteUserFromDb(email) {
   try {
     // delete user sessions
-    await supabaseFetch(`user_sessions?email=eq.${encodeURIComponent(email)}`, {
-      method: 'DELETE'
-    });
+    await pool.query('DELETE FROM user_sessions WHERE email = $1', [email]);
   } catch (err) {
-    console.error('[Supabase DB] Failed to delete user sessions:', err);
+    console.error('[Postgres DB] Failed to delete user sessions:', err);
   }
 
   try {
     // delete chat limits
     const identifier = `user:${email}`;
-    await supabaseFetch(`chat_limits?identifier=eq.${encodeURIComponent(identifier)}`, {
-      method: 'DELETE'
-    });
+    await pool.query('DELETE FROM chat_limits WHERE identifier = $1', [identifier]);
   } catch (err) {
-    console.error('[Supabase DB] Failed to delete chat limits:', err);
+    console.error('[Postgres DB] Failed to delete chat limits:', err);
   }
 
   try {
     // delete user
-    await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-      method: 'DELETE'
-    });
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    clearCachedUser(email);
   } catch (err) {
-    console.error('[Supabase DB] Failed to delete user:', err);
+    console.error('[Postgres DB] Failed to delete user:', err);
     throw err;
   }
 }
@@ -478,68 +445,54 @@ export async function deleteUserFromDb(email) {
 // 11. Save chat message to history
 export async function saveChatMessage(identifier, role, message, context = null) {
   try {
-    await supabaseFetch('chat_history', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
+    await pool.query(
+      'INSERT INTO chat_history (identifier, role, message, context) VALUES ($1, $2, $3, $4)',
+      [
         identifier,
         role,
         message,
-        context: context ? (typeof context === 'object' ? context : JSON.parse(context)) : null
-      })
-    });
+        context ? (typeof context === 'object' ? JSON.stringify(context) : context) : null
+      ]
+    );
   } catch (err) {
-    console.warn('[Supabase DB] Failed to save chat message (make sure chat_history table is created in Supabase):', err.message);
+    console.warn('[Postgres DB] Failed to save chat message:', err.message);
   }
 }
 
 // 12. Load chat history for identifier
 export async function getChatHistory(identifier, limit = 50) {
   try {
-    const res = await supabaseFetch(`chat_history?identifier=eq.${encodeURIComponent(identifier)}&order=created_at.asc&limit=${limit}`);
-    return await res.json();
+    const res = await pool.query(
+      'SELECT * FROM chat_history WHERE identifier = $1 ORDER BY created_at ASC LIMIT $2',
+      [identifier, limit]
+    );
+    return res.rows;
   } catch (err) {
-    console.warn('[Supabase DB] Failed to load chat history (make sure chat_history table is created in Supabase):', err.message);
+    console.warn('[Postgres DB] Failed to load chat history:', err.message);
     return [];
   }
 }
 
-// 13. Update user O2 preference
+// 13. Update user O2 preference (stub - disabled as per user request)
 export async function updateUserO2Preference(email, o2Val) {
-  try {
-    await supabaseFetch(`users?email=eq.${encodeURIComponent(email)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        o2_preference: o2Val
-      })
-    });
-    clearCachedUser(email);
-  } catch (err) {
-    console.error('[Supabase DB] Failed to update O2 preference:', err);
-    throw err;
-  }
+  return true;
 }
 
 // 14. Bulk increment user active session seconds spent
 export async function bulkIncrementUserTimeSpent(updates) {
   if (!updates || updates.length === 0) return;
   try {
-    await supabaseFetch('rpc/bulk_increment_time_spent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates })
-    });
+    await pool.query(
+      'SELECT bulk_increment_time_spent($1::jsonb)',
+      [JSON.stringify(updates)]
+    );
     for (const item of updates) {
       if (item.email) {
         clearCachedUser(item.email);
       }
     }
   } catch (err) {
-    console.error('[Supabase DB] Failed to bulk increment user time spent:', err);
+    console.error('[Postgres DB] Failed to bulk increment user time spent:', err);
   }
 }
 
@@ -547,17 +500,45 @@ export async function bulkIncrementUserTimeSpent(updates) {
 export async function bulkIncrementUserStats(updates) {
   if (!updates || updates.length === 0) return;
   try {
-    await supabaseFetch('rpc/bulk_increment_user_stats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates })
-    });
+    await pool.query(
+      'SELECT bulk_increment_user_stats($1::jsonb)',
+      [JSON.stringify(updates)]
+    );
     for (const item of updates) {
       if (item.email) {
         clearCachedUser(item.email);
       }
     }
   } catch (err) {
-    console.error('[Supabase DB] Failed to bulk increment user stats:', err);
+    console.error('[Postgres DB] Failed to bulk increment user stats:', err);
+  }
+}
+
+// 16. Get and Save Simulation Session State
+export async function getSessionState(sessionId) {
+  try {
+    const res = await pool.query(
+      'SELECT state FROM simulation_sessions WHERE id = $1',
+      [sessionId]
+    );
+    return res.rows.length > 0 ? res.rows[0].state : null;
+  } catch (err) {
+    console.error('[Postgres DB] Failed to get session state:', err);
+  }
+  return null;
+}
+
+export async function upsertSessionState(sessionId, email, state) {
+  try {
+    await pool.query(
+      'INSERT INTO simulation_sessions (id, email, state, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, state = EXCLUDED.state, updated_at = EXCLUDED.updated_at',
+      [
+        sessionId,
+        email || null,
+        typeof state === 'object' ? JSON.stringify(state) : state
+      ]
+    );
+  } catch (err) {
+    console.error('[Postgres DB] Failed to upsert session state:', err);
   }
 }
