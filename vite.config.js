@@ -128,7 +128,11 @@ export default defineConfig(({ mode }) => {
           deserializeSimulation(sim, dbState);
         }
 
+        const bufferBefore = sim ? sim.solverTicksBuffer : 0;
         const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
+        const bufferAfter = sim ? sim.solverTicksBuffer : 0;
+
+        console.log(`[Solver Debug] User: ${user.email}, Session: ${sessionId}, bufferBefore: ${bufferBefore}, bufferAfter: ${bufferAfter}`);
 
         if (sim) {
           const state = serializeSimulation(sim);
@@ -139,6 +143,7 @@ export default defineConfig(({ mode }) => {
           }
 
           const ticks = sim.solverTicksBuffer || 0;
+          console.log(`[Solver Debug] Ticks to increment: ${ticks}, current user solver_ticks: ${user.solver_ticks}`);
           if (ticks > 0) {
             sim.solverTicksBuffer = 0;
             try {
@@ -148,6 +153,7 @@ export default defineConfig(({ mode }) => {
               );
               clearCachedUser(user.email);
               user.solver_ticks = (user.solver_ticks || 0) + ticks;
+              console.log(`[Solver Debug] Incremented solver_ticks in DB. New local solver_ticks: ${user.solver_ticks}`);
             } catch (err) {
               console.error('[Solver] Failed to increment solver ticks in DB:', err);
             }
@@ -156,6 +162,7 @@ export default defineConfig(({ mode }) => {
 
         const totalActual = user.solver_ticks || 0;
         result.solverTicks = totalActual;
+        console.log(`[Solver Debug] Returning solverTicks: ${totalActual}`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
