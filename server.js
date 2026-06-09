@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser } from './src/supabase_db.js';
+import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser, bufferUserSolverTicks } from './src/supabase_db.js';
 import { initializeDatabase } from './src/db_init.js';
 import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
@@ -93,10 +93,6 @@ app.post('/api/solve-fba', async (req, res) => {
     };
 
     const sim = await getOrCreateSimulation(sessionId, user.email);
-    const dbState = await getSessionState(sessionId);
-    if (dbState && sim) {
-      deserializeSimulation(sim, dbState);
-    }
 
     const bufferBefore = sim ? sim.solverTicksBuffer : 0;
     const result = solveFba(highs, staticLpHeader, concentrations, parameters, options);
@@ -106,27 +102,18 @@ app.post('/api/solve-fba', async (req, res) => {
 
     if (sim) {
       const state = serializeSimulation(sim);
-      try {
-        await upsertSessionState(sessionId, user.email, state);
-      } catch (err) {
+      // Asynchronously upsert state to database (do not await, prevents blocking response)
+      upsertSessionState(sessionId, user.email, state).catch(err => {
         console.error('[Solver] Failed to save session to DB:', err);
-      }
+      });
 
       const ticks = sim.solverTicksBuffer || 0;
-      console.log(`[Solver Debug] Ticks to increment: ${ticks}, current user solver_ticks: ${user.solver_ticks}`);
+      console.log(`[Solver Debug] Ticks to buffer: ${ticks}, current user solver_ticks: ${user.solver_ticks}`);
       if (ticks > 0) {
         sim.solverTicksBuffer = 0;
-        try {
-          await pool.query(
-            'UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + $1 WHERE email = $2',
-            [ticks, user.email]
-          );
-          clearCachedUser(user.email);
-          user.solver_ticks = (user.solver_ticks || 0) + ticks;
-          console.log(`[Solver Debug] Incremented solver_ticks in DB. New local solver_ticks: ${user.solver_ticks}`);
-        } catch (err) {
-          console.error('[Solver] Failed to increment solver ticks in DB:', err);
-        }
+        user.solver_ticks = (user.solver_ticks || 0) + ticks;
+        bufferUserSolverTicks(user.email, ticks);
+        console.log(`[Solver Debug] Buffered solver_ticks. New local solver_ticks: ${user.solver_ticks}`);
       }
     }
 

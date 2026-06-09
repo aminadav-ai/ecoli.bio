@@ -23,7 +23,11 @@ const { Pool } = pg;
 
 // Connection pool configuration
 const connectionString = process.env.DATABASE_URL;
-const config = {};
+const config = {
+  max: 50,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+};
 
 if (connectionString) {
   try {
@@ -80,21 +84,14 @@ export async function getUserByToken(token) {
     }
   }
   try {
-    const sessionRes = await pool.query(
-      'SELECT email FROM user_sessions WHERE token = $1',
+    const userRes = await pool.query(
+      'SELECT u.* FROM users u JOIN user_sessions s ON u.email = s.email WHERE s.token = $1',
       [token]
     );
-    if (sessionRes.rows.length > 0) {
-      const email = sessionRes.rows[0].email;
-      const userRes = await pool.query(
-        'SELECT * FROM users WHERE email = $1',
-        [email]
-      );
-      if (userRes.rows.length > 0) {
-        const user = userRes.rows[0];
-        tokenCache.set(token, { user, timestamp: now });
-        return user;
-      }
+    if (userRes.rows.length > 0) {
+      const user = userRes.rows[0];
+      tokenCache.set(token, { user, timestamp: now });
+      return user;
     }
   } catch (err) {
     console.error('[Postgres DB] Failed to get user by token:', err);
@@ -527,3 +524,38 @@ export async function upsertSessionState(sessionId, email, state) {
     console.error('[Postgres DB] Failed to upsert session state:', err);
   }
 }
+
+// Buffered solver ticks updates to avoid row lock contention under load
+const pendingTicks = new Map(); // email -> ticks
+let flushTicksInterval = null;
+
+export function bufferUserSolverTicks(email, ticks) {
+  if (!email || !ticks) return;
+  pendingTicks.set(email, (pendingTicks.get(email) || 0) + ticks);
+  
+  if (!flushTicksInterval) {
+    flushTicksInterval = setInterval(flushPendingSolverTicks, 5000);
+    if (flushTicksInterval && typeof flushTicksInterval.unref === 'function') {
+      flushTicksInterval.unref();
+    }
+  }
+}
+
+async function flushPendingSolverTicks() {
+  if (pendingTicks.size === 0) return;
+  const updates = Array.from(pendingTicks.entries()).map(([email, ticks]) => ({
+    email,
+    ticks
+  }));
+  pendingTicks.clear();
+  
+  try {
+    await pool.query(
+      'SELECT bulk_increment_user_stats($1::jsonb)',
+      [JSON.stringify(updates)]
+    );
+  } catch (err) {
+    console.error('[Postgres DB] Failed to flush pending solver ticks:', err);
+  }
+}
+
