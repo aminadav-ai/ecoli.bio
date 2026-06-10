@@ -77,6 +77,26 @@
         </div>
 
         <div class="header-actions">
+          <!-- Solver Status Panel -->
+          <div id="solver-status-container" class="solver-status-container">
+            <button id="solver-status-badge" class="solver-badge work" title="Click to view changing components">
+              <span class="status-dot"></span>
+              <span class="status-text">WORK</span>
+            </button>
+            <div id="solver-details-dropdown" class="solver-dropdown glass hidden">
+              <div class="dropdown-header">
+                <h3>Solver Activity</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button id="solver-clear-btn" class="btn-clear-activity" title="Clear accumulated activity">Clear</button>
+                  <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
+                </div>
+              </div>
+              <div id="solver-details-body" class="solver-details-body">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+
           <!-- Map Warnings Panel -->
           <div id="map-warnings-container" class="map-warnings-container hidden">
             <button id="warnings-toggle-btn" class="warnings-badge-btn">
@@ -120,10 +140,6 @@
           <div class="header-controls">
             <button id="play-pause-btn" class="btn btn-primary header-btn">⏸ Pause</button>
             <button id="reset-btn" class="btn btn-secondary header-btn">↺ Reset</button>
-            <button id="solver-status-badge" class="solver-badge work" title="Click to view changing components">
-              <span class="status-dot"></span>
-              <span class="status-text">WORK</span>
-            </button>
           </div>
 
           <!-- Map Settings (Gear) Trigger -->
@@ -277,19 +293,7 @@
         </div>
       </aside>
 
-      <!-- Solver Activity Panel -->
-      <div id="solver-details-dropdown" class="solver-dropdown glass hidden">
-        <div class="dropdown-header">
-          <h3>Solver Activity</h3>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button id="solver-clear-btn" class="btn-clear-activity" title="Clear accumulated activity">Clear</button>
-            <button id="solver-details-close-btn" class="close-dropdown-btn">✕</button>
-          </div>
-        </div>
-        <div id="solver-details-body" class="solver-details-body">
-          <!-- Will be populated dynamically -->
-        </div>
-      </div>
+
 
       <!-- Right Overlay Panel (Metabolite / Reaction Inspector) -->
       <aside id="inspector-panel" class="right-panel panel glass hidden-panel">

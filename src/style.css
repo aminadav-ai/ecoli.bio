@@ -3923,9 +3923,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 20px;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: 11px;
@@ -4002,15 +4002,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: scale(1.2); opacity: 1; }
 }
 
+.solver-status-container {
+  position: relative;
+}
+
 /* Solver Panel (Non-modal Overlay) */
 .solver-dropdown {
   position: absolute;
-  top: 100px;
-  left: 440px;
+  top: calc(100% + 10px);
+  right: 0;
   width: 320px;
   border-radius: 12px;
   padding: 16px;
-  z-index: 10;
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 12px;
