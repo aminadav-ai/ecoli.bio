@@ -23,7 +23,9 @@ import {
   deleteUserFromDb, 
   saveChatMessage, 
   getChatHistory, 
-  bulkIncrementUserStats 
+  bulkIncrementUserStats,
+  incrementUserVisits,
+  incrementUserQuestions
 } from './d1_db.js';
 
 // ==========================================
