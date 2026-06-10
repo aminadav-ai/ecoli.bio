@@ -3905,6 +3905,19 @@ async function checkAuthStatus(isVisit = false) {
   if (!token) {
     // Guest user - immediately configure guest mode locally and load static state
     console.log('[Auth] Guest user detected (no token). Bypassing /api/auth/status query.');
+
+    if (isVisit) {
+      // Fire-and-forget query to record guest visit on the server
+      const headers = { 
+        'x-guest-id': guestId,
+        'x-session-id': sessionId,
+        'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+      fetch('/api/auth/status?visit=true', { headers }).catch(err => {
+        console.error('[Auth] Failed to send guest visit notification:', err);
+      });
+    }
+
     userProfile = null;
     updateUserStatusUI();
 
