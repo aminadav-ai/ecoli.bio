@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Скрипт нагрузочного тестирования для cellflux.org
+ * Скрипт нагрузочного тестирования для cellflux.org (под стек Cloudflare)
  * Имитирует активность N пользователей, отправляющих запросы к солверу через случайные интервалы от 10 до 60 секунд.
  * Запросы распределены во времени под авторизованной сессией.
  * Поддерживает изменение числа пользователей прямо во время работы (введите число и нажмите Enter).
  */
 
 import { argv } from 'process';
-import pg from 'pg';
 import fs from 'fs';
-import path from 'path';
+import { execSync } from 'child_process';
 
 // Настройки по умолчанию
 let targetUrl = 'https://cellflux.org';
@@ -103,10 +102,6 @@ class VirtualUser {
         reset: false
       };
 
-      if (this.lastTimestamp) {
-        payload.lastTimestamp = this.lastTimestamp;
-      }
-
       const headers = {
         'Content-Type': 'application/json',
         'x-guest-id': this.guestId,
@@ -130,10 +125,7 @@ class VirtualUser {
       if (res.status === 200) {
         stats.success++;
         stats.totalSuccess++;
-        const data = await res.json().catch(() => ({}));
-        if (data.lastTimestamp) {
-          this.lastTimestamp = data.lastTimestamp;
-        }
+        await res.json().catch(() => ({}));
       } else if (res.status === 429) {
         stats.rateLimits++;
         stats.totalRateLimits++;
@@ -176,73 +168,31 @@ function adjustUsers(targetCount) {
   stats.activeUsers = users.size;
 }
 
-// Загрузка переменных окружения для подключения к БД
+// Создание тестовой сессии в Cloudflare D1
 async function getOrCreateTestSession() {
-  const envPath = path.resolve('.env');
-  if (fs.existsSync(envPath)) {
-    const envConfig = fs.readFileSync(envPath, 'utf8');
-    for (const line of envConfig.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const parts = trimmed.split('=');
-      const key = parts[0].trim();
-      const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
-      if (key && !(key in process.env)) {
-        process.env[key] = value;
-      }
-    }
-  }
-
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    console.log('[Load Test] DATABASE_URL не найден в .env. Будет запущен без интеграции с базой данных.');
-    return null;
-  }
-
-  const { Pool } = pg;
-  const config = { connectionString };
+  console.log('[Load Test] Подготовка тестовой сессии в Cloudflare D1...');
+  const email = 'test_load_user@cellflux.org';
+  const token = 'test_load_token_uuid_value_12345';
   
-  if (!connectionString.includes('localhost') && !connectionString.includes('127.0.0.1')) {
-    config.ssl = { rejectUnauthorized: false };
-  }
-
-  const pool = new Pool(config);
   try {
-    console.log('[Load Test] Подключение к PostgreSQL...');
-    const email = 'test_load_user@cellflux.org';
+    // 1. Создаем пользователя в D1
+    console.log('[Load Test] Добавление тестового пользователя в D1...');
+    execSync(`npx wrangler d1 execute ecoli_db --remote --command "INSERT INTO users (email, name, premium_tier, premium_until) VALUES ('${email}', 'Load Test User', 2, '2030-01-01') ON CONFLICT (email) DO UPDATE SET premium_tier = 2, premium_until = '2030-01-01';"`, { stdio: 'ignore' });
     
-    // Создаем тестового пользователя
-    await pool.query(
-      `INSERT INTO users (email, name, premium_tier, premium_until) 
-       VALUES ($1, 'Load Test User', 2, '2030-01-01') 
-       ON CONFLICT (email) 
-       DO UPDATE SET premium_tier = 2, premium_until = '2030-01-01'`,
-      [email]
-    );
-
-    // Генерируем или находим токен
-    const token = 'test_load_token_uuid_value_12345';
-    await pool.query(
-      `INSERT INTO user_sessions (token, email) 
-       VALUES ($1, $2) 
-       ON CONFLICT DO NOTHING`,
-      [token, email]
-    );
-
-    // Сбрасываем лимиты
-    await pool.query(
-      `DELETE FROM chat_limits WHERE identifier = $1`,
-      [`user:${email}`]
-    );
-
-    console.log(`[Load Test] Тестовая сессия создана в БД. Токен: ${token}`);
-    await pool.end();
+    // 2. Создаем сессию в D1
+    console.log('[Load Test] Создание тестовой сессии в D1...');
+    execSync(`npx wrangler d1 execute ecoli_db --remote --command "INSERT INTO user_sessions (token, email) VALUES ('${token}', '${email}') ON CONFLICT (token) DO NOTHING;"`, { stdio: 'ignore' });
+    
+    // 3. Сбрасываем лимиты чата
+    console.log('[Load Test] Сброс лимитов чата...');
+    execSync(`npx wrangler d1 execute ecoli_db --remote --command "DELETE FROM chat_limits WHERE identifier = 'user:${email}';"`, { stdio: 'ignore' });
+    
+    console.log(`[Load Test] Тестовая сессия в D1 успешно создана/обновлена. Токен: ${token}`);
     return token;
   } catch (err) {
-    console.error('[Load Test] Не удалось создать сессию в БД:', err.message);
-    console.log('[Load Test] Переключение в резервный режим.');
-    try { await pool.end(); } catch (e) {}
-    return null;
+    console.error('[Load Test] Не удалось обновить БД через Wrangler CLI:', err.message);
+    console.log('[Load Test] Будет использован дефолтный токен без принудительного обновления БД.');
+    return token;
   }
 }
 
