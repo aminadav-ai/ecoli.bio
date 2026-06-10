@@ -4125,10 +4125,6 @@ function updateUserStatusUI() {
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
 
-  // Identify user in Microsoft Clarity for session replay matching
-  if (userProfile && typeof clarity === 'function') {
-    clarity("identify", userProfile.email, userProfile.name);
-  }
 
   // Update User Tier Badge in Top Header
   const userTierContainer = document.getElementById('user-tier-container');

@@ -1,0 +1,31 @@
+name = "e-coli3"
+main = "src/worker.js"
+compatibility_date = "2024-04-03"
+compatibility_flags = [ "nodejs_compat" ]
+
+# Bindings to D1 database
+[[d1_databases]]
+binding = "DB"
+database_name = "ecoli_db"
+database_id = "73a66654-5446-421b-89bc-d0b9d6e7058c"
+migrations_dir = "migrations"
+
+# Bindings to Durable Objects
+[[durable_objects.bindings]]
+name = "SOLVER_DO"
+class_name = "SolverDO"
+
+# Define migrations for Durable Objects
+[[migrations]]
+tag = "v1"
+new_classes = ["SolverDO"]
+
+# Bundle WASM files directly as WebAssembly.Module
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
+# Serve static assets built by Vite
+[assets]
+directory = "./dist"

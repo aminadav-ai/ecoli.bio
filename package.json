@@ -9,7 +9,10 @@
     "prebuild": "node scripts/compile_bounds.js && node scripts/generate_guest_state.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:worker": "wrangler dev",
+    "d1:migrate:local": "wrangler d1 migrations apply ecoli_db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply ecoli_db --remote"
   },
   "devDependencies": {
     "vite": "^8.0.12"
