@@ -350,3 +350,16 @@ export async function bulkIncrementUserStats(db, updates) {
     console.error('[D1 DB] Failed to bulk increment user stats:', err);
   }
 }
+
+// 14. Record guest visit by session and date
+export async function recordGuestVisit(db, sessionId, dateStr) {
+  if (!sessionId) return;
+  try {
+    await db.prepare(
+      'INSERT INTO guest_visits (session_id, visit_date, visit_count) VALUES (?, ?, 1) ' +
+      'ON CONFLICT(session_id, visit_date) DO UPDATE SET visit_count = visit_count + 1'
+    ).bind(sessionId, dateStr).run();
+  } catch (err) {
+    console.error('[D1 DB] Failed to record guest visit:', err);
+  }
+}

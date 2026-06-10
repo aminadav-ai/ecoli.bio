@@ -26,7 +26,8 @@ import {
   getChatHistory, 
   bulkIncrementUserStats,
   incrementUserVisits,
-  incrementUserQuestions
+  incrementUserQuestions,
+  recordGuestVisit
 } from './d1_db.js';
 
 // ==========================================
@@ -399,9 +400,15 @@ ${JSON.stringify(context, null, 2)}
         const visit = url.searchParams.get('visit') === 'true';
 
         let status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
-        if (visit && status.loggedIn && status.user) {
-          await incrementUserVisits(env.DB, status.user.email);
-          status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
+        if (visit) {
+          if (status.loggedIn && status.user) {
+            await incrementUserVisits(env.DB, status.user.email);
+            status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
+          } else {
+            const sessionId = request.headers.get('x-session-id') || guestId || ip || 'unknown';
+            const dateStr = new Date().toISOString().slice(0, 10);
+            ctx.waitUntil(recordGuestVisit(env.DB, sessionId, dateStr));
+          }
         }
         return new Response(JSON.stringify(status), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
