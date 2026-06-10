@@ -40,6 +40,13 @@ export class SolverDO {
     this.highs = null;
     this.lastSolveTime = 0;
 
+    // In-memory buffering state
+    this.bufferedTicks = 0;
+    this.lastFlushTime = 0;
+    this.userEmail = null;
+    this.totalSolverTicks = undefined;
+    this.alarmScheduled = false;
+
     // Block DO concurrency until WASM solver is loaded and state is restored
     this.state.blockConcurrencyWhile(async () => {
       try {
@@ -73,10 +80,42 @@ export class SolverDO {
         } else {
           console.log('[DO] Initialized new simulation state.');
         }
+
+        // Restore buffered ticks and user email
+        const bufferedState = await this.state.storage.get('buffered_state');
+        if (bufferedState) {
+          this.bufferedTicks = bufferedState.ticks || 0;
+          this.userEmail = bufferedState.email || null;
+          console.log(`[DO] Restored buffered state: ${this.bufferedTicks} ticks for ${this.userEmail}`);
+        }
       } catch (err) {
         console.error('[DO] Failed DO initialization:', err);
       }
     });
+  }
+
+  async flushTicks() {
+    if (this.bufferedTicks > 0 && this.userEmail) {
+      const email = this.userEmail;
+      const ticks = this.bufferedTicks;
+      console.log(`[DO] Flushing ${ticks} buffered ticks to D1 for ${email}...`);
+      
+      this.bufferedTicks = 0;
+      this.lastFlushTime = Date.now();
+      await this.state.storage.delete('buffered_state');
+
+      this.state.waitUntil(
+        bulkIncrementUserStats(this.env.DB, [{ email, ticks }]).catch(err => {
+          console.error('[DO] Failed to increment user solver ticks in D1:', err);
+        })
+      );
+    }
+  }
+
+  async alarm() {
+    console.log('[DO Alarm] Alarm triggered. Flushing ticks...');
+    this.alarmScheduled = false;
+    await this.flushTicks();
   }
 
   async fetch(request) {
@@ -117,19 +156,45 @@ export class SolverDO {
       const stateToSave = serializeSimulation(this.simulation);
       this.state.storage.put('sim_state', stateToSave);
 
-      // Asynchronously flush solver ticks to D1
-      const ticks = this.simulation.solverTicksBuffer || 0;
-      if (ticks > 0 && data.userEmail) {
-        this.simulation.solverTicksBuffer = 0;
-        this.state.waitUntil(
-          bulkIncrementUserStats(this.env.DB, [{ email: data.userEmail, ticks }]).catch(err => {
-            console.error('[DO] Failed to increment user solver ticks:', err);
-          })
-        );
+      // Initialize totalSolverTicks if not set yet
+      if (this.totalSolverTicks === undefined && data.dbTicks !== undefined) {
+        this.totalSolverTicks = data.dbTicks;
+        console.log(`[DO] Initialized totalSolverTicks with DB value: ${this.totalSolverTicks}`);
       }
 
-      // Sync solver ticks count to return the actual count to the user
-      // Note: we can read the ticks from the user profile, but returning it is handled in the main worker
+      // Accumulate solver ticks in DO memory and DO storage
+      const newTicks = this.simulation.solverTicksBuffer || 0;
+      if (newTicks > 0 && data.userEmail) {
+        this.simulation.solverTicksBuffer = 0;
+        this.bufferedTicks += newTicks;
+        this.userEmail = data.userEmail;
+        if (this.totalSolverTicks !== undefined) {
+          this.totalSolverTicks += newTicks;
+        }
+
+        // Save buffered state to survive DO eviction
+        this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
+      }
+
+      // Check if we should flush due to 5-second interval
+      if (this.lastFlushTime === 0) {
+        this.lastFlushTime = now;
+      }
+      if (now - this.lastFlushTime >= 5000) {
+        // Run flush without awaiting it to keep response fast
+        this.state.waitUntil(this.flushTicks());
+      }
+
+      // Handle DO alarm scheduling for trailing flush
+      if (!this.alarmScheduled && this.bufferedTicks > 0) {
+        this.alarmScheduled = true;
+        this.state.storage.setAlarm(Date.now() + 5000);
+        console.log('[DO] Scheduled DO Alarm to flush ticks in 5 seconds');
+      }
+
+      // Return the current actual ticks to the worker
+      result.solverTicks = this.totalSolverTicks !== undefined ? this.totalSolverTicks : (data.dbTicks || 0);
+
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }
       });
@@ -196,7 +261,8 @@ export default {
             parameters: body.parameters,
             reset: body.reset,
             scenario: body.scenario,
-            userEmail: user.email
+            userEmail: user.email,
+            dbTicks: user.solver_ticks || 0
           })
         });
 
@@ -207,9 +273,8 @@ export default {
 
         const result = await doRes.json();
         
-        // Append user ticks and timestamp
-        const updatedUser = await getUserByToken(env.DB, token);
-        result.solverTicks = updatedUser ? (updatedUser.solver_ticks || 0) : 0;
+        // Append user ticks and timestamp (no second D1 query!)
+        result.solverTicks = result.solverTicks !== undefined ? result.solverTicks : (user.solver_ticks || 0);
         result.lastTimestamp = Date.now();
 
         return new Response(JSON.stringify(result), {
