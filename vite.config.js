@@ -107,7 +107,7 @@ export default defineConfig(({ mode }) => {
 
         if (!user) {
           res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Пожалуйста, авторизуйтесь для работы с симулятором.' }));
+          res.end(JSON.stringify({ error: 'Please sign in to use the simulator.' }));
           return;
         }
 

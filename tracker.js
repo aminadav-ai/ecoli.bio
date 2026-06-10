@@ -177,10 +177,10 @@ async function sendStatsSummary() {
     .map(([d, count]) => `• <code>${d}</code>: <b>${count}</b>`)
     .join('\n');
 
-  const text = `📊 <b>Сводная статистика посещений (за 10 мин)</b>\n\n` +
-               `Всего новых визитов: <b>${totalVisits}</b>\n` +
-               `Уникальных адресов (IP): <b>${uniqueIPs}</b>\n\n` +
-               `<b>Устройства:</b>\n${deviceList}`;
+  const text = `📊 <b>Visit Stats Summary (last 10 min)</b>\n\n` +
+               `Total new visits: <b>${totalVisits}</b>\n` +
+               `Unique IP addresses: <b>${uniqueIPs}</b>\n\n` +
+               `<b>Devices:</b>\n${deviceList}`;
 
   await sendTelegramMessage(text);
   
@@ -196,7 +196,7 @@ async function sendStatsSummary() {
       clearInterval(statsInterval);
       statsInterval = null;
     }
-    await sendTelegramMessage(`ℹ️ <b>Режим статистики отключен.</b> Активность снизилась, возвращаюсь к поштучным оповещениям.`);
+    await sendTelegramMessage(`ℹ️ <b>Stats mode disabled.</b> Activity has decreased, returning to individual alerts.`);
   }
 }
 
@@ -232,11 +232,11 @@ export async function trackVisit(req) {
     console.warn(`[Suspicious Scan] New scan attempt from ${ip} (${device}), method: ${req.method || 'GET'}, url: ${urlStr}`);
 
     // Send immediate Warning alert bypassing session cooldown
-    const alertText = `⚠️ <b>Попытка сканирования сайта (Подозрительный запрос)!</b>\n\n` +
-                      `<b>Запрос:</b> <code>${req.method || 'GET'} ${urlStr}</code>\n` +
+    const alertText = `⚠️ <b>Site scanning attempt (Suspicious request)!</b>\n\n` +
+                      `<b>Request:</b> <code>${req.method || 'GET'} ${urlStr}</code>\n` +
                       `<b>IP:</b> <code>${ip}</code>\n` +
-                      `<b>Устройство:</b> <code>${device}</code>\n` +
-                      `<b>Реферер:</b> <code>${referer}</code>`;
+                      `<b>Device:</b> <code>${device}</code>\n` +
+                      `<b>Referer:</b> <code>${referer}</code>`;
     await sendTelegramMessage(alertText);
     return;
   }
@@ -284,9 +284,9 @@ export async function trackVisit(req) {
       queuedVisits.push(visit);
       
       await sendTelegramMessage(
-        `⚠️ <b>Высокая активность посещений!</b>\n` +
-        `Число новых визитов за 10 минут превысило лимит (${STATS_TRIGGER_THRESHOLD}).\n` +
-        `Переключаюсь в режим накопления статистики. Буду присылать сводные отчеты каждые 10 минут.`
+        `⚠️ <b>High visit activity!</b>\n` +
+        `The number of new visits in 10 minutes exceeded the limit (${STATS_TRIGGER_THRESHOLD}).\n` +
+        `Switching to stats accumulation mode. Summary reports will be sent every 10 minutes.`
       );
 
       if (!statsInterval) {
@@ -296,11 +296,11 @@ export async function trackVisit(req) {
         }
       }
     } else {
-      const text = `🔔 <b>Новый посетитель на сайте!</b>\n\n` +
-                   `<b>Путь:</b> <code>${req.method || 'GET'} ${urlPath}</code>\n` +
+      const text = `🔔 <b>New visitor on site!</b>\n\n` +
+                   `<b>Path:</b> <code>${req.method || 'GET'} ${urlPath}</code>\n` +
                    `<b>IP:</b> <code>${ip}</code>\n` +
-                   `<b>Устройство:</b> <code>${device}</code>\n` +
-                   `<b>Реферер:</b> <code>${referer}</code>`;
+                   `<b>Device:</b> <code>${device}</code>\n` +
+                   `<b>Referer:</b> <code>${referer}</code>`;
       await sendTelegramMessage(text);
     }
   }
@@ -321,7 +321,7 @@ export async function trackChatQuery(req, message, usageMetadata = null) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
-  let email = 'Guest (Не авторизован)';
+  let email = 'Guest (Not authorized)';
   if (token) {
     const user = await getUserByToken(token);
     if (user && user.email) {
@@ -340,19 +340,19 @@ export async function trackChatQuery(req, message, usageMetadata = null) {
     const promptTokens = usageMetadata.promptTokenCount || 0;
     const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
     const totalTokens = usageMetadata.totalTokenCount || 0;
-    tokensInfo = `\n\n<b>Токены:</b>\n` +
-                 `• Вопрос: <b>${promptTokens}</b>\n` +
-                 `• Ответ: <b>${candidatesTokens}</b>\n` +
-                 `• Всего: <b>${totalTokens}</b>`;
+    tokensInfo = `\n\n<b>Tokens:</b>\n` +
+                 `• Prompt: <b>${promptTokens}</b>\n` +
+                 `• Response: <b>${candidatesTokens}</b>\n` +
+                 `• Total: <b>${totalTokens}</b>`;
   }
 
   console.log(`[Chat Query] Tracking query from ${email}: "${message}"${usageMetadata ? ` (Tokens: ${usageMetadata.totalTokenCount})` : ''}`);
 
-  const text = `💬 <b>Запрос к ИИ чату!</b>\n\n` +
-               `<b>Пользователь:</b> <code>${email}</code>\n` +
+  const text = `💬 <b>AI Chat Request!</b>\n\n` +
+               `<b>User:</b> <code>${email}</code>\n` +
                `<b>IP:</b> <code>${ip}</code>\n` +
-               `<b>Устройство:</b> <code>${device}</code>\n\n` +
-               `<b>Вопрос:</b>\n<blockquote>${safeMessage}</blockquote>` +
+               `<b>Device:</b> <code>${device}</code>\n\n` +
+               `<b>Prompt:</b>\n<blockquote>${safeMessage}</blockquote>` +
                tokensInfo;
 
   await sendTelegramMessage(text);

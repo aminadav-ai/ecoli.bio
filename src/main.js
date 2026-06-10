@@ -5019,7 +5019,7 @@ function checkScenarioObjectives() {
 
   // If student just finished all objectives, show a small hint & open chat to evaluate answer
   if (!allCompletedBefore && allCompletedAfter) {
-    appendModelMessage("🎉 Вы выполнили все практические задачи сценария! Теперь запишите ваш ответ на вопрос рефлексии в текстовое поле слева и нажмите «Проверить ответ с ИИ», чтобы обсудить результат с преподавателем.");
+    appendModelMessage("🎉 You have completed all the practical tasks of the scenario! Now write your answer to the reflection question in the text field on the left and click \"Evaluate Answer with AI\" to discuss the results with the tutor.");
     // Open chat automatically
     const chatDrawer = document.getElementById('ai-chat-drawer');
     const chatTrigger = document.getElementById('ai-chat-trigger');

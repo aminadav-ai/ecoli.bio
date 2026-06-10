@@ -239,7 +239,7 @@ export default {
         const user = token ? await getUserByToken(env.DB, token) : null;
 
         if (!user) {
-          return new Response(JSON.stringify({ error: 'Пожалуйста, авторизуйтесь для работы с симулятором.' }), {
+          return new Response(JSON.stringify({ error: 'Please sign in to use the simulator.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });

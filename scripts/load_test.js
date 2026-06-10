@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
 /**
- * Скрипт нагрузочного тестирования для cellflux.org (под стек Cloudflare)
- * Имитирует активность N пользователей, отправляющих запросы к солверу через случайные интервалы от 10 до 60 секунд.
- * Запросы распределены во времени под авторизованной сессией.
- * Поддерживает изменение числа пользователей прямо во время работы (введите число и нажмите Enter).
+ * Load testing script for cellflux.org (under Cloudflare stack)
+ * Simulates activity of N users sending requests to the solver at random intervals from 10 to 60 seconds.
+ * Requests are distributed in time under an authorized session.
+ * Supports changing the number of users dynamically at runtime (type a number and press Enter).
  */
 
 import { argv } from 'process';
 import fs from 'fs';
 import { execSync } from 'child_process';
 
-// Настройки по умолчанию
+// Default settings
 let targetUrl = 'https://cellflux.org';
 let numUsers = 10;
 let cmdToken = null;
 
-// Парсинг аргументов командной строки
+// Command line arguments parsing
 for (let i = 2; i < argv.length; i++) {
   if (argv[i] === '--url' && argv[i + 1]) {
     targetUrl = argv[i + 1];
@@ -30,12 +30,12 @@ for (let i = 2; i < argv.length; i++) {
   }
 }
 
-// Убираем слеш в конце URL, если он есть
+// Remove trailing slash from URL if present
 if (targetUrl.endsWith('/')) {
   targetUrl = targetUrl.slice(0, -1);
 }
 
-// Статистика
+// Statistics
 const stats = {
   activeUsers: 0,
   requestsSent: 0,
@@ -48,7 +48,7 @@ const stats = {
   totalErrors: 0
 };
 
-// Хранилище виртуальных пользователей
+// Virtual users storage
 const users = new Map();
 let activeToken = null;
 
@@ -80,7 +80,7 @@ class VirtualUser {
     
     await this.sendSolveRequest();
     
-    // Планируем следующий запрос через случайный интервал от 10 до 60 секунд
+    // Schedule the next request after a random interval from 10 to 60 seconds
     if (this.active) {
       const nextDelay = 10000 + Math.random() * 50000;
       this.timer = setTimeout(() => this.runLoop(), nextDelay);
@@ -92,7 +92,7 @@ class VirtualUser {
     stats.requestsSent++;
 
     try {
-      // Имитируем случайное изменение параметров среды слайдерами
+      // Simulate random environmental parameters changes via sliders
       const payload = {
         concentrations: {
           o2_e: parseFloat((Math.random() * 0.4).toFixed(3)),
@@ -142,12 +142,12 @@ class VirtualUser {
   }
 }
 
-// Функция изменения числа пользователей
+// Function to change the number of users
 function adjustUsers(targetCount) {
   const currentCount = users.size;
 
   if (targetCount > currentCount) {
-    // Добавляем пользователей с шагом в 600мс для предотвращения пиковой нагрузки холодного старта
+    // Add users with a 600ms step to prevent cold start peak load
     let index = 0;
     for (let i = currentCount + 1; i <= targetCount; i++) {
       const user = new VirtualUser(i, activeToken);
@@ -156,7 +156,7 @@ function adjustUsers(targetCount) {
       index++;
     }
   } else if (targetCount < currentCount) {
-    // Останавливаем и удаляем лишних
+    // Stop and remove excess users
     for (let i = currentCount; i > targetCount; i--) {
       const user = users.get(i);
       if (user) {
@@ -168,30 +168,30 @@ function adjustUsers(targetCount) {
   stats.activeUsers = users.size;
 }
 
-// Создание тестовой сессии в Cloudflare D1
+// Creating a test session in Cloudflare D1
 async function getOrCreateTestSession() {
-  console.log('[Load Test] Подготовка тестовой сессии в Cloudflare D1...');
+  console.log('[Load Test] Preparing test session in Cloudflare D1...');
   const email = 'test_load_user@cellflux.org';
   const token = 'test_load_token_uuid_value_12345';
   
   try {
-    // 1. Создаем пользователя в D1
-    console.log('[Load Test] Добавление тестового пользователя в D1...');
+    // 1. Create user in D1
+    console.log('[Load Test] Adding test user to D1...');
     execSync(`npx wrangler d1 execute ecoli_db --remote --command "INSERT INTO users (email, name, premium_tier, premium_until) VALUES ('${email}', 'Load Test User', 2, '2030-01-01') ON CONFLICT (email) DO UPDATE SET premium_tier = 2, premium_until = '2030-01-01';"`, { stdio: 'ignore' });
     
-    // 2. Создаем сессию в D1
-    console.log('[Load Test] Создание тестовой сессии в D1...');
+    // 2. Create session in D1
+    console.log('[Load Test] Creating test session in D1...');
     execSync(`npx wrangler d1 execute ecoli_db --remote --command "INSERT INTO user_sessions (token, email) VALUES ('${token}', '${email}') ON CONFLICT (token) DO NOTHING;"`, { stdio: 'ignore' });
     
-    // 3. Сбрасываем лимиты чата
-    console.log('[Load Test] Сброс лимитов чата...');
+    // 3. Reset chat limits
+    console.log('[Load Test] Resetting chat limits...');
     execSync(`npx wrangler d1 execute ecoli_db --remote --command "DELETE FROM chat_limits WHERE identifier = 'user:${email}';"`, { stdio: 'ignore' });
     
-    console.log(`[Load Test] Тестовая сессия в D1 успешно создана/обновлена. Токен: ${token}`);
+    console.log(`[Load Test] Test session in D1 successfully created/updated. Token: ${token}`);
     return token;
   } catch (err) {
-    console.error('[Load Test] Не удалось обновить БД через Wrangler CLI:', err.message);
-    console.log('[Load Test] Будет использован дефолтный токен без принудительного обновления БД.');
+    console.error('[Load Test] Failed to update DB via Wrangler CLI:', err.message);
+    console.log('[Load Test] Will use default token without forcing DB update.');
     return token;
   }
 }
@@ -205,28 +205,28 @@ async function start() {
   activeToken = token;
   
   if (!activeToken) {
-    console.warn('\n⚠️ ВНИМАНИЕ: Тестовый токен не найден. Запросы к солверу могут возвращать 401 Unauthorized. Используйте параметр --token <токен>.\n');
+    console.warn('\n⚠️ WARNING: Test token not found. Requests to solver might return 401 Unauthorized. Use parameter --token <token>.\n');
   }
 
-  // Запуск начального количества пользователей
+  // Start initial number of users
   adjustUsers(numUsers);
 
-  // Чтение ввода из консоли для динамического изменения числа пользователей
+  // Read input from console to dynamically change user count
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', (data) => {
     const input = data.trim();
     const num = parseInt(input, 10);
     if (!isNaN(num) && num >= 0) {
       adjustUsers(num);
-      console.log(`\n>>> Количество пользователей изменено на: ${num}\n`);
+      console.log(`\n>>> Number of users changed to: ${num}\n`);
     } else {
-      console.log(`\n>>> Некорректный ввод. Введите целое число.\n`);
+      console.log(`\n>>> Invalid input. Please enter an integer.\n`);
     }
   });
 
   const testStartTime = Date.now();
 
-  // Вывод статистики раз в секунду
+  // Output statistics once per second
   setInterval(() => {
     const rps = stats.requestsSent;
     const success = stats.success;
@@ -244,7 +244,7 @@ async function start() {
       maxTime = Math.max(...stats.responseTimes);
     }
 
-    // Расчет времени теста и среднего RPS
+    // Calculate test duration and average RPS
     const elapsedSeconds = Math.max(1, Math.round((Date.now() - testStartTime) / 1000));
     const totalRequests = stats.totalSuccess + stats.totalRateLimits + stats.totalErrors;
     const avgRps = totalRequests / elapsedSeconds;
@@ -254,14 +254,14 @@ async function start() {
     const seconds = elapsedSeconds % 60;
     const elapsedStr = `${pad(minutes)}:${pad(seconds)}`;
 
-    // Очистка статистики за секунду
+    // Clear per-second statistics
     stats.requestsSent = 0;
     stats.success = 0;
     stats.rateLimits = 0;
     stats.errors = 0;
     stats.responseTimes = [];
 
-    // Очищаем экран и рисуем дашборд
+    // Clear screen and draw dashboard
     process.stdout.write('\x1B[2J\x1B[0F');
     console.log('====================================================');
     console.log('             CELLFLUX.ORG LOAD TESTER               ');
@@ -271,28 +271,28 @@ async function start() {
     console.log(` Auth Token:           ${activeToken ? 'Active (Bearer)' : 'None (Guest)'}`);
     console.log(` Elapsed Time:         ${elapsedStr}`);
     console.log('----------------------------------------------------');
-    console.log(' Метрики за последнюю секунду:');
-    console.log(`   Текущий RPS:        ${rps}`);
-    console.log(`   Успешно (200 OK):   ${success}`);
-    console.log(`   Лимит (429):        ${rateLimits}`);
-    console.log(`   Ошибки/Таймауты:    ${errors}`);
-    console.log(' Время отклика:');
-    console.log(`   Среднее (avg):      ${avgTime.toFixed(1)} ms`);
-    console.log(`   Минимум (min):      ${minTime} ms`);
-    console.log(`   Максимум (max):      ${maxTime} ms`);
+    console.log(' Metrics for the last second:');
+    console.log(`   Current RPS:        ${rps}`);
+    console.log(`   Success (200 OK):   ${success}`);
+    console.log(`   Rate Limit (429):   ${rateLimits}`);
+    console.log(`   Errors/Timeouts:    ${errors}`);
+    console.log(' Response time:');
+    console.log(`   Average (avg):      ${avgTime.toFixed(1)} ms`);
+    console.log(`   Minimum (min):      ${minTime} ms`);
+    console.log(`   Maximum (max):      ${maxTime} ms`);
     console.log('----------------------------------------------------');
-    console.log(' Накопительный итог:');
-    console.log(`   Всего запросов:     ${totalRequests}`);
-    console.log(`   Средний RPS (avg):   ${avgRps.toFixed(2)}`);
-    console.log(`   Всего успешно:      ${stats.totalSuccess}`);
-    console.log(`   Всего лимитов:      ${stats.totalRateLimits}`);
-    console.log(`   Всего ошибок:       ${stats.totalErrors}`);
+    console.log(' Cumulative total:');
+    console.log(`   Total requests:     ${totalRequests}`);
+    console.log(`   Average RPS (avg):  ${avgRps.toFixed(2)}`);
+    console.log(`   Total success:      ${stats.totalSuccess}`);
+    console.log(`   Total rate limits:  ${stats.totalRateLimits}`);
+    console.log(`   Total errors:       ${stats.totalErrors}`);
     console.log('====================================================');
-    console.log(' Чтобы изменить количество пользователей, введите число');
-    console.log(' и нажмите Enter (например, "50"): ');
+    console.log(' To change the number of users, type a number');
+    console.log(' and press Enter (e.g., "50"): ');
   }, 1000);
 }
 
 start().catch(err => {
-  console.error('[Load Test] Ошибка инициализации:', err);
+  console.error('[Load Test] Initialization error:', err);
 });

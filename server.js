@@ -83,7 +83,7 @@ app.post('/api/solve-fba', async (req, res) => {
     const user = token ? await getUserByToken(token) : null;
 
     if (!user) {
-      return res.status(401).json({ error: 'Пожалуйста, авторизуйтесь для работы с симулятором.' });
+      return res.status(401).json({ error: 'Please sign in to use the simulator.' });
     }
 
     const sessionId = req.headers['x-session-id'] || 'default_user';
