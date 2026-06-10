@@ -2,8 +2,11 @@
 // FBA solver core adapted for Cloudflare Workers (no fs/path dependencies)
 
 import { Simulation } from './simulation.js';
-import staticBounds from './static_bounds.json';
-import escherMapData from '../public/iJO1366.Central metabolism.json';
+import staticBoundsRaw from './static_bounds.json';
+import escherMapDataRaw from '../public/iJO1366.Central metabolism.json';
+
+const staticBounds = staticBoundsRaw.default || staticBoundsRaw;
+const escherMapData = escherMapDataRaw.default || escherMapDataRaw;
 
 export { staticBounds };
 
@@ -75,7 +78,7 @@ function ensureReferenceNormalFluxes(highsInstance, staticLpHeader) {
 
   try {
     const refConcentrations = { 'o2_e': 1.0, 'glc__D_e': 10.0 };
-    const refResult = solveFba(highsInstance, staticLpHeader, refConcentrations, {}, { skipSimTick: true });
+    const refResult = solveFba(highsInstance, staticLpHeader, refConcentrations, {}, null, { skipSimTick: true });
     if (refResult.status === 'Optimal' && escherMapData) {
       const refSim = new Simulation(escherMapData);
       refSim.updateFluxes(refResult.fluxes, refResult.biomass_flux);

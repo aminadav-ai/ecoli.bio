@@ -1,6 +1,7 @@
 // src/worker.js
 // Cloudflare Worker + Durable Objects entry point
 
+import './polyfill.js';
 import highsLoader from 'highs';
 import highsWasm from 'highs/build/highs.wasm';
 import staticLpHeader from '../public/static_lp_header.txt';
@@ -45,9 +46,19 @@ export class SolverDO {
         console.log('[DO] Loading HiGHS solver WebAssembly...');
         this.highs = await highsLoader({
           instantiateWasm(imports, successCallback) {
-            WebAssembly.instantiate(highsWasm, imports).then(result => {
-              successCallback(result.instance, result.module);
-            });
+            console.log('[DO] instantiating WASM...');
+            WebAssembly.instantiate(highsWasm, imports)
+              .then(result => {
+                console.log('[DO] WASM instantiation successful.');
+                if (result.instance) {
+                  successCallback(result.instance, result.module);
+                } else {
+                  successCallback(result, highsWasm);
+                }
+              })
+              .catch(err => {
+                console.error('[DO] WebAssembly.instantiate error:', err);
+              });
             return {};
           }
         });
