@@ -980,6 +980,56 @@ function setupUIListeners() {
     }
   });
 
+  // Shared copy to clipboard helper
+  async function handleCopyClick(btn, textToCopy) {
+    if (!btn) return;
+    const originalHTML = btn.innerHTML;
+    const svgWidth = btn.querySelector('svg')?.getAttribute('width') || 14;
+    const svgHeight = btn.querySelector('svg')?.getAttribute('height') || 14;
+    const checkmarkHTML = `
+      <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="${svgWidth}" height="${svgHeight}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    
+    let success = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        success = true;
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
+    }
+    
+    if (!success) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) {
+          success = true;
+        }
+      } catch (err) {
+        console.error('Fallback copy failed: ', err);
+      }
+    }
+    
+    if (success) {
+      btn.classList.add('copied');
+      btn.innerHTML = checkmarkHTML;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = originalHTML;
+      }, 1500);
+    }
+  }
+
   // Copy to clipboard helper
   function setupCopyButton(btnId, spanId) {
     const btn = document.getElementById(btnId);
@@ -1194,6 +1244,72 @@ function setupUIListeners() {
           copyFluxBtn.innerHTML = originalHTML;
         }, 1500);
       }
+    });
+  }
+
+  // Copy global O2 button listener
+  const copyGlobalO2Btn = document.getElementById('copy-global-o2-btn');
+  if (copyGlobalO2Btn) {
+    copyGlobalO2Btn.addEventListener('click', () => {
+      const val = document.getElementById('global-o2-slider').value;
+      handleCopyClick(copyGlobalO2Btn, `o2_e = ${val}`);
+    });
+  }
+
+  // Copy global Glucose button listener
+  const copyGlobalGlcBtn = document.getElementById('copy-global-glc-btn');
+  if (copyGlobalGlcBtn) {
+    copyGlobalGlcBtn.addEventListener('click', () => {
+      const val = document.getElementById('global-glc-slider').value;
+      handleCopyClick(copyGlobalGlcBtn, `glc__D_e = ${val}`);
+    });
+  }
+
+  // Copy Growth Rate button listener
+  const copyGrowthBtn = document.getElementById('copy-growth-btn');
+  if (copyGrowthBtn) {
+    copyGrowthBtn.addEventListener('click', () => {
+      const val = document.getElementById('metric-growth').textContent;
+      handleCopyClick(copyGrowthBtn, `Growth Rate = ${val}`);
+    });
+  }
+
+  // Copy ATP Yield button listener
+  const copyAtpBtn = document.getElementById('copy-atp-btn');
+  if (copyAtpBtn) {
+    copyAtpBtn.addEventListener('click', () => {
+      const val = document.getElementById('metric-atp').textContent;
+      handleCopyClick(copyAtpBtn, `ATP Yield = ${val}`);
+    });
+  }
+
+  // Copy Reaction Stoichiometry equation button listener
+  const copyEquationBtn = document.getElementById('copy-equation-btn');
+  if (copyEquationBtn) {
+    copyEquationBtn.addEventListener('click', () => {
+      if (!selectedReactionId) return;
+      const eqText = document.getElementById('rxn-equation').textContent;
+      handleCopyClick(copyEquationBtn, `${selectedReactionId}: ${eqText}`);
+    });
+  }
+
+  // Copy Metabolite Name button listener
+  const copyMetabNameBtn = document.getElementById('copy-metab-name-btn');
+  if (copyMetabNameBtn) {
+    copyMetabNameBtn.addEventListener('click', () => {
+      if (!selectedMetaboliteId) return;
+      const nameText = document.getElementById('metab-name').textContent;
+      handleCopyClick(copyMetabNameBtn, `${selectedMetaboliteId} Name = ${nameText}`);
+    });
+  }
+
+  // Copy Metabolite Concentration button listener
+  const copyMetabConcBtn = document.getElementById('copy-metab-conc-btn');
+  if (copyMetabConcBtn) {
+    copyMetabConcBtn.addEventListener('click', () => {
+      if (!selectedMetaboliteId) return;
+      const concText = document.getElementById('metab-conc-val').textContent;
+      handleCopyClick(copyMetabConcBtn, `${selectedMetaboliteId} Concentration = ${concText} mM`);
     });
   }
 
@@ -2005,6 +2121,12 @@ function renderPinnedReactions() {
           <span class="pinned-rxn-id code-font">${rxnId}</span>
         </div>
         <div class="pinned-row-actions">
+          <button class="btn-copy-pinned copy-id-btn" data-id="${rxnId}" title="Copy Vmax Code">
+            <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
           <button class="btn-focus-pinned" data-id="${rxnId}" title="Focus on map">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
@@ -2029,16 +2151,24 @@ function renderPinnedReactions() {
       </div>
     `;
     
+    // Setup copy button event
+    row.querySelector('.btn-copy-pinned').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = rxnId;
+      const currentVmax = isRepressed ? 0.0 : (rxn.vMax !== undefined ? rxn.vMax : 15.0);
+      handleCopyClick(row.querySelector('.btn-copy-pinned'), `${id} Vmax = ${currentVmax.toFixed(1)}`);
+    });
+
     // Setup focus button event
     row.querySelector('.btn-focus-pinned').addEventListener('click', (e) => {
       e.stopPropagation();
       const id = rxnId;
-      const rBadge = renderer.rxnBadges[id];
-      if (rBadge) {
-        const fakeRxn = { biggId: id, name: rxn.name };
-        handleReactionSelect(fakeRxn);
+      const mapRxn = renderer.reactions.find(r => r.biggId === id);
+      if (mapRxn) {
+        renderer.selectReaction(mapRxn.id);
+        handleReactionSelect(mapRxn);
         if (renderer.focusOnCoordinates) {
-          renderer.focusOnCoordinates(rBadge.x, rBadge.y);
+          renderer.focusOnCoordinates(mapRxn.labelX, mapRxn.labelY, 0.85);
         }
       }
     });
@@ -5487,6 +5617,9 @@ function startScenario(scenarioId) {
       labelRow.appendChild(label);
       labelRow.appendChild(valSpan);
       
+      const sliderRow = document.createElement('div');
+      sliderRow.className = 'slider-with-btn-row';
+      
       const input = document.createElement('input');
       input.type = 'range';
       input.id = `scenario-slider-${ctrl.id}`;
@@ -5494,6 +5627,22 @@ function startScenario(scenarioId) {
       input.max = ctrl.max;
       input.step = ctrl.step;
       input.value = ctrl.value;
+      
+      const copyBtn = document.createElement('button');
+      copyBtn.id = `copy-scenario-slider-${ctrl.id}`;
+      copyBtn.className = 'copy-id-btn';
+      copyBtn.title = `Copy ${ctrl.name} Code`;
+      copyBtn.innerHTML = `
+        <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      `;
+
+      copyBtn.addEventListener('click', () => {
+        const val = input.value;
+        handleCopyClick(copyBtn, `${ctrl.id} = ${val}`);
+      });
       
       // Update simulation concentration on slider change
       input.addEventListener('input', (e) => {
@@ -5524,8 +5673,11 @@ function startScenario(scenarioId) {
         }
       });
       
+      sliderRow.appendChild(input);
+      sliderRow.appendChild(copyBtn);
+      
       wrapper.appendChild(labelRow);
-      wrapper.appendChild(input);
+      wrapper.appendChild(sliderRow);
       sliderGroup.appendChild(wrapper);
 
       // Force initial value in simulation

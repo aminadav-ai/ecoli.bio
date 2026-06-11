@@ -193,11 +193,27 @@
             <h2>Metabolic Performance</h2>
             <div class="metrics-grid">
               <div class="metric-card">
-                <span class="metric-label">Growth Rate</span>
+                <div class="metric-header-row">
+                  <span class="metric-label">Growth Rate</span>
+                  <button id="copy-growth-btn" class="copy-id-btn" title="Copy Growth Rate">
+                    <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
                 <span id="metric-growth" class="metric-value">0.32 hr⁻¹</span>
               </div>
               <div class="metric-card">
-                <span class="metric-label">ATP Yield</span>
+                <div class="metric-header-row">
+                  <span class="metric-label">ATP Yield</span>
+                  <button id="copy-atp-btn" class="copy-id-btn" title="Copy ATP Yield">
+                    <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
                 <span id="metric-atp" class="metric-value">12.5 mM/s</span>
               </div>
             </div>
@@ -214,14 +230,30 @@
                 <label for="global-o2-slider" class="click-focus-env" data-metab-id="o2_e">Oxygen Supply (o2_e)</label>
                 <span id="global-o2-val" class="code-font">1.0</span>
               </div>
-              <input type="range" id="global-o2-slider" min="0.0" max="2.0" step="0.1" value="1.0" />
+              <div class="slider-with-btn-row">
+                <input type="range" id="global-o2-slider" min="0.0" max="2.0" step="0.1" value="1.0" />
+                <button id="copy-global-o2-btn" class="copy-id-btn" title="Copy Oxygen Supply Code">
+                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="param-slider" style="margin-top: 1rem;">
               <div class="param-label-row">
                 <label for="global-glc-slider" class="click-focus-env" data-metab-id="glc__D_e">Glucose Supply (glc__D_e)</label>
                 <span id="global-glc-val" class="code-font">10.0</span>
               </div>
-              <input type="range" id="global-glc-slider" min="0.0" max="20.0" step="0.5" value="10.0" />
+              <div class="slider-with-btn-row">
+                <input type="range" id="global-glc-slider" min="0.0" max="20.0" step="0.5" value="10.0" />
+                <button id="copy-global-glc-btn" class="copy-id-btn" title="Copy Glucose Supply Code">
+                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </section>
 
@@ -305,7 +337,15 @@
             <span class="category-badge badge-metab">Metabolite</span>
             <button class="close-inspector-btn">✕</button>
           </div>
-          <h2 id="metab-name" class="inspector-title">Glucose-6-Phosphate</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+            <h2 id="metab-name" class="inspector-title" style="margin: 0;">Glucose-6-Phosphate</h2>
+            <button id="copy-metab-name-btn" class="copy-id-btn" title="Copy Metabolite Name">
+              <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
           <div class="meta-row">
             <span class="meta-label">BiGG ID:</span>
             <div class="meta-value-container">
@@ -323,8 +363,14 @@
           <div class="chart-container">
             <h3>Concentration History</h3>
             <canvas id="rolling-chart"></canvas>
-            <div class="chart-legend">
+            <div class="chart-legend" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
               <span class="current-conc-text">Current: <span id="metab-conc-val" class="highlight-val">1.20</span> mM</span>
+              <button id="copy-metab-conc-btn" class="copy-id-btn" title="Copy Concentration Value" style="margin-left: 8px;">
+                <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -390,7 +436,15 @@
 
           <!-- Stoichiometric Equation -->
           <div class="equation-box">
-            <h3>Reaction Stoichiometry</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <h3>Reaction Stoichiometry</h3>
+              <button id="copy-equation-btn" class="copy-id-btn" title="Copy Stoichiometric Equation">
+                <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
             <div id="rxn-equation" class="equation-text code-font">f6p_c + atp_c &rarr; fdp_c + adp_c + h_c</div>
           </div>
 
@@ -489,7 +543,7 @@
           <button id="btn-close-auth" class="btn-close-auth">✕</button>
           <span class="auth-icon">👤</span>
           <h3 id="auth-title">Sign In</h3>
-          <p id="auth-message">Please sign in to modify E. coli metabolic simulation parameters on the fly and chat with the AI assistant.</p>
+          <p id="auth-message">Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.</p>
           <div id="global-google-signin-btn-container" class="google-signin-btn-container">
             <!-- Google auth button will render here -->
           </div>

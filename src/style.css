@@ -543,6 +543,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
   gap: 4px;
 }
 
+.metric-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .metric-label {
   font-size: 11px;
   color: #64748b;
@@ -2130,7 +2137,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   gap: 6px;
 }
 
-.btn-focus-pinned, .btn-unpin-pinned {
+.btn-focus-pinned, .btn-unpin-pinned, .btn-copy-pinned {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -2143,7 +2150,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transition: all 0.15s ease;
 }
 
-.btn-focus-pinned:hover {
+.btn-focus-pinned:hover, .btn-copy-pinned:hover {
   color: #3b82f6;
   background: rgba(59, 130, 246, 0.1);
 }
