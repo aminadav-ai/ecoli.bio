@@ -134,7 +134,6 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
     user: {
       email: user.email,
       name: user.name,
-      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
@@ -197,7 +196,6 @@ export async function getUserStatus(db, token, ip, guestId, timeZone) {
     user: user ? {
       email: user.email,
       name: user.name,
-      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium,
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
@@ -271,42 +269,7 @@ export async function incrementUserQuestions(db, email) {
   }
 }
 
-// 9. Fetch all user statistics for admin report
-export async function getAllUsersFromDb(db) {
-  try {
-    const res = await db.prepare('SELECT * FROM users').all();
-    const dbUsers = res.results || [];
-    
-    return dbUsers.map(u => {
-      return {
-        email: u.email,
-        name: u.name,
-        created_at: u.created_at,
-        premium_tier: u.premium_tier,
-        visits: u.visits || 0,
-        last_visit: u.last_visit || u.created_at || null,
-        questions: u.questions || 0,
-        auto_renew: !!u.auto_renew
-      };
-    });
-  } catch (err) {
-    console.error('[D1 DB] Failed to get all users:', err);
-    return [];
-  }
-}
 
-// 10. Delete user and their associated data
-export async function deleteUserFromDb(db, email) {
-  try {
-    await db.prepare('DELETE FROM user_sessions WHERE email = ?').bind(email).run();
-    const identifier = `user:${email}`;
-    await db.prepare('DELETE FROM chat_limits WHERE identifier = ?').bind(identifier).run();
-    await db.prepare('DELETE FROM users WHERE email = ?').bind(email).run();
-  } catch (err) {
-    console.error('[D1 DB] Failed to delete user:', err);
-    throw err;
-  }
-}
 
 // 11. Save chat message to history
 export async function saveChatMessage(db, identifier, role, message, context = null) {

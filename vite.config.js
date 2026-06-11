@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { pool, clearCachedUser, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, bufferUserSolverTicks } from './src/supabase_db.js';
+import { pool, clearCachedUser, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, bufferUserSolverTicks } from './src/supabase_db.js';
 import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
 // Load static bounds once on startup
@@ -242,60 +242,7 @@ export default defineConfig(({ mode }) => {
         res.end(JSON.stringify({ error: err.message }));
       }
 
-    } else if (url.pathname === '/api/admin/reports/users' && req.method === 'GET') {
-      try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Unauthorized.' }));
-          return;
-        }
-        const user = await getUserByToken(token);
-        if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-          res.writeHead(403, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Forbidden.' }));
-          return;
-        }
-        const users = await getAllUsersFromDb();
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(users));
-      } catch (err) {
-        console.error('Vite Admin Users report error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-      }
-    } else if (url.pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
-      try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Unauthorized.' }));
-          return;
-        }
-        const user = await getUserByToken(token);
-        if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-          res.writeHead(403, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Forbidden.' }));
-          return;
-        }
-        
-        const targetEmail = decodeURIComponent(url.pathname.substring('/api/admin/users/'.length));
-        if (!targetEmail) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Email parameter is required.' }));
-          return;
-        }
-        
-        await deleteUserFromDb(targetEmail);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
-      } catch (err) {
-        console.error('Vite Admin Delete User error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-      }
+
     } else if (url.pathname === '/api/payments/simulate' && req.method === 'POST') {
       try {
         const authHeader = req.headers['authorization'];

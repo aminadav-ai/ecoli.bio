@@ -252,7 +252,6 @@ export async function verifyGoogleTokenAndLogin(credential) {
     user: {
       email: user.email,
       name: user.name,
-      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
@@ -317,7 +316,6 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
     user: user ? {
       email: user.email,
       name: user.name,
-      isAdmin: user.email === 'fbhcdbhf@gmail.com',
       isPremium,
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
@@ -399,56 +397,7 @@ export async function incrementUserTimeSpent(email, seconds) {
   return 0;
 }
 
-// 9. Fetch and format all user statistics for admin report
-export async function getAllUsersFromDb() {
-  try {
-    const res = await pool.query('SELECT * FROM users');
-    const dbUsers = res.rows;
-    
-    return dbUsers.map(u => {
-      return {
-        email: u.email,
-        name: u.name,
-        created_at: u.created_at,
-        premium_tier: u.premium_tier,
-        visits: u.visits || 0,
-        last_visit: u.last_visit || u.created_at || null,
-        questions: u.questions || 0,
-        auto_renew: !!u.auto_renew
-      };
-    });
-  } catch (err) {
-    console.error('[Postgres DB] Failed to get all users:', err);
-    return [];
-  }
-}
 
-// 10. Delete user and their associated data
-export async function deleteUserFromDb(email) {
-  try {
-    // delete user sessions
-    await pool.query('DELETE FROM user_sessions WHERE email = $1', [email]);
-  } catch (err) {
-    console.error('[Postgres DB] Failed to delete user sessions:', err);
-  }
-
-  try {
-    // delete chat limits
-    const identifier = `user:${email}`;
-    await pool.query('DELETE FROM chat_limits WHERE identifier = $1', [identifier]);
-  } catch (err) {
-    console.error('[Postgres DB] Failed to delete chat limits:', err);
-  }
-
-  try {
-    // delete user
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    clearCachedUser(email);
-  } catch (err) {
-    console.error('[Postgres DB] Failed to delete user:', err);
-    throw err;
-  }
-}
 
 // 11. Save chat message to history
 export async function saveChatMessage(identifier, role, message, context = null) {

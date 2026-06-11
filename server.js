@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, getAllUsersFromDb, deleteUserFromDb, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser, bufferUserSolverTicks } from './src/supabase_db.js';
+import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser, bufferUserSolverTicks } from './src/supabase_db.js';
 import { initializeDatabase } from './src/db_init.js';
 import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
@@ -342,47 +342,6 @@ app.post('/api/auth/logout', async (req, res) => {
 });
 
 
-app.get('/api/admin/reports/users', async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized.' });
-    }
-    const user = await getUserByToken(token);
-    if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
-    const users = await getAllUsersFromDb();
-    return res.json(users);
-  } catch (err) {
-    console.error('Admin Users report error:', err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete('/api/admin/users/:email', async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized.' });
-    }
-    const user = await getUserByToken(token);
-    if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-      return res.status(403).json({ error: 'Forbidden.' });
-    }
-    const targetEmail = req.params.email;
-    if (!targetEmail) {
-      return res.status(400).json({ error: 'Email parameter is required.' });
-    }
-    await deleteUserFromDb(targetEmail);
-    return res.json({ success: true });
-  } catch (err) {
-    console.error('Admin Delete User error:', err);
-    return res.status(500).json({ error: err.message });
-  }
-});
 
 app.post('/api/payments/simulate', async (req, res) => {
   try {

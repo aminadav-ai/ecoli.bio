@@ -1259,15 +1259,7 @@ function setupUIListeners() {
         if (chevron) chevron.style.transform = 'rotate(0deg)';
       }
     }
-    const reportsDropdown = document.getElementById('reports-dropdown');
-    if (reportsDropdown && !e.target.closest('.reports-container')) {
-      reportsDropdown.classList.add('hidden');
-      const btn = document.getElementById('reports-dropdown-btn');
-      if (btn) {
-        const chevron = btn.querySelector('.chevron-icon');
-        if (chevron) chevron.style.transform = 'rotate(0deg)';
-      }
-    }
+
   });
 
   // Solver badge dropdown toggle
@@ -4167,30 +4159,10 @@ function updateUserStatusUI() {
     }
   }
 
-  // Update Reports Button Visibility
-  const adminReportsContainer = document.getElementById('admin-reports-container');
-  if (adminReportsContainer) {
-    if (userProfile && userProfile.isAdmin) {
-      adminReportsContainer.classList.remove('hidden');
-    } else {
-      adminReportsContainer.classList.add('hidden');
-      const reportsDropdown = document.getElementById('reports-dropdown');
-      if (reportsDropdown) reportsDropdown.classList.add('hidden');
-    }
-  }
-
-  // Update AI Chat Context Button Visibility (Admins Only)
+  // Update AI Chat Context Button Visibility (Visible to everyone)
   const contextBtn = document.getElementById('ai-chat-context-btn');
-  const contextPanel = document.getElementById('ai-chat-context-panel');
   if (contextBtn) {
-    if (userProfile && userProfile.isAdmin) {
-      contextBtn.classList.remove('hidden');
-    } else {
-      contextBtn.classList.add('hidden');
-      if (contextPanel) {
-        contextPanel.classList.add('hidden');
-      }
-    }
+    contextBtn.classList.remove('hidden');
   }
   
   // 1. Update AI Chat Status Bar (if it exists)
@@ -4687,113 +4659,7 @@ function setupScenariosAndChat() {
   // Initial Auth & Limit checks
   checkAuthStatus(true);
 
-  // Admin Reports Dropdown & Modal setup
-  const reportsDropdownBtn = document.getElementById('reports-dropdown-btn');
-  const reportsDropdownElement = document.getElementById('reports-dropdown');
-  const reportUsersOpt = document.getElementById('report-users-opt');
-  const reportsModal = document.getElementById('reports-modal');
-  const closeReportsModal = document.getElementById('close-reports-modal');
-  const reportsTableBody = document.getElementById('reports-table-body');
 
-  if (reportsDropdownBtn && reportsDropdownElement) {
-    reportsDropdownBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      reportsDropdownElement.classList.toggle('hidden');
-      const chevron = reportsDropdownBtn.querySelector('.chevron-icon');
-      if (chevron) {
-        const isHidden = reportsDropdownElement.classList.contains('hidden');
-        chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
-      }
-    });
-  }
-
-  if (reportUsersOpt && reportsModal && reportsTableBody) {
-    reportUsersOpt.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (reportsDropdownElement) reportsDropdownElement.classList.add('hidden');
-      const chevron = reportsDropdownBtn ? reportsDropdownBtn.querySelector('.chevron-icon') : null;
-      if (chevron) chevron.style.transform = 'rotate(0deg)';
-
-      reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">Loading report data...</td></tr>';
-      reportsModal.classList.remove('hidden');
-
-      try {
-        const token = localStorage.getItem('userToken');
-        const headers = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        const res = await fetch('/api/admin/reports/users', { headers });
-        if (res.ok) {
-          const users = await res.json();
-          if (users.length === 0) {
-            reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">No registered users found.</td></tr>';
-          } else {
-            reportsTableBody.innerHTML = users.map(u => {
-              const lastVisitStr = u.last_visit ? new Date(u.last_visit).toLocaleString() : 'Never';
-              const autoRenewStr = u.auto_renew ? 'Yes' : 'No';
-              return `
-                <tr>
-                  <td>${u.email || ''}</td>
-                  <td>${u.name || ''}</td>
-                  <td>${u.visits || 0}</td>
-                  <td>${lastVisitStr}</td>
-                  <td>${u.questions || 0}</td>
-                  <td>${autoRenewStr}</td>
-                  <td style="text-align: center;">
-                    <button class="delete-user-btn" data-email="${u.email}" title="Delete User">🗑️</button>
-                  </td>
-                </tr>
-              `;
-            }).join('');
-
-            // Attach event listeners for delete buttons
-            const deleteButtons = reportsTableBody.querySelectorAll('.delete-user-btn');
-            deleteButtons.forEach(btn => {
-              btn.addEventListener('click', async (evt) => {
-                evt.stopPropagation();
-                const emailToDelete = btn.dataset.email;
-                if (!emailToDelete) return;
-
-                if (confirm(`Are you sure you want to delete user ${emailToDelete}? All sessions, statistics, and access status will be permanently erased.`)) {
-                  try {
-                    const delRes = await fetch(`/api/admin/users/${encodeURIComponent(emailToDelete)}`, {
-                      method: 'DELETE',
-                      headers: {
-                        'Authorization': `Bearer ${token}`
-                      }
-                    });
-                    if (delRes.ok) {
-                      // Reload report
-                      reportUsersOpt.click();
-                    } else {
-                      const err = await delRes.json();
-                      alert(`Failed to delete user: ${err.error}`);
-                    }
-                  } catch (err) {
-                    console.error('Delete user error:', err);
-                    alert('Failed to connect to the server.');
-                  }
-                }
-              });
-            });
-          }
-        } else {
-          const err = await res.json();
-          reportsTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${err.error || 'Failed to load report data.'}</td></tr>`;
-        }
-      } catch (err) {
-        console.error('Failed to load user reports:', err);
-        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #ef4444;">Error: Failed to fetch data from server.</td></tr>';
-      }
-    });
-  }
-
-  if (closeReportsModal && reportsModal) {
-    closeReportsModal.addEventListener('click', () => {
-      reportsModal.classList.add('hidden');
-    });
-  }
 
 }
 

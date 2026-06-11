@@ -20,8 +20,6 @@ import {
   getUserStatus, 
   logoutSession, 
   simulatePremiumPayment, 
-  getAllUsersFromDb, 
-  deleteUserFromDb, 
   saveChatMessage, 
   getChatHistory, 
   bulkIncrementUserStats,
@@ -465,60 +463,6 @@ ${JSON.stringify(context, null, 2)}
         });
       }
 
-      // 8. Admin Reports
-      if (url.pathname === '/api/admin/reports/users' && request.method === 'GET') {
-        const authHeader = request.headers.get('authorization');
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        const user = await getUserByToken(env.DB, token);
-        if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-          return new Response(JSON.stringify({ error: 'Forbidden.' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        const users = await getAllUsersFromDb(env.DB);
-        return new Response(JSON.stringify(users), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
-      // 9. Admin delete user
-      if (url.pathname.startsWith('/api/admin/users/') && request.method === 'DELETE') {
-        const authHeader = request.headers.get('authorization');
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        const user = await getUserByToken(env.DB, token);
-        if (!user || user.email !== 'fbhcdbhf@gmail.com') {
-          return new Response(JSON.stringify({ error: 'Forbidden.' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        
-        const targetEmail = decodeURIComponent(url.pathname.substring('/api/admin/users/'.length));
-        if (!targetEmail) {
-          return new Response(JSON.stringify({ error: 'Email parameter is required.' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        
-        await deleteUserFromDb(env.DB, targetEmail);
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
 
       // 10. User preferences endpoint (stub)
       if (url.pathname === '/api/user/preferences' && request.method === 'PATCH') {
