@@ -1388,6 +1388,19 @@ function setupUIListeners() {
       await createNewExperiment();
     });
   }
+
+  // Reload chat and experiments list when tab becomes active/visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const chatDrawer = document.getElementById('ai-chat-drawer');
+      if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
+        loadChatHistory();
+      }
+      if (userProfile && isExperimentsListLoaded) {
+        loadExperimentsList();
+      }
+    }
+  });
 }
 
 /**
