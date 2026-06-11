@@ -6153,13 +6153,20 @@ function makeElementsClickable(container) {
     }
     if (renderer.reactions) {
       renderer.reactions.forEach(r => {
-        if (r.biggId) idMap.set(r.biggId.toLowerCase(), { type: 'reaction', id: r.id, rxn: r });
-        if (r.id) idMap.set(r.id.toLowerCase(), { type: 'reaction', id: r.id, rxn: r });
+        const lowerBigg = r.biggId ? r.biggId.toLowerCase() : '';
+        const lowerId = r.id ? r.id.toLowerCase() : '';
+        if (r.biggId) idMap.set(lowerBigg, { type: 'reaction', id: r.id, rxn: r });
+        if (r.id) idMap.set(lowerId, { type: 'reaction', id: r.id, rxn: r });
+        
+        // Map ATPS4r alias to ATPS4rpp
+        if (lowerBigg === 'atps4rpp' || lowerId === 'atps4rpp') {
+          idMap.set('atps4r', { type: 'reaction', id: r.id, rxn: r });
+        }
       });
     }
   }
 
-  const wordRegex = /\b[A-Za-z0-9_]{3,}\b/g;
+  const wordRegex = /\b[A-Za-z0-9_]{2,}\b/g;
 
   // Walk text nodes
   const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
