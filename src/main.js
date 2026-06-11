@@ -3848,6 +3848,18 @@ let currentLimit = { max: 5, count: 0, remaining: 5 };
 let userProfile = null;
 let googleAuthInitialized = false;
 
+function resetChatToGreeting() {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (chatMessages) {
+    chatMessages.innerHTML = `
+      <div class="message message-model">
+        Hello! I am your AI assistant for E. coli metabolism. Feel free to ask me any questions about the map, reactions, metabolic pathways, or the current learning scenarios.
+      </div>
+    `;
+  }
+  aiChatHistory = [];
+}
+
 async function loadChatHistory() {
   const token = localStorage.getItem('userToken');
   try {
@@ -3915,6 +3927,7 @@ async function checkAuthStatus(isVisit = false) {
 
     userProfile = null;
     updateUserStatusUI();
+    resetChatToGreeting();
 
     if (simulation) {
       try {
