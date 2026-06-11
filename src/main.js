@@ -1348,6 +1348,10 @@ function setupUIListeners() {
       e.stopPropagation();
       populateSolverDetails();
       solverDropdown.classList.toggle('hidden');
+      const isOpening = !solverDropdown.classList.contains('hidden');
+      if (isOpening) {
+        closeAllOtherPanels('solver');
+      }
     });
   }
   if (solverDetailsCloseBtn && solverDropdown) {
@@ -1419,6 +1423,10 @@ function setupUIListeners() {
       e.stopPropagation();
       customOptionsDiv.classList.toggle('hidden');
       customWrapper.classList.toggle('open');
+      const isOpening = !customOptionsDiv.classList.contains('hidden');
+      if (isOpening) {
+        closeAllOtherPanels('experiments');
+      }
     });
 
     document.addEventListener('click', (e) => {
@@ -1516,7 +1524,7 @@ function handleMetaboliteSelect(node) {
     hideInspector();
     return;
   }
-  closeChatDrawer();
+  closeAllOtherPanels('inspector');
 
   selectedMetaboliteId = node.biggId;
   selectedReactionId = null;
@@ -1583,7 +1591,7 @@ function handleMetaboliteSelect(node) {
  * Event handler triggered when a user clicks on a reaction badge in Pixi canvas.
  */
 function handleReactionSelect(rxn) {
-  closeChatDrawer();
+  closeAllOtherPanels('inspector');
   selectedReactionId = rxn.biggId;
   selectedMetaboliteId = null;
   chartHistory = [];
@@ -1684,8 +1692,7 @@ function openChatDrawer() {
   const chatTrigger = document.getElementById('ai-chat-trigger');
   if (chatDrawer) {
     chatDrawer.classList.remove('hidden');
-    // Hide the reaction/metabolite inspector panel
-    hideInspector();
+    closeAllOtherPanels('chat');
   }
   if (chatTrigger) {
     chatTrigger.classList.remove('animate-bounce');
@@ -1712,6 +1719,47 @@ function closeChatDrawer() {
       lastChatScrollTop = chatMessages.scrollTop;
     }
     chatDrawer.classList.add('hidden');
+  }
+}
+
+/**
+ * Closes all panel elements except the specified one to prevent visual overlap.
+ * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver'.
+ */
+function closeAllOtherPanels(except) {
+  // 1. AI Chat Drawer
+  if (except !== 'chat') {
+    closeChatDrawer();
+  }
+  // 2. User Profile Dropdown
+  if (except !== 'profile') {
+    const userDropdown = document.getElementById('user-profile-dropdown');
+    if (userDropdown) {
+      userDropdown.classList.add('hidden');
+      const badge = document.getElementById('user-profile-badge');
+      if (badge) {
+        const chevron = badge.querySelector('.chevron-icon');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+      }
+    }
+  }
+  // 3. Reaction/Metabolite Inspector Panel
+  if (except !== 'inspector') {
+    hideInspector();
+  }
+  // 4. Experiments List
+  if (except !== 'experiments') {
+    const customOptionsDiv = document.getElementById('custom-experiment-options');
+    const customWrapper = document.getElementById('custom-experiment-select-wrapper');
+    if (customOptionsDiv) customOptionsDiv.classList.add('hidden');
+    if (customWrapper) customWrapper.classList.remove('open');
+  }
+  // 5. Solver Activity Dropdown
+  if (except !== 'solver') {
+    const solverDropdown = document.getElementById('solver-details-dropdown');
+    if (solverDropdown) {
+      solverDropdown.classList.add('hidden');
+    }
   }
 }
 
@@ -1870,7 +1918,7 @@ function renderPinnedReactions() {
             <span>Vmax:</span>
             <span id="pinned-vmax-val-${rxnId}" class="code-font">${labelText}</span>
           </span>
-          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="100.0" step="0.5" value="${vmaxVal}" ${disabledAttr} />
+          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="40.0" step="0.5" value="${vmaxVal}" ${disabledAttr} />
         </div>
       </div>
     `;
@@ -4838,8 +4886,7 @@ function updateUserStatusUI() {
           dropdown.classList.toggle('hidden');
           const isOpening = !dropdown.classList.contains('hidden');
           if (isOpening) {
-            closeChatDrawer();
-            hideInspector();
+            closeAllOtherPanels('profile');
           }
           const chevron = badge.querySelector('.chevron-icon');
           if (chevron) {
