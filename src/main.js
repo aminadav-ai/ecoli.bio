@@ -1294,6 +1294,16 @@ function setupUIListeners() {
     });
   }
 
+  // Copy Reaction Name button listener
+  const copyRxnNameBtn = document.getElementById('copy-rxn-name-btn');
+  if (copyRxnNameBtn) {
+    copyRxnNameBtn.addEventListener('click', () => {
+      if (!selectedReactionId) return;
+      const nameText = document.getElementById('rxn-name').textContent;
+      handleCopyClick(copyRxnNameBtn, `${selectedReactionId} Name = ${nameText}`);
+    });
+  }
+
   // Copy Metabolite Name button listener
   const copyMetabNameBtn = document.getElementById('copy-metab-name-btn');
   if (copyMetabNameBtn) {
