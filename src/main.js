@@ -1252,7 +1252,7 @@ function setupUIListeners() {
   if (copyGlobalO2Btn) {
     copyGlobalO2Btn.addEventListener('click', () => {
       const val = document.getElementById('global-o2-slider').value;
-      handleCopyClick(copyGlobalO2Btn, `o2_e = ${val}`);
+      handleCopyClick(copyGlobalO2Btn, `o2_e Concentration = ${parseFloat(val).toFixed(1)} mM`);
     });
   }
 
@@ -1261,7 +1261,7 @@ function setupUIListeners() {
   if (copyGlobalGlcBtn) {
     copyGlobalGlcBtn.addEventListener('click', () => {
       const val = document.getElementById('global-glc-slider').value;
-      handleCopyClick(copyGlobalGlcBtn, `glc__D_e = ${val}`);
+      handleCopyClick(copyGlobalGlcBtn, `glc__D_e Concentration = ${parseFloat(val).toFixed(1)} mM`);
     });
   }
 
@@ -2121,12 +2121,6 @@ function renderPinnedReactions() {
           <span class="pinned-rxn-id code-font">${rxnId}</span>
         </div>
         <div class="pinned-row-actions">
-          <button class="btn-copy-pinned copy-id-btn" data-id="${rxnId}" title="Copy Vmax Code">
-            <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
           <button class="btn-focus-pinned" data-id="${rxnId}" title="Focus on map">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
@@ -2146,7 +2140,15 @@ function renderPinnedReactions() {
             <span>Vmax:</span>
             <span id="pinned-vmax-val-${rxnId}" class="code-font">${labelText}</span>
           </span>
-          <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="40.0" step="0.5" value="${vmaxVal}" ${disabledAttr} />
+          <div class="slider-with-btn-row">
+            <input type="range" class="pinned-vmax-slider" data-id="${rxnId}" min="0.0" max="40.0" step="0.5" value="${vmaxVal}" ${disabledAttr} />
+            <button class="btn-copy-pinned copy-id-btn" data-id="${rxnId}" title="Copy Vmax Code">
+              <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -2155,8 +2157,8 @@ function renderPinnedReactions() {
     row.querySelector('.btn-copy-pinned').addEventListener('click', (e) => {
       e.stopPropagation();
       const id = rxnId;
-      const currentVmax = isRepressed ? 0.0 : (rxn.vMax !== undefined ? rxn.vMax : 15.0);
-      handleCopyClick(row.querySelector('.btn-copy-pinned'), `${id} Vmax = ${currentVmax.toFixed(1)}`);
+      const sliderVal = parseFloat(row.querySelector('.pinned-vmax-slider').value);
+      handleCopyClick(row.querySelector('.btn-copy-pinned'), `${id} Vmax = ${sliderVal.toFixed(1)}`);
     });
 
     // Setup focus button event
