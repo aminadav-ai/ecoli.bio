@@ -55,7 +55,7 @@ export class SolverDO {
     this.bufferedTicks = 0;
     this.lastFlushTime = 0;
     this.userEmail = null;
-    this.totalSolverTicks = undefined;
+    this.totalSolverTicks = 0;
     this.alarmScheduled = false;
 
     // Block DO concurrency until WASM solver is loaded and state is restored
@@ -173,12 +173,11 @@ export class SolverDO {
         
         // Increment solver ticks
         const newTicks = this.simulation.solverTicksBuffer || 0;
+        console.log(`[DO LOOP] newTicks=${newTicks}, userEmail=${this.userEmail}, totalSolverTicks=${this.totalSolverTicks}`);
         if (newTicks > 0 && this.userEmail) {
           this.simulation.solverTicksBuffer = 0;
           this.bufferedTicks += newTicks;
-          if (this.totalSolverTicks !== undefined) {
-            this.totalSolverTicks += newTicks;
-          }
+          this.totalSolverTicks += newTicks;
           await this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
           
           if (!this.alarmScheduled) {
@@ -348,9 +347,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       
       if (data.type === 'INIT') {
         const { userEmail, dbTicks } = data;
+        console.log(`[DO INIT] Received userEmail=${userEmail}, dbTicks=${dbTicks}. Current totalSolverTicks=${this.totalSolverTicks}`);
         this.userEmail = userEmail || null;
-        if (dbTicks !== undefined && this.totalSolverTicks === undefined) {
-          this.totalSolverTicks = dbTicks;
+        if (dbTicks !== undefined) {
+          this.totalSolverTicks = Math.max(this.totalSolverTicks, dbTicks);
         }
         
         const dbSession = await getSimulationSession(this.env.DB, this.sessionId);
@@ -528,8 +528,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       const stateToSave = serializeSimulation(this.simulation);
       this.state.storage.put('sim_state', stateToSave);
 
-      if (this.totalSolverTicks === undefined && data.dbTicks !== undefined) {
-        this.totalSolverTicks = data.dbTicks;
+      if (data.dbTicks !== undefined) {
+        this.totalSolverTicks = Math.max(this.totalSolverTicks, data.dbTicks);
       }
 
       const newTicks = this.simulation.solverTicksBuffer || 0;
@@ -537,9 +537,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.simulation.solverTicksBuffer = 0;
         this.bufferedTicks += newTicks;
         this.userEmail = data.userEmail;
-        if (this.totalSolverTicks !== undefined) {
-          this.totalSolverTicks += newTicks;
-        }
+        this.totalSolverTicks += newTicks;
         this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
       }
 
@@ -555,7 +553,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.state.storage.setAlarm(Date.now() + 5000);
       }
 
-      result.solverTicks = this.totalSolverTicks !== undefined ? this.totalSolverTicks : (data.dbTicks || 0);
+      result.solverTicks = this.totalSolverTicks || 0;
 
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }

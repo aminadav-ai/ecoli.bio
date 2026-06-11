@@ -4088,10 +4088,11 @@ function connectSessionWebSocket() {
   sessionWebSocket.onopen = () => {
     console.log('[WS] Connection established.');
     if (sessionWebSocket.readyState === WebSocket.OPEN) {
+      console.log('[WS DEBUG] Sending INIT message with dbTicks:', userProfile ? userProfile.solverTicks : 'no userProfile');
       sessionWebSocket.send(JSON.stringify({
         type: "INIT",
-        userEmail: userProfile.email,
-        dbTicks: userProfile.solverTicks || 0
+        userEmail: userProfile ? userProfile.email : null,
+        dbTicks: userProfile ? (userProfile.solverTicks || 0) : 0
       }));
     }
   };
@@ -4109,6 +4110,7 @@ function connectSessionWebSocket() {
         if (data.name) {
           updateActiveExperimentNameUI(data.name);
         }
+        console.log('[WS DEBUG] Received INIT_STATE. solverTicks:', data.solverTicks, 'userProfile:', userProfile);
         if (data.solverTicks !== undefined && userProfile) {
           userProfile.solverTicks = data.solverTicks;
           updateUserStatusUI();
@@ -4131,6 +4133,7 @@ function connectSessionWebSocket() {
           accumulatedChangingMetabolites[metab.id] = metab;
         });
 
+        console.log('[WS DEBUG] Received TICK_UPDATE. solverTicks:', data.solverTicks, 'userProfile:', userProfile);
         if (userProfile && data.solverTicks !== undefined) {
           userProfile.solverTicks = data.solverTicks;
         }

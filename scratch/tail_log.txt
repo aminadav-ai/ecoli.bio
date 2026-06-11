@@ -1,0 +1,3619 @@
+{
+    "wallTime": 172,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164321749,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08b2ec33c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 121,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 334,
+    "cpuTime": 218,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO INIT] Received userEmail=fbhcdbhf@gmail.com, dbTicks=5. Current totalSolverTicks=undefined"
+            ],
+            "level": "log",
+            "timestamp": 1781164325228
+        },
+        {
+            "message": [
+                "[DO LOOP] newTicks=1, userEmail=fbhcdbhf@gmail.com, totalSolverTicks=5"
+            ],
+            "level": "log",
+            "timestamp": 1781164325249
+        },
+        {
+            "message": [
+                "[DO LOOP] newTicks=1, userEmail=fbhcdbhf@gmail.com, totalSolverTicks=6"
+            ],
+            "level": "log",
+            "timestamp": 1781164325329
+        }
+    ],
+    "eventTimestamp": 1781164325069,
+    "event": {
+        "getWebSocketEvent": {
+            "webSocketEventType": "message"
+        }
+    }
+}
+{
+    "wallTime": 248,
+    "cpuTime": 107,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO INIT] Received userEmail=fbhcdbhf@gmail.com, dbTicks=5. Current totalSolverTicks=7"
+            ],
+            "level": "log",
+            "timestamp": 1781164325481
+        },
+        {
+            "message": [
+                "[DO LOOP] newTicks=1, userEmail=fbhcdbhf@gmail.com, totalSolverTicks=7"
+            ],
+            "level": "log",
+            "timestamp": 1781164325529
+        }
+    ],
+    "eventTimestamp": 1781164325455,
+    "event": {
+        "getWebSocketEvent": {
+            "webSocketEventType": "message"
+        }
+    }
+}
+{
+    "wallTime": 53,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO Alarm] Alarm triggered. Flushing ticks..."
+            ],
+            "level": "log",
+            "timestamp": 1781164330249
+        },
+        {
+            "message": [
+                "[DO] Flushing 3 buffered ticks to D1 for fbhcdbhf@gmail.com..."
+            ],
+            "level": "log",
+            "timestamp": 1781164330249
+        }
+    ],
+    "eventTimestamp": 1781164325653,
+    "event": {
+        "scheduledTime": "2026-06-11T07:52:10.249Z"
+    }
+}
+{
+    "wallTime": 142,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164331708,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08f12e11c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 114,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 142,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164340409,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f09278a19c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 107,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 143,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164341709,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f092fabf8c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 102,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 145,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164351719,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f096e3f3ec666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 101,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 140,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164361737,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f09acda72c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 92,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 144,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164371868,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f09ec2dd2c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 88,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 145,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164381811,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0a2a49bcc666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 83,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 142,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164391758,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0a687ce1c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 76,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 143,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164400409,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0a9e888bc666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 82,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 145,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164401803,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0aa74b95c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 81,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 147,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164411701,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0ae51a4fc666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 74,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 144,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164421718,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0b23bfd7c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 68,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 141,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164431716,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0b623ccfc666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 67,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 146,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164441788,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0ba12855c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 71,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 146,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164451650,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0bdecd87c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 70,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 142,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164460408,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0c158f6ec666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 72,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 143,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164461672,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0c1d69c7c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 73,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 2,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "exception",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [
+        {
+            "stack": "    at Object.fetch (worker.js:14864:31)",
+            "name": "TypeError",
+            "message": "Cannot read properties of undefined (reading 'fetch')",
+            "timestamp": 1781164470644
+        }
+    ],
+    "logs": [],
+    "eventTimestamp": 1781164470561,
+    "event": {
+        "request": {
+            "url": "http://cellflux.org/wp-admin/install.php?step=1",
+            "method": "GET",
+            "headers": {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "accept-encoding": "gzip",
+                "accept-language": "en-us,en;q=0.8,fr;q=0.5,fr-ca;q=0.3",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "2a06:98c0:3600::103",
+                "cf-ipcountry": "DE",
+                "cf-ray": "a09f0c5497585d92",
+                "cf-visitor": "{\"scheme\":\"http\"}",
+                "cf-worker": "tyokc78176.workers.dev",
+                "connection": "Keep-Alive",
+                "host": "cellflux.org",
+                "pragma": "no-cache",
+                "user-agent": "http://cellflux.org/wp-admin/install.php?step=1",
+                "x-forwarded-proto": "http",
+                "x-real-ip": "2a06:98c0:3600::103"
+            },
+            "cf": {
+                "requestHeaderNames": {},
+                "httpProtocol": "HTTP/1.1",
+                "tlsCipher": "",
+                "continent": "EU",
+                "asn": 13335,
+                "verifiedBotCategory": "",
+                "country": "DE",
+                "isEUCountry": "1",
+                "region": "Hesse",
+                "tlsClientCiphersSha1": "",
+                "tlsClientAuth": {
+                    "certIssuerDNLegacy": "",
+                    "certIssuerSKI": "",
+                    "certSubjectDNRFC2253": "",
+                    "certSubjectDNLegacy": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certSKI": "",
+                    "certSerial": "",
+                    "certIssuerDN": "",
+                    "certVerified": "NONE",
+                    "certNotAfter": "",
+                    "certSubjectDN": "",
+                    "certPresented": "0",
+                    "certRevoked": "0",
+                    "certIssuerSerial": "",
+                    "certIssuerDNRFC2253": "",
+                    "certFingerprintSHA1": ""
+                },
+                "tlsClientRandom": "",
+                "tlsClientHelloLength": "",
+                "colo": "FRA",
+                "timezone": "Europe/Berlin",
+                "longitude": "8.68290",
+                "latitude": "50.11090",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestPriority": "",
+                "postalCode": "60280",
+                "city": "Frankfurt am Main",
+                "tlsVersion": "",
+                "regionCode": "HE",
+                "asOrganization": "Cloudflare, Inc.",
+                "tlsClientExtensionsSha1Le": "",
+                "tlsClientExtensionsSha1": ""
+            }
+        },
+        "response": {
+            "status": 500
+        }
+    }
+}
+{
+    "wallTime": 145,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164471813,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0c5cccd2c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 67,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 144,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164481838,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0c9b7b67c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 62,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 141,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164491689,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0cd90ea7c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 59,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 148,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164501754,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0d17fa83c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 56,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 144,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164511763,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0d5688b0c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 54,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 139,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164520398,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0d8c7b27c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 55,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 177,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164521810,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0d954d64c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 52,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 4,
+    "cpuTime": 0,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164330300,
+    "event": {
+        "getWebSocketEvent": {
+            "wasClean": false,
+            "code": 1006,
+            "webSocketEventType": "close"
+        }
+    }
+}
+{
+    "wallTime": 4,
+    "cpuTime": 3,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO] Loading HiGHS solver WebAssembly..."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO] instantiating WASM..."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO] WASM instantiation successful."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO] HiGHS solver WebAssembly loaded successfully."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO] Failed DO initialization:",
+                "TypeError: The Durable Object's code has been updated, this version can no longer access storage."
+            ],
+            "level": "error",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO WS] Connection closed: 1006 - WebSocket disconnected without sending Close frame."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        },
+        {
+            "message": [
+                "[DO WS] Connection closed: 1006 - WebSocket disconnected without sending Close frame."
+            ],
+            "level": "log",
+            "timestamp": 1781164529669
+        }
+    ],
+    "eventTimestamp": 1781164529669,
+    "event": {
+        "getWebSocketEvent": {
+            "wasClean": false,
+            "code": 1006,
+            "webSocketEventType": "close"
+        }
+    }
+}
+{
+    "wallTime": 15,
+    "cpuTime": 11,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "responseStreamDisconnected",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO] Loading HiGHS solver WebAssembly..."
+            ],
+            "level": "log",
+            "timestamp": 1781164325065
+        },
+        {
+            "message": [
+                "[DO] instantiating WASM..."
+            ],
+            "level": "log",
+            "timestamp": 1781164325065
+        },
+        {
+            "message": [
+                "[DO] WASM instantiation successful."
+            ],
+            "level": "log",
+            "timestamp": 1781164325065
+        },
+        {
+            "message": [
+                "[DO] HiGHS solver WebAssembly loaded successfully."
+            ],
+            "level": "log",
+            "timestamp": 1781164325065
+        },
+        {
+            "message": [
+                "[DO] Restored active simulation state from storage."
+            ],
+            "level": "log",
+            "timestamp": 1781164325068
+        }
+    ],
+    "eventTimestamp": 1781164325064,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/session-websocket?sessionId=session_56i6pc68hyijunvrcdjty",
+            "method": "GET",
+            "headers": {
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08c70a30f486",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Upgrade",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "origin": "https://cellflux.org",
+                "pragma": "no-cache",
+                "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+                "sec-websocket-key": "REDACTED",
+                "sec-websocket-version": "13",
+                "upgrade": "websocket",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "clientTcpRtt": 69,
+                "requestHeaderNames": {},
+                "httpProtocol": "HTTP/1.1",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "continent": "AS",
+                "asn": 16116,
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "verifiedBotCategory": "",
+                "country": "IL",
+                "isEUCountry": false,
+                "region": "Jerusalem",
+                "tlsClientCiphersSha1": "KuGfs2vBuh8l0G+IPFHc60e2nNk=",
+                "tlsClientAuth": {
+                    "certIssuerDNLegacy": "",
+                    "certIssuerSKI": "",
+                    "certSubjectDNRFC2253": "",
+                    "certSubjectDNLegacy": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certSKI": "",
+                    "certSerial": "",
+                    "certIssuerDN": "",
+                    "certVerified": "NONE",
+                    "certNotAfter": "",
+                    "certSubjectDN": "",
+                    "certPresented": "0",
+                    "certRevoked": "0",
+                    "certIssuerSerial": "",
+                    "certIssuerDNRFC2253": "",
+                    "certFingerprintSHA1": ""
+                },
+                "tlsClientRandom": "qMDF6uvEVXKT6tO29zizsARj3jWAFrJiYA+812zBdAs=",
+                "tlsExportedAuthenticator": {
+                    "clientFinished": "db2e34a879b1017057dbadc6739ae2f321d5960a40a3ec844bd0429e9ff594ad",
+                    "clientHandshake": "d14378bbda6b33843b05e7267a6ae94323f6827492d0da22f853fa94e055df17",
+                    "serverHandshake": "32296c9c473f668a15d03a98f7ffb1f5973ac97658bbbc0fcccbbcba86d248b7",
+                    "serverFinished": "6bd695c2048c33af522aa6c9b58241162ae087a551e2606b279a48ba2324099f"
+                },
+                "tlsClientHelloLength": "2036",
+                "colo": "TLV",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestPriority": "",
+                "city": "Jerusalem",
+                "tlsVersion": "TLSv1.3",
+                "regionCode": "JM",
+                "asOrganization": "Pelephone Communications Ltd.",
+                "tlsClientExtensionsSha1Le": "n1lc4koFJNm1A+B4Sn48GW/dbkc=",
+                "tlsClientExtensionsSha1": "aSZQpl4YhMBOdzEgh6moyXf/qaA="
+            }
+        }
+    }
+}
+{
+    "wallTime": 84,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "responseStreamDisconnected",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164325350,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/session-websocket?sessionId=session_56i6pc68hyijunvrcdjty",
+            "method": "GET",
+            "headers": {
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08ca2e3a2c5c",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Upgrade",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "origin": "https://cellflux.org",
+                "pragma": "no-cache",
+                "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+                "sec-websocket-key": "REDACTED",
+                "sec-websocket-version": "13",
+                "upgrade": "websocket",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "clientTcpRtt": 23,
+                "requestHeaderNames": {},
+                "httpProtocol": "HTTP/1.1",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "continent": "AS",
+                "asn": 16116,
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "verifiedBotCategory": "",
+                "country": "IL",
+                "isEUCountry": false,
+                "region": "Jerusalem",
+                "tlsClientCiphersSha1": "cG3ksVXz5z5aMztJKpmN9By5SR8=",
+                "tlsClientAuth": {
+                    "certIssuerDNLegacy": "",
+                    "certIssuerSKI": "",
+                    "certSubjectDNRFC2253": "",
+                    "certSubjectDNLegacy": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certSKI": "",
+                    "certSerial": "",
+                    "certIssuerDN": "",
+                    "certVerified": "NONE",
+                    "certNotAfter": "",
+                    "certSubjectDN": "",
+                    "certPresented": "0",
+                    "certRevoked": "0",
+                    "certIssuerSerial": "",
+                    "certIssuerDNRFC2253": "",
+                    "certFingerprintSHA1": ""
+                },
+                "tlsClientRandom": "k5MVio0xyBCn6/Jb99/5t4fVV0aNxZQk8fYsZfV/WYE=",
+                "tlsExportedAuthenticator": {
+                    "clientFinished": "0e89ecb01e7253bf62dbdf65e24c54e0b7e909a5d06d683d8f2a0235d827f798",
+                    "clientHandshake": "95649b1b3c77a0164dbabcf4ece6f7a16e4f0a76cca0fa82ec5b40ecdb8ad209",
+                    "serverHandshake": "c8fde05f8e0f3a2266bab06bd2c796491bce40cf238b2f666d9db6034c7737d2",
+                    "serverFinished": "9e535fd0e5bc5e4820ebc52600ccd056d8d69aaf4c4d5f11cb13a5d4bb73e5d8"
+                },
+                "tlsClientHelloLength": "1940",
+                "colo": "TLV",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestPriority": "",
+                "city": "Jerusalem",
+                "tlsVersion": "TLSv1.3",
+                "regionCode": "JM",
+                "asOrganization": "Pelephone Communications Ltd.",
+                "tlsClientExtensionsSha1Le": "ooNAV6pZF1OCRwY3iez4CQPXD3k=",
+                "tlsClientExtensionsSha1": "CU5OtOFej6PYIFg3sJPMD0kKGU4="
+            }
+        }
+    }
+}
+{
+    "wallTime": 70,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "responseStreamDisconnected",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164325478,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/session-websocket?sessionId=session_56i6pc68hyijunvrcdjty",
+            "method": "GET",
+            "headers": {
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08ca2e3a2c5c",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Upgrade",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "origin": "https://cellflux.org",
+                "pragma": "no-cache",
+                "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+                "sec-websocket-key": "REDACTED",
+                "sec-websocket-version": "13",
+                "upgrade": "websocket",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "clientTcpRtt": 23,
+                "requestHeaderNames": {},
+                "httpProtocol": "HTTP/1.1",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "continent": "AS",
+                "asn": 16116,
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "verifiedBotCategory": "",
+                "country": "IL",
+                "isEUCountry": false,
+                "region": "Jerusalem",
+                "tlsClientCiphersSha1": "cG3ksVXz5z5aMztJKpmN9By5SR8=",
+                "tlsClientAuth": {
+                    "certIssuerDNLegacy": "",
+                    "certIssuerSKI": "",
+                    "certSubjectDNRFC2253": "",
+                    "certSubjectDNLegacy": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certSKI": "",
+                    "certSerial": "",
+                    "certIssuerDN": "",
+                    "certVerified": "NONE",
+                    "certNotAfter": "",
+                    "certSubjectDN": "",
+                    "certPresented": "0",
+                    "certRevoked": "0",
+                    "certIssuerSerial": "",
+                    "certIssuerDNRFC2253": "",
+                    "certFingerprintSHA1": ""
+                },
+                "tlsClientRandom": "k5MVio0xyBCn6/Jb99/5t4fVV0aNxZQk8fYsZfV/WYE=",
+                "tlsExportedAuthenticator": {
+                    "clientFinished": "0e89ecb01e7253bf62dbdf65e24c54e0b7e909a5d06d683d8f2a0235d827f798",
+                    "clientHandshake": "95649b1b3c77a0164dbabcf4ece6f7a16e4f0a76cca0fa82ec5b40ecdb8ad209",
+                    "serverHandshake": "c8fde05f8e0f3a2266bab06bd2c796491bce40cf238b2f666d9db6034c7737d2",
+                    "serverFinished": "9e535fd0e5bc5e4820ebc52600ccd056d8d69aaf4c4d5f11cb13a5d4bb73e5d8"
+                },
+                "tlsClientHelloLength": "1940",
+                "colo": "TLV",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestPriority": "",
+                "city": "Jerusalem",
+                "tlsVersion": "TLSv1.3",
+                "regionCode": "JM",
+                "asOrganization": "Pelephone Communications Ltd.",
+                "tlsClientExtensionsSha1Le": "ooNAV6pZF1OCRwY3iez4CQPXD3k=",
+                "tlsClientExtensionsSha1": "CU5OtOFej6PYIFg3sJPMD0kKGU4="
+            }
+        }
+    }
+}
+{
+    "wallTime": 85,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "responseStreamDisconnected",
+    "scriptVersion": {
+        "id": "44f24989-1cc4-47a7-b5fa-66cbd3c58975"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164324977,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/session-websocket?sessionId=session_56i6pc68hyijunvrcdjty",
+            "method": "GET",
+            "headers": {
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "cache-control": "no-cache",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f08c70a30f486",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Upgrade",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "origin": "https://cellflux.org",
+                "pragma": "no-cache",
+                "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+                "sec-websocket-key": "REDACTED",
+                "sec-websocket-version": "13",
+                "upgrade": "websocket",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "clientTcpRtt": 69,
+                "requestHeaderNames": {},
+                "httpProtocol": "HTTP/1.1",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "continent": "AS",
+                "asn": 16116,
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "verifiedBotCategory": "",
+                "country": "IL",
+                "isEUCountry": false,
+                "region": "Jerusalem",
+                "tlsClientCiphersSha1": "KuGfs2vBuh8l0G+IPFHc60e2nNk=",
+                "tlsClientAuth": {
+                    "certIssuerDNLegacy": "",
+                    "certIssuerSKI": "",
+                    "certSubjectDNRFC2253": "",
+                    "certSubjectDNLegacy": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certSKI": "",
+                    "certSerial": "",
+                    "certIssuerDN": "",
+                    "certVerified": "NONE",
+                    "certNotAfter": "",
+                    "certSubjectDN": "",
+                    "certPresented": "0",
+                    "certRevoked": "0",
+                    "certIssuerSerial": "",
+                    "certIssuerDNRFC2253": "",
+                    "certFingerprintSHA1": ""
+                },
+                "tlsClientRandom": "qMDF6uvEVXKT6tO29zizsARj3jWAFrJiYA+812zBdAs=",
+                "tlsExportedAuthenticator": {
+                    "clientFinished": "db2e34a879b1017057dbadc6739ae2f321d5960a40a3ec844bd0429e9ff594ad",
+                    "clientHandshake": "d14378bbda6b33843b05e7267a6ae94323f6827492d0da22f853fa94e055df17",
+                    "serverHandshake": "32296c9c473f668a15d03a98f7ffb1f5973ac97658bbbc0fcccbbcba86d248b7",
+                    "serverFinished": "6bd695c2048c33af522aa6c9b58241162ae087a551e2606b279a48ba2324099f"
+                },
+                "tlsClientHelloLength": "2036",
+                "colo": "TLV",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestPriority": "",
+                "city": "Jerusalem",
+                "tlsVersion": "TLSv1.3",
+                "regionCode": "JM",
+                "asOrganization": "Pelephone Communications Ltd.",
+                "tlsClientExtensionsSha1Le": "n1lc4koFJNm1A+B4Sn48GW/dbkc=",
+                "tlsClientExtensionsSha1": "aSZQpl4YhMBOdzEgh6moyXf/qaA="
+            }
+        }
+    }
+}
+{
+    "wallTime": 149,
+    "cpuTime": 2,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "b216c236-083e-4231-affb-9db3055c9932"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164531832,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0dd3eaa3c666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 56,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
+{
+    "wallTime": 278,
+    "cpuTime": 246,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "b216c236-083e-4231-affb-9db3055c9932"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO INIT] Received userEmail=fbhcdbhf@gmail.com, dbTicks=8. Current totalSolverTicks=0"
+            ],
+            "level": "log",
+            "timestamp": 1781164535352
+        },
+        {
+            "message": [
+                "[Solver] Pre-calculated referenceNormalFluxes successfully on worker."
+            ],
+            "level": "log",
+            "timestamp": 1781164535370
+        },
+        {
+            "message": [
+                "[DO LOOP] newTicks=1, userEmail=fbhcdbhf@gmail.com, totalSolverTicks=8"
+            ],
+            "level": "log",
+            "timestamp": 1781164535370
+        }
+    ],
+    "eventTimestamp": 1781164535211,
+    "event": {
+        "getWebSocketEvent": {
+            "webSocketEventType": "message"
+        }
+    }
+}
+{
+    "wallTime": 76,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "b216c236-083e-4231-affb-9db3055c9932"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO INIT] Received userEmail=fbhcdbhf@gmail.com, dbTicks=8. Current totalSolverTicks=10"
+            ],
+            "level": "log",
+            "timestamp": 1781164535475
+        }
+    ],
+    "eventTimestamp": 1781164535470,
+    "event": {
+        "getWebSocketEvent": {
+            "webSocketEventType": "message"
+        }
+    }
+}
+{
+    "wallTime": 54,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "durableObject",
+    "outcome": "ok",
+    "durableObjectId": "36db3d469689091aa87c23eb963019c7e996c3575f1a97fc7cc0031d01a4c91e",
+    "scriptVersion": {
+        "id": "b216c236-083e-4231-affb-9db3055c9932"
+    },
+    "entrypoint": "SolverDO",
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [
+        {
+            "message": [
+                "[DO Alarm] Alarm triggered. Flushing ticks..."
+            ],
+            "level": "log",
+            "timestamp": 1781164540370
+        },
+        {
+            "message": [
+                "[DO] Flushing 2 buffered ticks to D1 for fbhcdbhf@gmail.com..."
+            ],
+            "level": "log",
+            "timestamp": 1781164540370
+        }
+    ],
+    "eventTimestamp": 1781164535572,
+    "event": {
+        "scheduledTime": "2026-06-11T07:55:40.370Z"
+    }
+}
+{
+    "wallTime": 149,
+    "cpuTime": 1,
+    "truncated": false,
+    "executionModel": "stateless",
+    "outcome": "ok",
+    "scriptVersion": {
+        "id": "b216c236-083e-4231-affb-9db3055c9932"
+    },
+    "scriptName": "e-coli3",
+    "diagnosticsChannelEvents": [],
+    "exceptions": [],
+    "logs": [],
+    "eventTimestamp": 1781164541668,
+    "event": {
+        "request": {
+            "url": "https://cellflux.org/api/experiments",
+            "method": "GET",
+            "headers": {
+                "accept": "*/*",
+                "accept-encoding": "gzip, br",
+                "accept-language": "he,en-US;q=0.9,en;q=0.8,ru;q=0.7",
+                "authorization": "REDACTED",
+                "cf-connecting-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516",
+                "cf-ipcountry": "IL",
+                "cf-ray": "a09f0e116f9bc666",
+                "cf-visitor": "{\"scheme\":\"https\"}",
+                "connection": "Keep-Alive",
+                "cookie": "REDACTED",
+                "host": "cellflux.org",
+                "priority": "u=1, i",
+                "referer": "https://cellflux.org/",
+                "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+                "x-forwarded-proto": "https",
+                "x-real-ip": "2a02:6680:1110:b38b:d417:46be:235d:d516"
+            },
+            "cf": {
+                "httpProtocol": "HTTP/3",
+                "clientAcceptEncoding": "gzip, deflate, br",
+                "requestPriority": "",
+                "edgeRequestKeepAliveStatus": 1,
+                "requestHeaderNames": {},
+                "clientTcpRtt": 0,
+                "clientQuicRtt": 67,
+                "colo": "TLV",
+                "asn": 16116,
+                "asOrganization": "Pelephone Communications Ltd.",
+                "country": "IL",
+                "isEUCountry": false,
+                "city": "Jerusalem",
+                "continent": "AS",
+                "region": "Jerusalem",
+                "regionCode": "JM",
+                "timezone": "Asia/Jerusalem",
+                "longitude": "35.21633",
+                "latitude": "31.76904",
+                "tlsVersion": "TLSv1.3",
+                "tlsCipher": "AEAD-AES128-GCM-SHA256",
+                "tlsClientRandom": "tZJ99Jk1w91felnqGuwiLYZa65FCi5XcSb4o+A86yUs=",
+                "tlsClientCiphersSha1": "3HTt3+R/6BL3zeALJDSq0pR1yOQ=",
+                "tlsClientExtensionsSha1": "8CvMMML5ngEj1EdD+jArZMLQyik=",
+                "tlsClientExtensionsSha1Le": "LX+uJcZ4kCHo0FxjGfmyDiFkZJ8=",
+                "tlsClientHelloLength": "1943",
+                "tlsClientAuth": {
+                    "certPresented": "0",
+                    "certVerified": "NONE",
+                    "certRevoked": "0",
+                    "certIssuerDN": "",
+                    "certSubjectDN": "",
+                    "certIssuerDNRFC2253": "",
+                    "certSubjectDNRFC2253": "",
+                    "certIssuerDNLegacy": "",
+                    "certSubjectDNLegacy": "",
+                    "certSerial": "",
+                    "certIssuerSerial": "",
+                    "certSKI": "",
+                    "certIssuerSKI": "",
+                    "certFingerprintSHA1": "",
+                    "certFingerprintSHA256": "",
+                    "certNotBefore": "",
+                    "certNotAfter": "",
+                    "certRFC9440": "",
+                    "certRFC9440TooLarge": false,
+                    "certChainRFC9440": "",
+                    "certChainRFC9440TooLarge": false
+                },
+                "verifiedBotCategory": "",
+                "edgeL4": {
+                    "deliveryRate": 1123079
+                }
+            }
+        },
+        "response": {
+            "status": 200
+        }
+    }
+}
