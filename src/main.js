@@ -252,7 +252,7 @@ let simulation = null;
 let renderer = null;
 let isPaused = false;
 let isDead = false;
-let isSolverWorking = true;
+let isSolverWorking = false;
 let solverHistory = [];
 let currentChangingMetabolites = [];
 let currentChangingReactions = [];
@@ -502,7 +502,7 @@ function throttle(func, limit) {
   };
 }
 
-const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args), 200);
+const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args), 250);
 
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
@@ -593,6 +593,10 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     });
 
     if (res.ok) {
+      const isWsOpen = sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN;
+      if (isWsOpen) {
+        return;
+      }
       const data = await res.json();
       activeRepressions = data.repressed || {};
       if (data.lastTimestamp !== undefined) {
@@ -832,6 +836,8 @@ function setupUIListeners() {
         simulation.metabolites['o2_e'].concentration = val;
         simulation.metabolites['o2_e'].targetConcentration = val;
       }
+      wakeUpSolver();
+      throttledUpdateFbaBounds(performance.now());
     });
 
     globalO2Slider.addEventListener('change', (e) => {
@@ -867,6 +873,8 @@ function setupUIListeners() {
         simulation.metabolites['glc__D_e'].concentration = val;
         simulation.metabolites['glc__D_e'].targetConcentration = val;
       }
+      wakeUpSolver();
+      throttledUpdateFbaBounds(performance.now());
     });
 
     globalGlcSlider.addEventListener('change', (e) => {
@@ -1131,6 +1139,8 @@ function setupUIListeners() {
           simulation.updateParameter(selectedReactionId, 'vMax', val);
         }
       }
+      wakeUpSolver();
+      throttledUpdateFbaBounds(performance.now());
     });
 
     vmaxSlider.addEventListener('change', (e) => {
@@ -1159,6 +1169,8 @@ function setupUIListeners() {
       if (selectedReactionId && simulation) {
         simulation.updateParameter(selectedReactionId, 'km', val);
       }
+      wakeUpSolver();
+      throttledUpdateFbaBounds(performance.now());
     });
 
     kmSlider.addEventListener('change', (e) => {
@@ -1921,6 +1933,8 @@ function renderPinnedReactions() {
       if (simulation) {
         simulation.updateParameter(rxnId, 'vMax', val);
       }
+      wakeUpSolver();
+      throttledUpdateFbaBounds(performance.now());
     });
 
     slider.addEventListener('change', (e) => {
@@ -5343,6 +5357,8 @@ function startScenario(scenarioId) {
           simulation.metabolites[ctrl.id].concentration = val;
           simulation.metabolites[ctrl.id].targetConcentration = val;
         }
+        wakeUpSolver();
+        throttledUpdateFbaBounds(performance.now());
       });
 
       input.addEventListener('change', (e) => {
