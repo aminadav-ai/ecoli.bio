@@ -6310,23 +6310,6 @@ function makeElementsClickable(container) {
         const lowerId = n.id ? n.id.toLowerCase() : '';
         if (n.biggId) idMap.set(lowerBigg, { type: 'metabolite', id: n.id, node: n });
         if (n.id) idMap.set(lowerId, { type: 'metabolite', id: n.id, node: n });
-
-        // Strip compartment suffixes (_c, _e, _p) for generic mentions (e.g. 'g6p_c' -> 'g6p')
-        if (lowerBigg.endsWith('_c') || lowerBigg.endsWith('_e') || lowerBigg.endsWith('_p')) {
-          const stripped = lowerBigg.slice(0, -2);
-          if (stripped.length >= 2) {
-            // Cytoplasmic matches take precedence, or first match wins
-            if (lowerBigg.endsWith('_c') || !idMap.has(stripped)) {
-              idMap.set(stripped, { type: 'metabolite', id: n.id, node: n });
-            }
-          }
-        }
-
-        // Custom aliases for glucose
-        if (lowerBigg === 'glc__d_c' || lowerBigg === 'glc__d_e') {
-          idMap.set('glc', { type: 'metabolite', id: n.id, node: n });
-          idMap.set('glucose', { type: 'metabolite', id: n.id, node: n });
-        }
       });
     }
     if (renderer.reactions) {
@@ -6335,47 +6318,6 @@ function makeElementsClickable(container) {
         const lowerId = r.id ? r.id.toLowerCase() : '';
         if (r.biggId) idMap.set(lowerBigg, { type: 'reaction', id: r.id, rxn: r });
         if (r.id) idMap.set(lowerId, { type: 'reaction', id: r.id, rxn: r });
-        
-        // General suffix stripping for periplasmic, transport, and diffusion reactions
-        // (e.g. 'atps4rpp' -> 'atps4r', 'glcptspp' -> 'glcpts', 'acaldtex' -> 'acald')
-        if (lowerBigg.endsWith('pp') && lowerBigg.length > 2) {
-          const base = lowerBigg.slice(0, -2);
-          if (!idMap.has(base)) idMap.set(base, { type: 'reaction', id: r.id, rxn: r });
-        }
-        if (lowerBigg.endsWith('tex') && lowerBigg.length > 3) {
-          const base = lowerBigg.slice(0, -3);
-          if (!idMap.has(base)) idMap.set(base, { type: 'reaction', id: r.id, rxn: r });
-        }
-        if (lowerBigg.endsWith('abcpp') && lowerBigg.length > 5) {
-          const base = lowerBigg.slice(0, -5);
-          if (!idMap.has(base)) idMap.set(base, { type: 'reaction', id: r.id, rxn: r });
-        }
-        if (lowerBigg.endsWith('tpp') && lowerBigg.length > 3) {
-          const base = lowerBigg.slice(0, -3);
-          if (!idMap.has(base)) idMap.set(base, { type: 'reaction', id: r.id, rxn: r });
-        }
-
-        // Specific alias mappings
-        // Cytochrome bo3 oxidase variants
-        if (lowerBigg === 'cytbo3_4pp' || lowerId === 'cytbo3_4pp') {
-          idMap.set('cytbo3', { type: 'reaction', id: r.id, rxn: r });
-          idMap.set('cytbo3_4', { type: 'reaction', id: r.id, rxn: r });
-        }
-        // Biomass objective function variations
-        if (lowerBigg === 'biomass_ecoli_core_w_gam' || lowerId === 'biomass_ecoli_core_w_gam') {
-          idMap.set('biomass', { type: 'reaction', id: r.id, rxn: r });
-          idMap.set('biomass_flux', { type: 'reaction', id: r.id, rxn: r });
-        }
-        // Glucose PTS transport variations
-        if (lowerBigg === 'glcptspp' || lowerId === 'glcptspp') {
-          idMap.set('glc_pts', { type: 'reaction', id: r.id, rxn: r });
-          idMap.set('glcpts', { type: 'reaction', id: r.id, rxn: r });
-        }
-        // ATP synthase variations
-        if (lowerBigg === 'atps4rpp' || lowerId === 'atps4rpp') {
-          idMap.set('atps4r', { type: 'reaction', id: r.id, rxn: r });
-          idMap.set('atps', { type: 'reaction', id: r.id, rxn: r });
-        }
       });
     }
   }

@@ -900,18 +900,20 @@ IMPORTANT: Respond in the same language as the user's query (usually Russian or 
 
 CRITICAL WARNING: The user interacts with a live simulation, meaning that fluxes, growth rates, and concentrations change in real time with every user action. Always look up all values, rates, and statuses from the CURRENT simulation state context below. DO NOT reuse numbers, fluxes (e.g. CYTBO3_4pp, growth rate, etc.) or parameter values from previous messages in the chat history, as they are now stale and incorrect.
 
-NOTE: The active model and map shown on the student's screen are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map). Almost all reaction and metabolite IDs in the provided context correspond to the standard iJO1366 BiGG IDs (e.g. GLCptspp, PFK, PGI, PDH, PFL, etc.).
-However, due to client UI compatibility:
-- The primary growth rate / biomass reaction is represented as BIOMASS_Ecoli_core_w_GAM in the reactions dictionary (and as growthRate at the root of the context).
-- The ATP production/synthase reaction is represented as ATPS4r in the reactions dictionary (and as atpYield at the root of the context).
-The context only contains reactions that are active (non-zero flux) or modified by the user, and metabolites that are active or buffered. All other reactions in the model have zero flux and default parameters, and other metabolites have concentration <= 0.0001 mM.
+NOTE: The active model and map shown on the student's screen are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map). 
+To ensure that reactions and metabolites mentioned in the chat are clickable and highlightable on the map, you MUST refer to them using the EXACT BiGG IDs present on our central metabolism map iJO1366.
+- The primary growth rate / biomass reaction on the map is represented as \`BIOMASS_Ecoli_core_w_GAM\`.
+- The ATP production/synthase reaction on the map is represented as \`ATPS4rpp\` (NOT \`ATPS4r\`).
+- Respiration / Cytochrome oxidases are \`CYTBO3_4pp\` and \`CYTBDpp\`.
+- Active metabolites must include their exact compartment suffixes: extracellular carbon sources/fermentation products must end with \`_e\` (e.g., use \`glc__D_e\` for glucose, \`ac_e\` for extracellular acetate, \`lac__D_e\` for extracellular D-lactate, \`etoh_e\` for extracellular ethanol). Cytoplasmic metabolites must end with \`_c\` (e.g. \`g6p_c\`, \`pyr_c\`, \`accoa_c\`).
+Wrap these exact IDs in backticks (e.g. \`ATPS4rpp\`, \`ac_e\`, \`lac__D_e\`, \`GLCptspp\`, \`pyr_c\`) in your text so that the client-side link detector can highlight them. Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose" in backticks, as they will not be recognized by the map.
 
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
 
 Instructions:
 1. Explain metabolism in simple, clear terms (undergraduate biology level).
-2. Use BiGG IDs (e.g. GLCptspp, PFK, PGI, PDH, PFL) when discussing specific reactions, but also mention their common names.
+2. Use the exact iJO1366 map BiGG IDs (e.g., \`ATPS4rpp\`, \`GLCptspp\`, \`ac_e\`, \`lac__D_e\`, \`PFK\`, \`PGI\`, \`PDH\`, \`PFL\`, \`pyr_c\`) wrapped in backticks when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
 3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
 4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
 `;
