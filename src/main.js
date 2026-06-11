@@ -5493,21 +5493,30 @@ function getSimulationContext() {
 
   const metabolitesState = {};
   for (const [id, metab] of Object.entries(simulation.metabolites)) {
-    metabolitesState[id] = {
-      name: metab.name,
-      concentration: parseFloat(metab.concentration.toFixed(4)),
-      isBuffered: metab.isBuffered || false
-    };
+    if (metab.concentration > 1e-4 || metab.isBuffered) {
+      metabolitesState[id] = {
+        concentration: parseFloat(metab.concentration.toFixed(4))
+      };
+      if (metab.isBuffered) {
+        metabolitesState[id].isBuffered = true;
+      }
+    }
   }
 
   const reactionsState = {};
   for (const [id, rxn] of Object.entries(simulation.reactions)) {
-    reactionsState[id] = {
-      name: rxn.name,
-      flux: parseFloat(rxn.flux.toFixed(4)),
-      vMax: rxn.vMax,
-      km: rxn.km
-    };
+    const hasFlux = Math.abs(rxn.flux) > 1e-4;
+    const isModified = rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm;
+
+    if (hasFlux || isModified) {
+      reactionsState[id] = {
+        flux: parseFloat(rxn.flux.toFixed(4))
+      };
+      if (isModified) {
+        reactionsState[id].vMax = rxn.vMax;
+        reactionsState[id].km = rxn.km;
+      }
+    }
   }
 
   const objectiveStatus = {};
