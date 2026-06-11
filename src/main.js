@@ -1091,6 +1091,112 @@ function setupUIListeners() {
     });
   }
 
+  // Copy Km button listener
+  const copyKmBtn = document.getElementById('copy-km-btn');
+  if (copyKmBtn) {
+    const originalHTML = copyKmBtn.innerHTML;
+    const checkmarkHTML = `
+      <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    copyKmBtn.addEventListener('click', async () => {
+      if (!selectedReactionId) return;
+      const kmTextVal = document.getElementById('km-val').textContent;
+      const textToCopy = `${selectedReactionId} Km = ${kmTextVal}`;
+      
+      let success = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          success = true;
+        } catch (err) {
+          console.error('Failed to copy Km: ', err);
+        }
+      }
+      
+      if (!success) {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = textToCopy;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (successful) {
+            success = true;
+          }
+        } catch (err) {
+          console.error('Fallback copy failed for Km: ', err);
+        }
+      }
+      
+      if (success) {
+        copyKmBtn.classList.add('copied');
+        copyKmBtn.innerHTML = checkmarkHTML;
+        setTimeout(() => {
+          copyKmBtn.classList.remove('copied');
+          copyKmBtn.innerHTML = originalHTML;
+        }, 1500);
+      }
+    });
+  }
+
+  // Copy Flux button listener
+  const copyFluxBtn = document.getElementById('copy-flux-btn');
+  if (copyFluxBtn) {
+    const originalHTML = copyFluxBtn.innerHTML;
+    const checkmarkHTML = `
+      <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    copyFluxBtn.addEventListener('click', async () => {
+      if (!selectedReactionId) return;
+      const fluxTextVal = document.getElementById('rxn-flux-val').textContent;
+      const textToCopy = `${selectedReactionId} Flux = ${fluxTextVal}`;
+      
+      let success = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          success = true;
+        } catch (err) {
+          console.error('Failed to copy Flux: ', err);
+        }
+      }
+      
+      if (!success) {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = textToCopy;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (successful) {
+            success = true;
+          }
+        } catch (err) {
+          console.error('Fallback copy failed for Flux: ', err);
+        }
+      }
+      
+      if (success) {
+        copyFluxBtn.classList.add('copied');
+        copyFluxBtn.innerHTML = checkmarkHTML;
+        setTimeout(() => {
+          copyFluxBtn.classList.remove('copied');
+          copyFluxBtn.innerHTML = originalHTML;
+        }, 1500);
+      }
+    });
+  }
+
   // Pin Reaction button click
   const pinBtn = document.getElementById('pin-rxn-btn');
   if (pinBtn) {
@@ -4375,14 +4481,12 @@ function connectSessionWebSocket() {
         if (data.concentrations && simulation) {
           for (const [mId, conc] of Object.entries(data.concentrations)) {
             if (simulation.metabolites[mId]) {
-              simulation.metabolites[mId].targetConcentration = conc;
+              // Do NOT overwrite user-controlled environmental parameters (o2_e, glc__D_e)
+              // with server tick responses, as it causes sliders to jump due to network lag.
               if (mId === 'o2_e' || mId === 'glc__D_e') {
-                simulation.metabolites[mId].concentration = conc;
-                const slider = document.getElementById(mId === 'o2_e' ? 'global-o2-slider' : 'global-glc-slider');
-                const valDisp = document.getElementById(mId === 'o2_e' ? 'global-o2-val' : 'global-glc-val');
-                if (slider) slider.value = conc;
-                if (valDisp) valDisp.textContent = conc.toFixed(1);
+                continue;
               }
+              simulation.metabolites[mId].targetConcentration = conc;
             }
           }
         }

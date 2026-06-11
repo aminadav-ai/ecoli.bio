@@ -397,7 +397,15 @@
           <!-- Flux value indicator -->
           <div class="flux-yield-card">
             <span class="flux-label">Current Rate (Flux)</span>
-            <span id="rxn-flux-val" class="flux-value">12.50 mM/s</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="rxn-flux-val" class="flux-value">12.50 mM/s</span>
+              <button id="copy-flux-btn" class="copy-id-btn" title="Copy Flux Value" style="margin-top: 2px;">
+                <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
             <div class="flux-direction-bar">
               <div id="flux-dir-indicator" class="flux-dir-fill"></div>
             </div>
@@ -426,7 +434,15 @@
                 <label for="km-slider">Michaelis Constant (Km)</label>
                 <span id="km-val" class="code-font">0.3</span>
               </div>
-              <input type="range" id="km-slider" min="0.05" max="5.0" step="0.05" value="0.3" />
+              <div class="slider-with-btn-row">
+                <input type="range" id="km-slider" min="0.05" max="5.0" step="0.05" value="0.3" />
+                <button id="copy-km-btn" class="copy-id-btn" title="Copy Km Code">
+                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
