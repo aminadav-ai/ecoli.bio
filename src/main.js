@@ -3951,6 +3951,7 @@ let sessionWebSocket = null;
 let activeExperimentName = "Experiment";
 let isExperimentsListLoaded = false;
 let experimentsList = [];
+let isDeletingLocally = false;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -4052,7 +4053,9 @@ async function loadExperimentsList(selectedId = null) {
       const exists = list.some(exp => exp.id === activeId);
       
       if (!exists && isExperimentsListLoaded) {
-        alert("This experiment was deleted from another session of this user.");
+        if (!isDeletingLocally) {
+          alert("This experiment was deleted from another session of this user.");
+        }
         if (list.length > 0) {
           sessionId = list[0].id;
           sessionStorage.setItem('simulationSessionId', sessionId);
@@ -4185,6 +4188,7 @@ async function handleDeleteExperiment(exp) {
   }
 
   try {
+    isDeletingLocally = true;
     const res = await fetch('/api/experiments/delete', {
       method: 'POST',
       headers,
@@ -4202,6 +4206,8 @@ async function handleDeleteExperiment(exp) {
   } catch (err) {
     console.error('Failed to delete experiment:', err);
     alert("An error occurred while deleting the experiment.");
+  } finally {
+    isDeletingLocally = false;
   }
 }
 
