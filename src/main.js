@@ -1300,7 +1300,7 @@ function setupUIListeners() {
     copyRxnNameBtn.addEventListener('click', () => {
       if (!selectedReactionId) return;
       const nameText = document.getElementById('rxn-name').textContent;
-      handleCopyClick(copyRxnNameBtn, `${selectedReactionId} Name = ${nameText}`);
+      handleCopyClick(copyRxnNameBtn, nameText);
     });
   }
 
@@ -1310,7 +1310,7 @@ function setupUIListeners() {
     copyMetabNameBtn.addEventListener('click', () => {
       if (!selectedMetaboliteId) return;
       const nameText = document.getElementById('metab-name').textContent;
-      handleCopyClick(copyMetabNameBtn, `${selectedMetaboliteId} Name = ${nameText}`);
+      handleCopyClick(copyMetabNameBtn, nameText);
     });
   }
 
