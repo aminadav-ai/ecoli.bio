@@ -4276,6 +4276,7 @@ let activeExperimentName = "Experiment";
 let isExperimentsListLoaded = false;
 let experimentsList = [];
 let isDeletingLocally = false;
+let editingExperimentId = null;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -4463,34 +4464,131 @@ function renderCustomExperimentSelect() {
     optionRow.className = `custom-select-option ${exp.id === sessionId ? 'selected' : ''}`;
     optionRow.setAttribute('data-id', exp.id);
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'custom-select-option-text';
-    nameSpan.textContent = exp.name;
-    nameSpan.addEventListener('click', (e) => {
-      e.stopPropagation();
-      optionsDiv.classList.add('hidden');
-      customWrapper.classList.remove('open');
-      
-      const nativeSelect = document.getElementById('experiment-select');
-      if (nativeSelect) {
-        nativeSelect.value = exp.id;
-        nativeSelect.dispatchEvent(new Event('change'));
-      }
-    });
+    if (editingExperimentId === exp.id) {
+      // Inline edit mode
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'custom-select-option-input';
+      input.value = exp.name;
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.stopPropagation();
+          await saveRename(exp.id, input.value);
+        } else if (e.key === 'Escape') {
+          e.stopPropagation();
+          editingExperimentId = null;
+          renderCustomExperimentSelect();
+        }
+      });
 
-    const deleteBtn = document.createElement('div');
-    deleteBtn.className = 'custom-select-option-delete';
-    deleteBtn.innerHTML = '🗑️';
-    deleteBtn.title = 'Delete experiment';
-    deleteBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await handleDeleteExperiment(exp);
-    });
+      const saveBtn = document.createElement('div');
+      saveBtn.className = 'custom-select-option-edit';
+      saveBtn.innerHTML = '✓';
+      saveBtn.title = 'Save';
+      saveBtn.style.color = '#22c55e';
+      saveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await saveRename(exp.id, input.value);
+      });
 
-    optionRow.appendChild(nameSpan);
-    optionRow.appendChild(deleteBtn);
+      const cancelBtn = document.createElement('div');
+      cancelBtn.className = 'custom-select-option-delete';
+      cancelBtn.innerHTML = '✗';
+      cancelBtn.title = 'Cancel';
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editingExperimentId = null;
+        renderCustomExperimentSelect();
+      });
+
+      optionRow.appendChild(input);
+      optionRow.appendChild(saveBtn);
+      optionRow.appendChild(cancelBtn);
+
+      // Auto-focus input
+      setTimeout(() => input.focus(), 50);
+    } else {
+      // Normal display mode
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'custom-select-option-text';
+      nameSpan.textContent = exp.name;
+      nameSpan.addEventListener('click', (e) => {
+        e.stopPropagation();
+        optionsDiv.classList.add('hidden');
+        customWrapper.classList.remove('open');
+        
+        const nativeSelect = document.getElementById('experiment-select');
+        if (nativeSelect) {
+          nativeSelect.value = exp.id;
+          nativeSelect.dispatchEvent(new Event('change'));
+        }
+      });
+
+      const actionsWrapper = document.createElement('div');
+      actionsWrapper.className = 'custom-select-option-actions';
+
+      const editBtn = document.createElement('div');
+      editBtn.className = 'custom-select-option-edit';
+      editBtn.innerHTML = '✏️';
+      editBtn.title = 'Rename experiment';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editingExperimentId = exp.id;
+        renderCustomExperimentSelect();
+      });
+
+      const deleteBtn = document.createElement('div');
+      deleteBtn.className = 'custom-select-option-delete';
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.title = 'Delete experiment';
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await handleDeleteExperiment(exp);
+      });
+
+      actionsWrapper.appendChild(editBtn);
+      actionsWrapper.appendChild(deleteBtn);
+
+      optionRow.appendChild(nameSpan);
+      optionRow.appendChild(actionsWrapper);
+    }
+
     optionsDiv.appendChild(optionRow);
   });
+}
+
+async function saveRename(id, newName) {
+  if (!newName || !newName.trim()) return;
+  const name = newName.trim();
+
+  const token = localStorage.getItem('userToken');
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch('/api/experiments/rename', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id, name })
+    });
+    if (res.ok) {
+      editingExperimentId = null;
+      if (id === sessionId) {
+        updateActiveExperimentNameUI(name);
+      }
+      await loadExperimentsList(sessionId);
+    } else {
+      const err = await res.json();
+      alert(`Failed to rename: ${err.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    console.error('Failed to rename experiment:', err);
+  }
 }
 
 async function handleDeleteExperiment(exp) {

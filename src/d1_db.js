@@ -331,7 +331,7 @@ export async function recordGuestVisit(db, sessionId, dateStr) {
 export async function getSimulationSessions(db, email) {
   try {
     const res = await db.prepare(
-      "SELECT s.id, s.base_name, s.name, s.created_at, s.updated_at, " +
+      "SELECT s.id, s.base_name, s.name, s.created_at, s.updated_at, s.is_custom_name, " +
       "(SELECT COUNT(*) FROM chat_history c WHERE c.identifier = 'user:' || s.email || ':' || s.id) AS chat_count " +
       "FROM simulation_sessions s WHERE s.email = ? ORDER BY s.updated_at DESC"
     ).bind(email).all();
@@ -355,14 +355,32 @@ export async function getSimulationSession(db, id) {
 }
 
 // 17. Upsert simulation session
-export async function upsertSimulationSession(db, id, email, baseName, name, state) {
+export async function upsertSimulationSession(db, id, email, baseName, name, state, isCustomName = null) {
   try {
-    await db.prepare(
-      'INSERT INTO simulation_sessions (id, email, base_name, name, state, updated_at) VALUES (?, ?, ?, ?, ?, datetime("now")) ' +
-      'ON CONFLICT(id) DO UPDATE SET email = excluded.email, base_name = excluded.base_name, name = excluded.name, state = excluded.state, updated_at = excluded.updated_at'
-    ).bind(id, email, baseName, name, state).run();
+    if (isCustomName !== null) {
+      await db.prepare(
+        'INSERT INTO simulation_sessions (id, email, base_name, name, state, is_custom_name, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now")) ' +
+        'ON CONFLICT(id) DO UPDATE SET email = excluded.email, base_name = excluded.base_name, name = excluded.name, state = excluded.state, is_custom_name = excluded.is_custom_name, updated_at = excluded.updated_at'
+      ).bind(id, email, baseName, name, state, isCustomName ? 1 : 0).run();
+    } else {
+      await db.prepare(
+        'INSERT INTO simulation_sessions (id, email, base_name, name, state, is_custom_name, updated_at) VALUES (?, ?, ?, ?, ?, 0, datetime("now")) ' +
+        'ON CONFLICT(id) DO UPDATE SET email = excluded.email, base_name = excluded.base_name, name = excluded.name, state = excluded.state, updated_at = excluded.updated_at'
+      ).bind(id, email, baseName, name, state).run();
+    }
   } catch (err) {
     console.error('[D1 DB] upsertSimulationSession error:', err);
+  }
+}
+
+// 17b. Rename simulation session explicitly
+export async function renameSimulationSession(db, id, name) {
+  try {
+    await db.prepare(
+      'UPDATE simulation_sessions SET base_name = ?, name = ?, is_custom_name = 1, updated_at = datetime("now") WHERE id = ?'
+    ).bind(name, name, id).run();
+  } catch (err) {
+    console.error('[D1 DB] renameSimulationSession error:', err);
   }
 }
 

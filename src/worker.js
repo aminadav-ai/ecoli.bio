@@ -29,6 +29,7 @@ import {
   getSimulationSessions,
   getSimulationSession,
   upsertSimulationSession,
+  renameSimulationSession,
   deleteSimulationSession,
   deleteChatHistoryForSession,
   getExperimentCount
@@ -86,6 +87,7 @@ export class SolverDO {
         
         // Restore simulation state from DO storage
         const savedState = await this.state.storage.get('sim_state');
+        this.isCustomName = await this.state.storage.get('is_custom_name') || false;
         this.simulation = initializeNewSimulation();
         if (savedState && this.simulation) {
           deserializeSimulation(this.simulation, savedState);
@@ -251,6 +253,10 @@ export class SolverDO {
 
   async performAiRename() {
     try {
+      if (this.isCustomName) {
+        console.log(`[DO] Skipping AI rename because session ${this.sessionId} has a custom name.`);
+        return;
+      }
       const modifiedList = [];
       for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
         if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
@@ -365,6 +371,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         if (dbSession) {
           this.baseName = dbSession.base_name;
           this.name = dbSession.name;
+          this.isCustomName = !!dbSession.is_custom_name;
+          await this.state.storage.put('is_custom_name', this.isCustomName);
           if (dbSession.state) {
             try {
               const stateObj = JSON.parse(dbSession.state);
@@ -380,6 +388,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         } else {
           this.baseName = "Experiment";
           this.name = this.name || "Experiment";
+          this.isCustomName = false;
+          await this.state.storage.put('is_custom_name', false);
         }
         
         ws.send(JSON.stringify({
@@ -458,15 +468,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         const { name } = data;
         this.baseName = name;
         this.name = name;
+        this.isCustomName = true;
+        await this.state.storage.put('is_custom_name', true);
         if (this.userEmail) {
-          await upsertSimulationSession(
-            this.env.DB,
-            this.sessionId,
-            this.userEmail,
-            this.baseName,
-            this.name,
-            JSON.stringify(serializeSimulation(this.simulation))
-          );
+          await renameSimulationSession(this.env.DB, this.sessionId, name);
         }
         this.broadcast({
           type: "RENAME_SESSION",
@@ -519,6 +524,23 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           headers: { 'Content-Type': 'application/json' }
         });
       }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (url.pathname === '/rename') {
+      const { name } = await request.json();
+      this.baseName = name;
+      this.name = name;
+      this.isCustomName = true;
+      await this.state.storage.put('is_custom_name', true);
+
+      this.broadcast({
+        type: "RENAME_SESSION",
+        base_name: this.baseName,
+        name: this.name
+      });
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' }
       });
@@ -784,6 +806,46 @@ export default {
 
         // Delete chat history for this session
         await deleteChatHistoryForSession(env.DB, user.email, id);
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // 1e. Rename experiment
+      if (url.pathname === '/api/experiments/rename' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+
+        if (!user) {
+          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { id, name } = await request.json();
+        if (!id || !name) {
+          return new Response(JSON.stringify({ error: 'Experiment ID and Name are required.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Update in D1 database
+        await renameSimulationSession(env.DB, id, name);
+
+        // Notify active DO of rename
+        const doId = env.SOLVER_DO.idFromName(id);
+        const doStub = env.SOLVER_DO.get(doId);
+        
+        const doRenameReq = new Request(new URL('/rename', url.origin), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        await doStub.fetch(doRenameReq);
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
