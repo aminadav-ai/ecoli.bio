@@ -460,6 +460,13 @@ async function bootstrap() {
   // Initialize Scenarios and AI Chat
   setupScenariosAndChat();
 
+  // Periodically refresh the list of experiments in the background (every 10s)
+  setInterval(() => {
+    if (userProfile && isExperimentsListLoaded) {
+      loadExperimentsList();
+    }
+  }, 10000);
+
   // 7. Start the main game-loop
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
@@ -1630,6 +1637,9 @@ function openChatDrawer() {
   if (chatTrigger) {
     chatTrigger.classList.remove('animate-bounce');
   }
+  // Load chat history dynamically when drawer is opened to ensure multi-tab synchronization
+  loadChatHistory();
+
   // Scroll to bottom or last scroll position
   const chatMessages = document.getElementById('ai-chat-messages');
   if (chatMessages) {
@@ -3967,33 +3977,45 @@ async function loadExperimentsList(selectedId = null) {
     const res = await fetch('/api/experiments', { headers });
     if (res.ok) {
       const list = await res.json();
-      select.innerHTML = '';
       
       if (list.length === 0) {
+        select.innerHTML = '';
         await createNewExperiment();
         return false;
       }
 
-      list.forEach(exp => {
-        const opt = document.createElement('option');
-        opt.value = exp.id;
-        opt.textContent = exp.name;
-        select.appendChild(opt);
-      });
+      // Check if elements actually changed to prevent menu glitching on focus/intervals
+      const currentValues = Array.from(select.options).map(opt => opt.value);
+      const newValues = list.map(exp => exp.id);
+      const currentTexts = Array.from(select.options).map(opt => opt.textContent);
+      const newTexts = list.map(exp => exp.name);
+
+      const isIdentical = currentValues.length === newValues.length &&
+                          currentValues.every((val, index) => val === newValues[index]) &&
+                          currentTexts.every((txt, index) => txt === newTexts[index]);
+
+      if (!isIdentical) {
+        select.innerHTML = '';
+        list.forEach(exp => {
+          const opt = document.createElement('option');
+          opt.value = exp.id;
+          opt.textContent = exp.name;
+          select.appendChild(opt);
+        });
+      }
 
       const activeId = selectedId || sessionId;
       const exists = list.some(exp => exp.id === activeId);
       if (exists) {
-        select.value = activeId;
-        if (sessionId !== activeId) {
-          sessionId = activeId;
-          sessionStorage.setItem('simulationSessionId', sessionId);
-        }
+        sessionId = activeId;
+        sessionStorage.setItem('simulationSessionId', sessionId);
       } else if (list.length > 0) {
-        select.value = list[0].id;
         sessionId = list[0].id;
         sessionStorage.setItem('simulationSessionId', sessionId);
       }
+      
+      // Always sync the select dropdown with the active sessionId
+      select.value = sessionId;
       
       isExperimentsListLoaded = true;
       return true;
@@ -4200,6 +4222,9 @@ async function loadChatHistory() {
             aiChatHistory.push({ role: 'model', text: item.message });
           }
         }
+        
+        // Scroll to bottom after loading history
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       }
     }
   } catch (err) {
