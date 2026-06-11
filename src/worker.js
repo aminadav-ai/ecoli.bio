@@ -51,6 +51,7 @@ export class SolverDO {
     this.name = "Experiment";
     this.renameTimeout = null;
     this.isSolving = false;
+    this.isFreshSession = true;
 
     // In-memory buffering state
     this.bufferedTicks = 0;
@@ -89,6 +90,10 @@ export class SolverDO {
         if (savedState && this.simulation) {
           deserializeSimulation(this.simulation, savedState);
           console.log('[DO] Restored active simulation state from storage.');
+          const hasFluxes = Object.values(this.simulation.reactions).some(r => r.flux !== 0);
+          if (hasFluxes || (this.simulation.tickCounter && this.simulation.tickCounter > 0)) {
+            this.isFreshSession = false;
+          }
         } else {
           console.log('[DO] Initialized new simulation state.');
         }
@@ -362,6 +367,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
             try {
               const stateObj = JSON.parse(dbSession.state);
               deserializeSimulation(this.simulation, stateObj);
+              const hasFluxes = Object.values(this.simulation.reactions).some(r => r.flux !== 0);
+              if (hasFluxes || (stateObj.tickCounter && stateObj.tickCounter > 0)) {
+                this.isFreshSession = false;
+              }
             } catch (e) {
               console.error("[DO] Failed to parse saved session state:", e);
             }
@@ -380,6 +389,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           isSolving: !!this.isSolving
         }));
         
+        if (this.isFreshSession) {
+          this.isFreshSession = false;
+          this.state.waitUntil(this.startSolveLoop());
+        }
         return;
       }
       
