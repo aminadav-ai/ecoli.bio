@@ -327,11 +327,13 @@ export async function recordGuestVisit(db, sessionId, dateStr) {
   }
 }
 
-// 15. Get list of sessions for email
+// 15. Get list of sessions for email (with chat message count)
 export async function getSimulationSessions(db, email) {
   try {
     const res = await db.prepare(
-      'SELECT id, base_name, name, created_at, updated_at FROM simulation_sessions WHERE email = ? ORDER BY updated_at DESC'
+      "SELECT s.id, s.base_name, s.name, s.created_at, s.updated_at, " +
+      "(SELECT COUNT(*) FROM chat_history c WHERE c.identifier = 'user:' || s.email || ':' || s.id) AS chat_count " +
+      "FROM simulation_sessions s WHERE s.email = ? ORDER BY s.updated_at DESC"
     ).bind(email).all();
     return res.results || [];
   } catch (err) {
@@ -370,6 +372,16 @@ export async function deleteSimulationSession(db, id) {
     await db.prepare('DELETE FROM simulation_sessions WHERE id = ?').bind(id).run();
   } catch (err) {
     console.error('[D1 DB] deleteSimulationSession error:', err);
+  }
+}
+
+// 18b. Delete chat history for session
+export async function deleteChatHistoryForSession(db, email, sessionId) {
+  try {
+    const identifier = `user:${email}:${sessionId}`;
+    await db.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(identifier).run();
+  } catch (err) {
+    console.error('[D1 DB] deleteChatHistoryForSession error:', err);
   }
 }
 

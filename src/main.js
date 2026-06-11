@@ -1389,6 +1389,25 @@ function setupUIListeners() {
     });
   }
 
+  // Custom select dropdown toggle & click outside listeners
+  const customTrigger = document.getElementById('custom-experiment-select-trigger');
+  const customWrapper = document.getElementById('custom-experiment-select-wrapper');
+  const customOptionsDiv = document.getElementById('custom-experiment-options');
+  if (customTrigger && customOptionsDiv && customWrapper) {
+    customTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      customOptionsDiv.classList.toggle('hidden');
+      customWrapper.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!customWrapper.contains(e.target)) {
+        customOptionsDiv.classList.add('hidden');
+        customWrapper.classList.remove('open');
+      }
+    });
+  }
+
   // Reload chat, auth status, and experiments list when tab becomes active/visible
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
@@ -3931,6 +3950,7 @@ let pendingChatCursorEnd = null;
 let sessionWebSocket = null;
 let activeExperimentName = "Experiment";
 let isExperimentsListLoaded = false;
+let experimentsList = [];
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -3973,6 +3993,16 @@ function updateActiveExperimentNameUI(name) {
       opt.textContent = name;
     }
   }
+  
+  const triggerText = document.getElementById('custom-experiment-selected-text');
+  if (triggerText) {
+    triggerText.textContent = name;
+  }
+  const exp = experimentsList.find(e => e.id === sessionId);
+  if (exp) {
+    exp.name = name;
+  }
+  renderCustomExperimentSelect();
 }
 
 async function loadExperimentsList(selectedId = null) {
@@ -3990,6 +4020,7 @@ async function loadExperimentsList(selectedId = null) {
     const res = await fetch('/api/experiments', { headers });
     if (res.ok) {
       const list = await res.json();
+      experimentsList = list;
       
       if (list.length === 0) {
         select.innerHTML = '';
@@ -4019,18 +4050,34 @@ async function loadExperimentsList(selectedId = null) {
 
       const activeId = selectedId || sessionId;
       const exists = list.some(exp => exp.id === activeId);
-      if (exists) {
-        sessionId = activeId;
-        sessionStorage.setItem('simulationSessionId', sessionId);
-      } else if (list.length > 0) {
-        sessionId = list[0].id;
-        sessionStorage.setItem('simulationSessionId', sessionId);
+      
+      if (!exists && isExperimentsListLoaded) {
+        alert("Данный эксперимент был удален из другой сессии этого пользователя.");
+        if (list.length > 0) {
+          sessionId = list[0].id;
+          sessionStorage.setItem('simulationSessionId', sessionId);
+          select.value = sessionId;
+          isSolverWorking = false;
+          updateSolverStatusUI();
+          renderCustomExperimentSelect();
+          await loadChatHistory();
+          connectSessionWebSocket();
+        }
+      } else {
+        if (exists) {
+          sessionId = activeId;
+          sessionStorage.setItem('simulationSessionId', sessionId);
+        } else if (list.length > 0) {
+          sessionId = list[0].id;
+          sessionStorage.setItem('simulationSessionId', sessionId);
+        }
+        
+        // Always sync the select dropdown with the active sessionId
+        select.value = sessionId;
+        isExperimentsListLoaded = true;
+        renderCustomExperimentSelect();
       }
       
-      // Always sync the select dropdown with the active sessionId
-      select.value = sessionId;
-      
-      isExperimentsListLoaded = true;
       return true;
     }
   } catch (err) {
@@ -4066,6 +4113,95 @@ async function createNewExperiment() {
     }
   } catch (err) {
     console.error('Failed to create new experiment:', err);
+  }
+}
+
+function renderCustomExperimentSelect() {
+  const customWrapper = document.getElementById('custom-experiment-select-wrapper');
+  if (!customWrapper) return;
+
+  const triggerText = document.getElementById('custom-experiment-selected-text');
+  const optionsDiv = document.getElementById('custom-experiment-options');
+  if (!optionsDiv) return;
+
+  // Find current active experiment
+  const currentExp = experimentsList.find(exp => exp.id === sessionId);
+  if (triggerText) {
+    triggerText.textContent = currentExp ? currentExp.name : 'Select Experiment';
+  }
+
+  optionsDiv.innerHTML = '';
+  experimentsList.forEach(exp => {
+    const optionRow = document.createElement('div');
+    optionRow.className = `custom-select-option ${exp.id === sessionId ? 'selected' : ''}`;
+    optionRow.setAttribute('data-id', exp.id);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'custom-select-option-text';
+    nameSpan.textContent = exp.name;
+    nameSpan.addEventListener('click', (e) => {
+      e.stopPropagation();
+      optionsDiv.classList.add('hidden');
+      customWrapper.classList.remove('open');
+      
+      const nativeSelect = document.getElementById('experiment-select');
+      if (nativeSelect) {
+        nativeSelect.value = exp.id;
+        nativeSelect.dispatchEvent(new Event('change'));
+      }
+    });
+
+    const deleteBtn = document.createElement('div');
+    deleteBtn.className = 'custom-select-option-delete';
+    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.title = 'Delete experiment';
+    deleteBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await handleDeleteExperiment(exp);
+    });
+
+    optionRow.appendChild(nameSpan);
+    optionRow.appendChild(deleteBtn);
+    optionsDiv.appendChild(optionRow);
+  });
+}
+
+async function handleDeleteExperiment(exp) {
+  const isDefault = exp.name.startsWith('Experiment');
+  const hasChat = exp.chat_count > 0;
+  
+  if (!isDefault || hasChat) {
+    const confirmed = confirm(`Удалить эксперимент "${exp.name}"?`);
+    if (!confirmed) return;
+  }
+  
+  const token = localStorage.getItem('userToken');
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-is-active-session': (exp.id === sessionId) ? 'true' : 'false'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch('/api/experiments/delete', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id: exp.id })
+    });
+    
+    if (res.ok) {
+      await loadExperimentsList();
+    } else if (res.status === 409) {
+      alert("Невозможно удалить этот эксперимент, так как он открыт в других вкладках.");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Не удалось удалить эксперимент.");
+    }
+  } catch (err) {
+    console.error('Failed to delete experiment:', err);
+    alert("Произошла ошибка при удалении эксперимента.");
   }
 }
 

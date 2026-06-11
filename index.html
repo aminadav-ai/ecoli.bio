@@ -66,9 +66,18 @@
         <div class="header-actions">
           <!-- Experiments Dropdown/Control -->
           <div id="experiments-container" class="experiments-container hidden">
-            <select id="experiment-select" class="experiment-select-dropdown" title="Select saved experiment">
+            <select id="experiment-select" class="experiment-select-dropdown" title="Select saved experiment" style="display: none;">
               <!-- Options loaded dynamically -->
             </select>
+            <div class="custom-select-wrapper" id="custom-experiment-select-wrapper">
+              <div class="custom-select-trigger" id="custom-experiment-select-trigger">
+                <span class="custom-select-text" id="custom-experiment-selected-text">Experiment</span>
+                <span class="custom-select-arrow">▼</span>
+              </div>
+              <div class="custom-select-options glass hidden" id="custom-experiment-options">
+                <!-- List items loaded dynamically -->
+              </div>
+            </div>
             <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
           </div>
 

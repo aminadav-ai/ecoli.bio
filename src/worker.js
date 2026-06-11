@@ -30,6 +30,7 @@ import {
   getSimulationSession,
   upsertSimulationSession,
   deleteSimulationSession,
+  deleteChatHistoryForSession,
   getExperimentCount
 } from './d1_db.js';
 
@@ -492,6 +493,22 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       return new Response(null, { status: 101, webSocket: client });
     }
 
+    if (url.pathname === '/delete-check') {
+      const activeSockets = this.state.getWebSockets();
+      const isDeletingActive = request.headers.get('x-is-active-session') === 'true';
+      const otherTabsCount = activeSockets.length - (isDeletingActive ? 1 : 0);
+
+      if (otherTabsCount > 0) {
+        return new Response(JSON.stringify({ error: 'conflict_open_elsewhere' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (url.pathname !== '/solve') {
       return new Response('Not found', { status: 404 });
     }
@@ -720,7 +737,38 @@ export default {
         }
 
         const { id } = await request.json();
+        if (!id) {
+          return new Response(JSON.stringify({ error: 'Experiment ID is required.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Check if DO has other active WebSocket connections (open in other tabs)
+        const doId = env.SOLVER_DO.idFromName(id);
+        const doStub = env.SOLVER_DO.get(doId);
+
+        const checkRequest = new Request(new URL('/delete-check', url.origin), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-is-active-session': request.headers.get('x-is-active-session') || 'false'
+          }
+        });
+
+        const doRes = await doStub.fetch(checkRequest);
+        if (doRes.status === 409) {
+          return new Response(JSON.stringify({ error: 'conflict_open_elsewhere' }), {
+            status: 409,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Delete from D1 database
         await deleteSimulationSession(env.DB, id);
+
+        // Delete chat history for this session
+        await deleteChatHistoryForSession(env.DB, user.email, id);
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
