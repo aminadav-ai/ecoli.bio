@@ -1636,6 +1636,19 @@ function setupUIListeners() {
         sessionStorage.setItem('simulationSessionId', sessionId);
         connectSessionWebSocket();
         await loadChatHistory();
+
+        // Peek chat drawer for 1 second if it's currently hidden
+        const chatDrawer = document.getElementById('ai-chat-drawer');
+        if (chatDrawer && chatDrawer.classList.contains('hidden')) {
+          isChatPeeking = true;
+          openChatDrawer();
+          setTimeout(() => {
+            if (isChatPeeking) {
+              closeChatDrawer();
+              isChatPeeking = false;
+            }
+          }, 1000);
+        }
       }
     });
   }
@@ -4277,6 +4290,7 @@ let isExperimentsListLoaded = false;
 let experimentsList = [];
 let isDeletingLocally = false;
 let editingExperimentId = null;
+let isChatPeeking = false;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -5561,6 +5575,7 @@ function setupScenariosAndChat() {
   if (chatTrigger && chatDrawer) {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
+      isChatPeeking = false; // Cancel auto-close peek if user interacted
       const isOpening = chatDrawer.classList.contains('hidden');
       if (isOpening) {
         openChatDrawer();
@@ -5571,6 +5586,7 @@ function setupScenariosAndChat() {
 
     chatClose.addEventListener('click', (e) => {
       e.stopPropagation();
+      isChatPeeking = false; // Cancel auto-close peek
       closeChatDrawer();
     });
 
@@ -5589,6 +5605,7 @@ function setupScenariosAndChat() {
     // Prevent click inside drawer from closing it
     chatDrawer.addEventListener('click', (e) => {
       e.stopPropagation();
+      isChatPeeking = false; // Cancel auto-close peek
     });
 
     // Context Panel Toggle
