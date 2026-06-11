@@ -5256,6 +5256,10 @@ function setupScenariosAndChat() {
   const cards = document.querySelectorAll('.scenario-card');
   cards.forEach(card => {
     card.addEventListener('click', () => {
+      if (!userProfile) {
+        openAuthModal();
+        return;
+      }
       const scenarioId = card.getAttribute('data-scenario');
       selectScenario(scenarioId);
     });
