@@ -4041,10 +4041,13 @@ async function handleGoogleCredentialResponse(response) {
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
       await checkAuthStatus(true);
+      const msg = pendingChatMessage;
       closeAuthModal();
-      if (pendingChatMessage) {
-        const msg = pendingChatMessage;
-        pendingChatMessage = null;
+      if (msg) {
+        const chatInput = document.getElementById('ai-chat-input');
+        if (chatInput) {
+          chatInput.value = '';
+        }
         sendChatMessage(msg);
       }
     } else {
@@ -4644,6 +4647,13 @@ function setupScenariosAndChat() {
     });
   }
 
+  const authModal = document.getElementById('global-auth-modal');
+  if (authModal) {
+    authModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
   const btnLockSignin = document.getElementById('btn-lock-signin');
   if (btnLockSignin) {
     btnLockSignin.addEventListener('click', () => {
@@ -4966,7 +4976,6 @@ async function sendChatMessage(customMessage = null) {
     if (!chatInput) return;
     message = chatInput.value.trim();
     if (!message) return;
-    chatInput.value = '';
   }
 
   // Check if user is logged in
@@ -4974,6 +4983,10 @@ async function sendChatMessage(customMessage = null) {
     pendingChatMessage = message;
     openAuthModal();
     return;
+  }
+
+  if (!customMessage && chatInput) {
+    chatInput.value = '';
   }
 
   // Append user message in UI
