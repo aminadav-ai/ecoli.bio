@@ -4509,3 +4509,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-family: inherit;
 }
 
+/* Custom named experiment golden highlight styling */
+.custom-select-option-text.is-custom {
+  color: #fbbf24;
+  text-shadow: 0 0 4px rgba(251, 191, 36, 0.15);
+}
+
+.custom-select-option.selected .custom-select-option-text.is-custom {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+#custom-experiment-selected-text.is-custom {
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.3);
+}
+

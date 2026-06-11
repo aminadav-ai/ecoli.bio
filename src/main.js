@@ -4321,12 +4321,18 @@ function updateActiveExperimentNameUI(name) {
   }
   
   const triggerText = document.getElementById('custom-experiment-selected-text');
-  if (triggerText) {
-    triggerText.textContent = name;
-  }
   const exp = experimentsList.find(e => e.id === sessionId);
   if (exp) {
     exp.name = name;
+  }
+
+  if (triggerText) {
+    triggerText.textContent = name;
+    if (exp && exp.is_custom_name) {
+      triggerText.classList.add('is-custom');
+    } else {
+      triggerText.classList.remove('is-custom');
+    }
   }
   renderCustomExperimentSelect();
 }
@@ -4456,6 +4462,11 @@ function renderCustomExperimentSelect() {
   const currentExp = experimentsList.find(exp => exp.id === sessionId);
   if (triggerText) {
     triggerText.textContent = currentExp ? currentExp.name : 'Select Experiment';
+    if (currentExp && currentExp.is_custom_name) {
+      triggerText.classList.add('is-custom');
+    } else {
+      triggerText.classList.remove('is-custom');
+    }
   }
 
   optionsDiv.innerHTML = '';
@@ -4513,6 +4524,11 @@ function renderCustomExperimentSelect() {
       const nameSpan = document.createElement('span');
       nameSpan.className = 'custom-select-option-text';
       nameSpan.textContent = exp.name;
+      if (exp.is_custom_name) {
+        nameSpan.classList.add('is-custom');
+      } else {
+        nameSpan.classList.remove('is-custom');
+      }
       nameSpan.addEventListener('click', (e) => {
         e.stopPropagation();
         optionsDiv.classList.add('hidden');
