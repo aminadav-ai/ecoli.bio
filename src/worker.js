@@ -475,6 +475,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
   async fetch(request) {
     const url = new URL(request.url);
+    const qSessionId = url.searchParams.get('sessionId') || request.headers.get('x-session-id');
+    if (qSessionId) {
+      this.sessionId = qSessionId;
+    }
 
     if (url.pathname === '/api/session-websocket') {
       if (request.headers.get("Upgrade") !== "websocket") {
@@ -620,7 +624,10 @@ export default {
         // Fetch solve result from DO
         const solveRequest = new Request(new URL('/solve', url.origin), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-session-id': sessionId
+          },
           body: JSON.stringify({
             concentrations: body.concentrations,
             parameters: body.parameters,

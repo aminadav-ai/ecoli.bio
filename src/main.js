@@ -4513,32 +4513,11 @@ function updateUserStatusUI() {
   }
 
 
-  // Update User Tier Badge in Top Header
+  // Update User Tier Badge in Top Header (Always hidden per user request)
   const userTierContainer = document.getElementById('user-tier-container');
   if (userTierContainer) {
-    if (userProfile) {
-      const tierName = userProfile.isPremium 
-        ? (userProfile.premiumTier === 2 ? 'Pro' : 'Basic') 
-        : 'Free';
-      const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
-      
-      userTierContainer.innerHTML = `
-        <span>${tierName}: ${currentLimit.remaining} left</span>
-        ${showUpgrade ? `<button id="header-tier-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
-      `;
-      userTierContainer.className = `user-tier-container tier-${userProfile.isPremium ? (userProfile.premiumTier === 2 ? 'pro' : 'basic') : 'free'}`;
-      
-      if (!userTierContainer.dataset.hasListener) {
-        userTierContainer.dataset.hasListener = "true";
-        userTierContainer.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openMockCheckout();
-        });
-      }
-    } else {
-      userTierContainer.className = 'user-tier-container hidden';
-      userTierContainer.innerHTML = '';
-    }
+    userTierContainer.className = 'user-tier-container hidden';
+    userTierContainer.innerHTML = '';
   }
 
   // Update AI Chat Context Button Visibility (Visible to everyone)
