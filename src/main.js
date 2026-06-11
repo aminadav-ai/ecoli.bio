@@ -4374,28 +4374,42 @@ async function loadChatHistory() {
       
       const chatMessages = document.getElementById('ai-chat-messages');
       if (chatMessages) {
-        // Reset container to default greeting message
-        chatMessages.innerHTML = `
-          <div class="message message-model">
-            Hello! I am your AI assistant for E. coli metabolism. Feel free to ask me any questions about the map, reactions, metabolic pathways, or the current learning scenarios.
-          </div>
-        `;
-        
-        aiChatHistory = [];
-        
-        // Populate messages from database history
-        for (const item of historyData) {
-          if (item.role === 'user') {
-            appendUserMessage(item.message);
-            aiChatHistory.push({ role: 'user', text: item.message });
-          } else {
-            appendModelMessage(item.message);
-            aiChatHistory.push({ role: 'model', text: item.message });
+        // Compare with current local history
+        const hasNewMessages = historyData.length !== aiChatHistory.length || 
+          historyData.some((item, index) => {
+            const current = aiChatHistory[index];
+            return !current || current.text !== item.message || current.role !== item.role;
+          });
+
+        if (hasNewMessages) {
+          // Reset container to default greeting message
+          chatMessages.innerHTML = `
+            <div class="message message-model">
+              Hello! I am your AI assistant for E. coli metabolism. Feel free to ask me any questions about the map, reactions, metabolic pathways, or the current learning scenarios.
+            </div>
+          `;
+          
+          aiChatHistory = [];
+          
+          // Populate messages from database history
+          for (const item of historyData) {
+            if (item.role === 'user') {
+              appendUserMessage(item.message);
+              aiChatHistory.push({ role: 'user', text: item.message });
+            } else {
+              appendModelMessage(item.message);
+              aiChatHistory.push({ role: 'model', text: item.message });
+            }
+          }
+          
+          // Scroll to bottom after loading new history
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else {
+          // No new messages - just restore or maintain scroll position
+          if (lastChatScrollTop !== null) {
+            chatMessages.scrollTop = lastChatScrollTop;
           }
         }
-        
-        // Scroll to bottom after loading history
-        chatMessages.scrollTop = chatMessages.scrollHeight;
       }
     }
   } catch (err) {
@@ -5165,6 +5179,14 @@ function setupScenariosAndChat() {
         }
       });
     }
+  }
+
+  // Scroll listener to update lastChatScrollTop
+  const chatMessagesEl = document.getElementById('ai-chat-messages');
+  if (chatMessagesEl) {
+    chatMessagesEl.addEventListener('scroll', () => {
+      lastChatScrollTop = chatMessagesEl.scrollTop;
+    });
   }
 
   // Global click outside closes chat
