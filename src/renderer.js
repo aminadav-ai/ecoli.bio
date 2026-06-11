@@ -957,7 +957,7 @@ export class PixiRenderer {
   updateCamera(deltaTime) {
     if (!this.isCameraAnimating) return;
 
-    const lerpSpeed = this.cameraLerpSpeed * deltaTime; // Adjust speed of transitions
+    const lerpSpeed = Math.min(1.0, this.cameraLerpSpeed * deltaTime); // Adjust speed of transitions, clamped to 1.0 to prevent overshoot on lag/sleep
 
     this.zoom += (this.targetZoom - this.zoom) * lerpSpeed;
     this.viewport.scale.set(this.zoom);
@@ -1163,7 +1163,7 @@ export class PixiRenderer {
       this.isCameraAnimating = false; // cancel animation
 
       const zoomSpeed = 0.001;
-      const zoomFactor = 1 - e.deltaY * zoomSpeed;
+      const zoomFactor = Math.max(0.1, Math.min(3.0, 1 - e.deltaY * zoomSpeed));
 
       const rect = el.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
