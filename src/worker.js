@@ -379,7 +379,6 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           isSolving: !!this.isSolving
         }));
         
-        this.state.waitUntil(this.startSolveLoop());
         return;
       }
       
