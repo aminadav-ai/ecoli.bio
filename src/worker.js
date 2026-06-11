@@ -906,14 +906,14 @@ To ensure that reactions and metabolites mentioned in the chat are clickable and
 - The ATP production/synthase reaction on the map is represented as \`ATPS4rpp\` (NOT \`ATPS4r\`).
 - Respiration / Cytochrome oxidases are \`CYTBO3_4pp\` and \`CYTBDpp\`.
 - Active metabolites must include their exact compartment suffixes: extracellular carbon sources/fermentation products must end with \`_e\` (e.g., use \`glc__D_e\` for glucose, \`ac_e\` for extracellular acetate, \`lac__D_e\` for extracellular D-lactate, \`etoh_e\` for extracellular ethanol). Cytoplasmic metabolites must end with \`_c\` (e.g. \`g6p_c\`, \`pyr_c\`, \`accoa_c\`).
-Wrap these exact IDs in backticks (e.g. \`ATPS4rpp\`, \`ac_e\`, \`lac__D_e\`, \`GLCptspp\`, \`pyr_c\`) in your text so that the client-side link detector can highlight them. Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose" in backticks, as they will not be recognized by the map.
+You should output these exact IDs (e.g. ATPS4rpp, ac_e, lac__D_e, GLCptspp, pyr_c) in your text. The client-side link detector will automatically find them and highlight them. Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose", as they will not be recognized by the map.
 
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
 
 Instructions:
 1. Explain metabolism in simple, clear terms (undergraduate biology level).
-2. Use the exact iJO1366 map BiGG IDs (e.g., \`ATPS4rpp\`, \`GLCptspp\`, \`ac_e\`, \`lac__D_e\`, \`PFK\`, \`PGI\`, \`PDH\`, \`PFL\`, \`pyr_c\`) wrapped in backticks when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
+2. Use the exact iJO1366 map BiGG IDs (e.g., ATPS4rpp, GLCptspp, ac_e, lac__D_e, PFK, PGI, PDH, PFL, pyr_c) in your text when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
 3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
 4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
 `;
