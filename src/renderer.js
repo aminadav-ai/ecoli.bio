@@ -1157,6 +1157,13 @@ export class PixiRenderer {
     el.addEventListener('pointercancel', endDrag);
     el.addEventListener('pointerupoutside', endDrag);
 
+    // Hide tooltip when pointer leaves the canvas boundary
+    el.addEventListener('pointerleave', () => {
+      this.hoveredNode = null;
+      const event = new CustomEvent('metabolite-hover', { detail: null });
+      el.dispatchEvent(event);
+    });
+
     // Zoom-to-cursor scroll implementation
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
