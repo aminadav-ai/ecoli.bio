@@ -3824,6 +3824,7 @@ const SCENARIOS = {
 
 let aiChatHistory = [];
 let lastChatScrollTop = null;
+let pendingChatMessage = null;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -4041,6 +4042,11 @@ async function handleGoogleCredentialResponse(response) {
       userToken = data.token;
       await checkAuthStatus(true);
       closeAuthModal();
+      if (pendingChatMessage) {
+        const msg = pendingChatMessage;
+        pendingChatMessage = null;
+        sendChatMessage(msg);
+      }
     } else {
       const err = await res.json();
       alert(`Google Auth failed: ${err.error}`);
@@ -4085,6 +4091,7 @@ function closeAuthModal() {
   if (authModal) {
     authModal.classList.add('hidden');
   }
+  pendingChatMessage = null;
 }
 
 function showLockOverlay(mode) {
@@ -4290,16 +4297,12 @@ function updateUserStatusUI() {
     }
   }
   
-  if (!userProfile) {
-    showLockOverlay('auth_required');
+  const limitsExceeded = userProfile && currentLimit.remaining <= 0;
+  if (limitsExceeded) {
+    showLockOverlay('limit_user');
   } else {
-    const limitsExceeded = currentLimit.remaining <= 0;
-    if (limitsExceeded) {
-      showLockOverlay('limit_user');
-    } else {
-      if (lockOverlay) lockOverlay.classList.add('hidden');
-      if (inputContainer) inputContainer.classList.remove('hidden');
-    }
+    if (lockOverlay) lockOverlay.classList.add('hidden');
+    if (inputContainer) inputContainer.classList.remove('hidden');
   }
 
   // 3. Update Solver Stats Panel (Usage)
@@ -4326,18 +4329,10 @@ function updateUserStatusUI() {
     }
   }
 
-  // Hide AI Chat trigger for guests
+  // AI Chat trigger is always visible
   const chatTrigger = document.getElementById('ai-chat-trigger');
-  const chatDrawer = document.getElementById('ai-chat-drawer');
   if (chatTrigger) {
-    if (userProfile) {
-      chatTrigger.classList.remove('hidden');
-    } else {
-      chatTrigger.classList.add('hidden');
-      if (chatDrawer) {
-        chatDrawer.classList.add('hidden');
-      }
-    }
+    chatTrigger.classList.remove('hidden');
   }
 
   // Hide play/pause and reset buttons for guests
@@ -4961,15 +4956,28 @@ function getSimulationContext() {
   };
 }
 
-async function sendChatMessage() {
+async function sendChatMessage(customMessage = null) {
+  let message;
   const chatInput = document.getElementById('ai-chat-input');
-  if (!chatInput) return;
-  const message = chatInput.value.trim();
-  if (!message) return;
+  
+  if (customMessage) {
+    message = customMessage;
+  } else {
+    if (!chatInput) return;
+    message = chatInput.value.trim();
+    if (!message) return;
+    chatInput.value = '';
+  }
+
+  // Check if user is logged in
+  if (!userProfile) {
+    pendingChatMessage = message;
+    openAuthModal();
+    return;
+  }
 
   // Append user message in UI
   appendUserMessage(message);
-  chatInput.value = '';
 
   // Show typing loader
   const chatMessages = document.getElementById('ai-chat-messages');
