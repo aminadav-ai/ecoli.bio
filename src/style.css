@@ -4511,17 +4511,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Custom named experiment golden highlight styling */
 .custom-select-option-text.is-custom {
-  color: #fbbf24;
-  text-shadow: 0 0 4px rgba(251, 191, 36, 0.15);
+  color: #fde047; /* Brighter yellow-gold */
+  text-shadow: 0 0 6px rgba(253, 224, 71, 0.25);
 }
 
 .custom-select-option.selected .custom-select-option-text.is-custom {
-  color: #f59e0b;
+  color: #ffd700; /* Vibrant gold for selected item */
   font-weight: 600;
 }
 
 #custom-experiment-selected-text.is-custom {
-  color: #fbbf24;
-  text-shadow: 0 0 6px rgba(251, 191, 36, 0.3);
+  color: #fde047; /* Brighter yellow-gold */
+  text-shadow: 0 0 8px rgba(253, 224, 71, 0.4);
 }
 
