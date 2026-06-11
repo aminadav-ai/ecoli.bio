@@ -4052,7 +4052,7 @@ async function loadExperimentsList(selectedId = null) {
       const exists = list.some(exp => exp.id === activeId);
       
       if (!exists && isExperimentsListLoaded) {
-        alert("Данный эксперимент был удален из другой сессии этого пользователя.");
+        alert("This experiment was deleted from another session of this user.");
         if (list.length > 0) {
           sessionId = list[0].id;
           sessionStorage.setItem('simulationSessionId', sessionId);
@@ -4171,7 +4171,7 @@ async function handleDeleteExperiment(exp) {
   const hasChat = exp.chat_count > 0;
   
   if (!isDefault || hasChat) {
-    const confirmed = confirm(`Удалить эксперимент "${exp.name}"?`);
+    const confirmed = confirm(`Delete experiment "${exp.name}"?`);
     if (!confirmed) return;
   }
   
@@ -4194,14 +4194,14 @@ async function handleDeleteExperiment(exp) {
     if (res.ok) {
       await loadExperimentsList();
     } else if (res.status === 409) {
-      alert("Невозможно удалить этот эксперимент, так как он открыт в других вкладках.");
+      alert("Cannot delete this experiment because it is open in other tabs.");
     } else {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Не удалось удалить эксперимент.");
+      alert(data.error || "Failed to delete the experiment.");
     }
   } catch (err) {
     console.error('Failed to delete experiment:', err);
-    alert("Произошла ошибка при удалении эксперимента.");
+    alert("An error occurred while deleting the experiment.");
   }
 }
 
