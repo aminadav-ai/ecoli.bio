@@ -6296,7 +6296,8 @@ function parseMarkdownOnly(text) {
   escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   // *italic* -> <em>italic</em>
   escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  escaped = escaped.replace(/_(.*?)_/g, '<em>$1</em>');
+  // Only parse underscores as italics if they are at word boundaries and not part of an ID (like ac_e)
+  escaped = escaped.replace(/(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)/g, '<em>$1</em>');
   return escaped;
 }
 
