@@ -2980,6 +2980,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-radius: 2px;
 }
 
+.message,
+.message span,
+.message strong,
+.message em {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .message {
   max-width: 85%;
   padding: 10px 32px 10px 12px;
@@ -2988,8 +2996,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   line-height: 1.5;
   word-break: break-word;
   position: relative;
-  user-select: text;
-  -webkit-user-select: text;
 }
 
 .message-user {
