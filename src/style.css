@@ -4370,8 +4370,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   justify-content: space-between;
   gap: 8px;
   cursor: pointer;
-  min-width: 140px;
-  max-width: 200px;
+  min-width: 250px;
+  max-width: 320px;
   transition: all 0.2s ease;
 }
 
@@ -4400,7 +4400,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  width: 260px;
+  width: 350px;
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
