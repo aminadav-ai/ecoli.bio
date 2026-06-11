@@ -8,7 +8,28 @@
 
 import { Simulation } from './simulation.js';
 import { PixiRenderer } from './renderer.js';
-import { serializeSimulation, deserializeSimulation } from './fba_solver_core.js';
+function deserializeSimulation(sim, state) {
+  if (!state) return;
+  if (state.metabolites) {
+    for (const [mId, mState] of Object.entries(state.metabolites)) {
+      if (sim.metabolites[mId]) {
+        sim.metabolites[mId].concentration = mState.concentration;
+        sim.metabolites[mId].targetConcentration = mState.targetConcentration;
+      }
+    }
+  }
+  if (state.parameters) {
+    for (const [rId, rState] of Object.entries(state.parameters)) {
+      if (sim.reactions[rId]) {
+        sim.reactions[rId].vMax = rState.vMax;
+        sim.reactions[rId].km = rState.km;
+      }
+    }
+  }
+  sim.isDead = !!state.isDead;
+  sim.tickCounter = state.tickCounter || 0;
+  sim.lastTimestamp = state.lastTimestamp || 0;
+}
 
 // Database cross-reference IDs mapped to BiGG IDs
 const NAMESPACE_DATABASE = {
