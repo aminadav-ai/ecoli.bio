@@ -1389,15 +1389,15 @@ function setupUIListeners() {
     });
   }
 
-  // Reload chat and experiments list when tab becomes active/visible
+  // Reload chat, auth status, and experiments list when tab becomes active/visible
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       const chatDrawer = document.getElementById('ai-chat-drawer');
       if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
         loadChatHistory();
       }
-      if (userProfile && isExperimentsListLoaded) {
-        loadExperimentsList();
+      if (localStorage.getItem('userToken')) {
+        checkAuthStatus();
       }
     }
   });
