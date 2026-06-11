@@ -49,7 +49,7 @@ export class SolverDO {
     this.sessionId = this.state.id.toString();
     this.baseName = "Experiment";
     this.name = "Experiment";
-    this.renameTimeout = null;
+    this.lastRenameRequestTime = 0;
     this.isSolving = false;
     this.isFreshSession = true;
 
@@ -238,13 +238,15 @@ export class SolverDO {
   triggerAiRename() {
     if (!this.env.GOOGLE_API_KEY || !this.userEmail) return;
     
-    if (this.renameTimeout) {
-      clearTimeout(this.renameTimeout);
-    }
+    const now = Date.now();
+    this.lastRenameRequestTime = now;
     
-    this.renameTimeout = setTimeout(() => {
-      this.state.waitUntil(this.performAiRename());
-    }, 5000); // 5 seconds debounce
+    this.state.waitUntil((async () => {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      if (this.lastRenameRequestTime === now) {
+        await this.performAiRename();
+      }
+    })());
   }
 
   async performAiRename() {
