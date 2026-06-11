@@ -3825,6 +3825,8 @@ const SCENARIOS = {
 let aiChatHistory = [];
 let lastChatScrollTop = null;
 let pendingChatMessage = null;
+let pendingChatCursorStart = null;
+let pendingChatCursorEnd = null;
 
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
@@ -4042,6 +4044,8 @@ async function handleGoogleCredentialResponse(response) {
       userToken = data.token;
       await checkAuthStatus(true);
       const msg = pendingChatMessage;
+      pendingChatCursorStart = null;
+      pendingChatCursorEnd = null;
       closeAuthModal();
       if (msg) {
         const chatInput = document.getElementById('ai-chat-input');
@@ -4095,6 +4099,14 @@ function closeAuthModal() {
     authModal.classList.add('hidden');
   }
   pendingChatMessage = null;
+  
+  const chatInput = document.getElementById('ai-chat-input');
+  if (chatInput && pendingChatCursorStart !== null) {
+    chatInput.focus();
+    chatInput.setSelectionRange(pendingChatCursorStart, pendingChatCursorEnd);
+  }
+  pendingChatCursorStart = null;
+  pendingChatCursorEnd = null;
 }
 
 function showLockOverlay(mode) {
@@ -4981,6 +4993,10 @@ async function sendChatMessage(customMessage = null) {
   // Check if user is logged in
   if (!userProfile) {
     pendingChatMessage = message;
+    if (chatInput) {
+      pendingChatCursorStart = chatInput.selectionStart;
+      pendingChatCursorEnd = chatInput.selectionEnd;
+    }
     openAuthModal();
     return;
   }
