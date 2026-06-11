@@ -4558,6 +4558,25 @@ function renderCustomExperimentSelect() {
       const actionsWrapper = document.createElement('div');
       actionsWrapper.className = 'custom-select-option-actions';
 
+      if (exp.chat_count > 0) {
+        const chatIconBtn = document.createElement('div');
+        chatIconBtn.className = 'custom-select-option-chat-icon';
+        chatIconBtn.innerHTML = '💬';
+        chatIconBtn.title = 'Switch to this experiment and show chat';
+        chatIconBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          optionsDiv.classList.add('hidden');
+          customWrapper.classList.remove('open');
+          
+          const nativeSelect = document.getElementById('experiment-select');
+          if (nativeSelect) {
+            nativeSelect.value = exp.id;
+            nativeSelect.dispatchEvent(new Event('change'));
+          }
+        });
+        actionsWrapper.appendChild(chatIconBtn);
+      }
+
       const editBtn = document.createElement('div');
       editBtn.className = 'custom-select-option-edit';
       editBtn.innerHTML = '✏️';

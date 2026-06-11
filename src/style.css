@@ -4416,7 +4416,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  width: 350px;
+  width: 450px;
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
@@ -4523,5 +4523,30 @@ input[type="range"]::-webkit-slider-thumb:hover {
 #custom-experiment-selected-text.is-custom {
   color: #fde047; /* Brighter yellow-gold */
   text-shadow: 0 0 8px rgba(253, 224, 71, 0.4);
+}
+
+.custom-select-option-chat-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 11px;
+}
+
+.custom-select-option-chat-icon:hover {
+  transform: translateY(-1px) scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #5a52e6 0%, #7376f2 100%);
+}
+
+.custom-select-option-chat-icon:active {
+  transform: translateY(0) scale(0.95);
 }
 
