@@ -6082,7 +6082,15 @@ function addCopyButton(messageElement, textToCopy) {
 
   copyBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(textToCopy).then(() => {
+    
+    // Create a temporary element to retrieve clean text without markdown or copy button
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = messageElement.innerHTML;
+    const btns = tempDiv.querySelectorAll('.chat-message-copy-btn');
+    btns.forEach(b => b.remove());
+    const cleanText = tempDiv.innerText || tempDiv.textContent || textToCopy;
+
+    navigator.clipboard.writeText(cleanText).then(() => {
       copyBtn.innerHTML = `
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: #22c55e;">
           <polyline points="20 6 9 17 4 12"></polyline>
