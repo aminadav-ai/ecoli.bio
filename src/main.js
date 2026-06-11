@@ -1955,6 +1955,12 @@ function openChatDrawer() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
   }
+
+  // Focus the chat input field for immediate typing if it's not a temporary peek
+  const chatInput = document.getElementById('ai-chat-input');
+  if (chatInput && !isChatPeeking) {
+    setTimeout(() => chatInput.focus(), 80);
+  }
 }
 
 function closeChatDrawer() {
