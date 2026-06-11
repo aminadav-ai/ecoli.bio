@@ -367,6 +367,57 @@ function initializeWarningsUI() {
   });
 }
 
+// Shared copy to clipboard helper
+async function handleCopyClick(btn, textToCopy) {
+  if (!btn) return;
+  console.log('[App] Copy click triggered on:', btn, 'Text to copy:', textToCopy);
+  const originalHTML = btn.innerHTML;
+  const svgWidth = btn.querySelector('svg')?.getAttribute('width') || 14;
+  const svgHeight = btn.querySelector('svg')?.getAttribute('height') || 14;
+  const checkmarkHTML = `
+    <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="${svgWidth}" height="${svgHeight}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  `;
+  
+  let success = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      success = true;
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  }
+  
+  if (!success) {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        success = true;
+      }
+    } catch (err) {
+      console.error('Fallback copy failed: ', err);
+    }
+  }
+  
+  if (success) {
+    btn.classList.add('copied');
+    btn.innerHTML = checkmarkHTML;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = originalHTML;
+    }, 1500);
+  }
+}
+
 /**
  * Bootstraps the application, loading assets and launching the loops.
  */
@@ -979,56 +1030,6 @@ function setupUIListeners() {
       updateFbaBounds(performance.now());
     }
   });
-
-  // Shared copy to clipboard helper
-  async function handleCopyClick(btn, textToCopy) {
-    if (!btn) return;
-    const originalHTML = btn.innerHTML;
-    const svgWidth = btn.querySelector('svg')?.getAttribute('width') || 14;
-    const svgHeight = btn.querySelector('svg')?.getAttribute('height') || 14;
-    const checkmarkHTML = `
-      <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="${svgWidth}" height="${svgHeight}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    `;
-    
-    let success = false;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-        success = true;
-      } catch (err) {
-        console.error('Failed to copy: ', err);
-      }
-    }
-    
-    if (!success) {
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = textToCopy;
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = '0';
-        document.body.appendChild(textArea);
-        textArea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        if (successful) {
-          success = true;
-        }
-      } catch (err) {
-        console.error('Fallback copy failed: ', err);
-      }
-    }
-    
-    if (success) {
-      btn.classList.add('copied');
-      btn.innerHTML = checkmarkHTML;
-      setTimeout(() => {
-        btn.classList.remove('copied');
-        btn.innerHTML = originalHTML;
-      }, 1500);
-    }
-  }
 
   // Copy to clipboard helper
   function setupCopyButton(btnId, spanId) {
