@@ -48,6 +48,8 @@ CREATE INDEX IF NOT EXISTS idx_chat_history_identifier ON chat_history(identifie
 CREATE TABLE IF NOT EXISTS simulation_sessions (
     id VARCHAR(255) PRIMARY KEY,
     email VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
+    base_name VARCHAR(255) NOT NULL DEFAULT 'Experiment',
+    name VARCHAR(255) NOT NULL DEFAULT 'Experiment',
     state JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

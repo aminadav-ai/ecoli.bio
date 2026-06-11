@@ -4303,3 +4303,50 @@ input[type="range"]::-webkit-slider-thumb:hover {
   50% { opacity: 1; }
 }
 
+.experiments-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.experiment-select-dropdown {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #f1f5f9;
+  padding: 4px 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  outline: none;
+  cursor: pointer;
+  max-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.experiment-select-dropdown:hover, .experiment-select-dropdown:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.btn-new-experiment {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-new-experiment:hover {
+  background: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+}
+

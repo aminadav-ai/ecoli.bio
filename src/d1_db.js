@@ -326,3 +326,62 @@ export async function recordGuestVisit(db, sessionId, dateStr) {
     console.error('[D1 DB] Failed to record guest visit:', err);
   }
 }
+
+// 15. Get list of sessions for email
+export async function getSimulationSessions(db, email) {
+  try {
+    const res = await db.prepare(
+      'SELECT id, base_name, name, created_at, updated_at FROM simulation_sessions WHERE email = ? ORDER BY updated_at DESC'
+    ).bind(email).all();
+    return res.results || [];
+  } catch (err) {
+    console.error('[D1 DB] getSimulationSessions error:', err);
+    return [];
+  }
+}
+
+// 16. Get single session by id
+export async function getSimulationSession(db, id) {
+  try {
+    return await db.prepare(
+      'SELECT * FROM simulation_sessions WHERE id = ?'
+    ).bind(id).first();
+  } catch (err) {
+    console.error('[D1 DB] getSimulationSession error:', err);
+    return null;
+  }
+}
+
+// 17. Upsert simulation session
+export async function upsertSimulationSession(db, id, email, baseName, name, state) {
+  try {
+    await db.prepare(
+      'INSERT INTO simulation_sessions (id, email, base_name, name, state, updated_at) VALUES (?, ?, ?, ?, ?, datetime("now")) ' +
+      'ON CONFLICT(id) DO UPDATE SET email = excluded.email, base_name = excluded.base_name, name = excluded.name, state = excluded.state, updated_at = excluded.updated_at'
+    ).bind(id, email, baseName, name, state).run();
+  } catch (err) {
+    console.error('[D1 DB] upsertSimulationSession error:', err);
+  }
+}
+
+// 18. Delete simulation session
+export async function deleteSimulationSession(db, id) {
+  try {
+    await db.prepare('DELETE FROM simulation_sessions WHERE id = ?').bind(id).run();
+  } catch (err) {
+    console.error('[D1 DB] deleteSimulationSession error:', err);
+  }
+}
+
+// 19. Count experiments by base_name and date for a user
+export async function getExperimentCount(db, email, baseName, dateStr) {
+  try {
+    const res = await db.prepare(
+      'SELECT COUNT(*) as count FROM simulation_sessions WHERE email = ? AND base_name = ? AND DATE(created_at) = ?'
+    ).bind(email, baseName, dateStr).first();
+    return res ? res.count : 0;
+  } catch (err) {
+    console.error('[D1 DB] getExperimentCount error:', err);
+    return 0;
+  }
+}

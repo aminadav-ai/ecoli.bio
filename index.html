@@ -64,6 +64,14 @@
         </div>
 
         <div class="header-actions">
+          <!-- Experiments Dropdown/Control -->
+          <div id="experiments-container" class="experiments-container hidden">
+            <select id="experiment-select" class="experiment-select-dropdown" title="Select saved experiment">
+              <!-- Options loaded dynamically -->
+            </select>
+            <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
+          </div>
+
           <!-- Solver Status Panel -->
           <div id="solver-status-container" class="solver-status-container">
             <button id="solver-status-badge" class="solver-badge work" title="Click to view changing components">

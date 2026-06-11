@@ -8,6 +8,7 @@
 
 import { Simulation } from './simulation.js';
 import { PixiRenderer } from './renderer.js';
+import { serializeSimulation, deserializeSimulation } from './fba_solver_core.js';
 
 // Database cross-reference IDs mapped to BiGG IDs
 const NAMESPACE_DATABASE = {
@@ -478,6 +479,40 @@ const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args),
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
   if (!userProfile) return;
+
+  // Send via WebSocket if connected
+  if (sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN) {
+    if (forceOptions.reset) {
+      sessionWebSocket.send(JSON.stringify({ type: "RESET_SIMULATION" }));
+    } else if (forceOptions.scenario) {
+      sessionWebSocket.send(JSON.stringify({ type: "APPLY_SCENARIO", scenarioId: forceOptions.scenario }));
+    } else {
+      const concentrations = {};
+      if (simulation.metabolites['o2_e']) {
+        concentrations['o2_e'] = simulation.metabolites['o2_e'].concentration;
+      }
+      if (simulation.metabolites['glc__D_e']) {
+        concentrations['glc__D_e'] = simulation.metabolites['glc__D_e'].concentration;
+      }
+
+      const parameters = {};
+      for (const [rId, rxn] of Object.entries(simulation.reactions)) {
+        if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
+          parameters[rId] = {
+            vMax: rxn.vMax,
+            km: rxn.km
+          };
+        }
+      }
+      sessionWebSocket.send(JSON.stringify({
+        type: "UPDATE_PARAMETER",
+        concentrations,
+        parameters
+      }));
+    }
+    return;
+  }
+
   if (isFetchingBounds || !simulation) return;
   isFetchingBounds = true;
 
@@ -658,7 +693,8 @@ function gameLoop(currentTime) {
   if (!isPaused && !isDead) {
     if (currentTime - lastBoundsFetchTime >= 250) {
       lastBoundsFetchTime = currentTime;
-      if (isSolverWorking) {
+      const isWsOpen = sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN;
+      if (isSolverWorking && !isWsOpen) {
         updateFbaBounds(currentTime);
       }
     }
@@ -1304,7 +1340,26 @@ function setupUIListeners() {
     });
   });
 
+  // Experiments panel event listeners
+  const experimentSelect = document.getElementById('experiment-select');
+  if (experimentSelect) {
+    experimentSelect.addEventListener('change', async (e) => {
+      const selectedId = e.target.value;
+      if (selectedId && selectedId !== sessionId) {
+        sessionId = selectedId;
+        sessionStorage.setItem('simulationSessionId', sessionId);
+        connectSessionWebSocket();
+        await loadChatHistory();
+      }
+    });
+  }
 
+  const btnNewExperiment = document.getElementById('btn-new-experiment');
+  if (btnNewExperiment) {
+    btnNewExperiment.addEventListener('click', async () => {
+      await createNewExperiment();
+    });
+  }
 }
 
 /**
@@ -3828,6 +3883,11 @@ let pendingChatMessage = null;
 let pendingChatCursorStart = null;
 let pendingChatCursorEnd = null;
 
+// WebSocket Sync & Naming State
+let sessionWebSocket = null;
+let activeExperimentName = "Experiment";
+let isExperimentsListLoaded = false;
+
 // Auth & Rate-limiting State
 let guestId = localStorage.getItem('chatGuestId');
 if (!guestId) {
@@ -3860,11 +3920,236 @@ function resetChatToGreeting() {
   aiChatHistory = [];
 }
 
+function updateActiveExperimentNameUI(name) {
+  activeExperimentName = name;
+  const select = document.getElementById('experiment-select');
+  if (select) {
+    const opt = select.querySelector(`option[value="${sessionId}"]`);
+    if (opt) {
+      opt.textContent = name;
+    }
+  }
+}
+
+async function loadExperimentsList(selectedId = null) {
+  if (!userProfile) return false;
+  const select = document.getElementById('experiment-select');
+  if (!select) return false;
+
+  const token = localStorage.getItem('userToken');
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch('/api/experiments', { headers });
+    if (res.ok) {
+      const list = await res.json();
+      select.innerHTML = '';
+      
+      if (list.length === 0) {
+        await createNewExperiment();
+        return false;
+      }
+
+      list.forEach(exp => {
+        const opt = document.createElement('option');
+        opt.value = exp.id;
+        opt.textContent = exp.name;
+        select.appendChild(opt);
+      });
+
+      const activeId = selectedId || sessionId;
+      const exists = list.some(exp => exp.id === activeId);
+      if (exists) {
+        select.value = activeId;
+        if (sessionId !== activeId) {
+          sessionId = activeId;
+          sessionStorage.setItem('simulationSessionId', sessionId);
+        }
+      } else if (list.length > 0) {
+        select.value = list[0].id;
+        sessionId = list[0].id;
+        sessionStorage.setItem('simulationSessionId', sessionId);
+      }
+      
+      isExperimentsListLoaded = true;
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to load experiments list:', err);
+  }
+  return false;
+}
+
+async function createNewExperiment() {
+  const token = localStorage.getItem('userToken');
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch('/api/experiments/new', {
+      method: 'POST',
+      headers
+    });
+    if (res.ok) {
+      const newExp = await res.json();
+      sessionId = newExp.id;
+      sessionStorage.setItem('simulationSessionId', sessionId);
+      
+      if (simulation) {
+        simulation.reset();
+      }
+      
+      await loadExperimentsList(sessionId);
+      connectSessionWebSocket();
+      await loadChatHistory();
+    }
+  } catch (err) {
+    console.error('Failed to create new experiment:', err);
+  }
+}
+
+function connectSessionWebSocket() {
+  if (sessionWebSocket) {
+    try {
+      sessionWebSocket.close();
+    } catch(e) {}
+    sessionWebSocket = null;
+  }
+
+  if (!userProfile) return;
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/api/session-websocket?sessionId=${sessionId}`;
+  
+  console.log(`[WS] Connecting to WebSocket: ${wsUrl}`);
+  sessionWebSocket = new WebSocket(wsUrl);
+
+  sessionWebSocket.onopen = () => {
+    console.log('[WS] Connection established.');
+    if (sessionWebSocket.readyState === WebSocket.OPEN) {
+      sessionWebSocket.send(JSON.stringify({
+        type: "INIT",
+        userEmail: userProfile.email,
+        dbTicks: userProfile.solverTicks || 0
+      }));
+    }
+  };
+
+  sessionWebSocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'INIT_STATE') {
+        console.log('[WS] Received initial simulation state:', data);
+        if (data.state && simulation) {
+          deserializeSimulation(simulation, data.state);
+          if (typeof requestRedraw === 'function') requestRedraw();
+        }
+        if (data.name) {
+          updateActiveExperimentNameUI(data.name);
+        }
+        if (data.solverTicks !== undefined && userProfile) {
+          userProfile.solverTicks = data.solverTicks;
+          updateUserStatusUI();
+        }
+        isSolverWorking = !!data.isSolving;
+        updateSolverStatusUI();
+        return;
+      }
+      
+      if (data.type === 'TICK_UPDATE') {
+        activeRepressions = data.repressed || {};
+        isSolverWorking = !data.stabilized;
+        currentChangingMetabolites = data.changingMetabolites || [];
+        currentChangingReactions = data.changingReactions || [];
+
+        currentChangingReactions.forEach(rxn => {
+          accumulatedChangingReactions[rxn.id] = rxn;
+        });
+        currentChangingMetabolites.forEach(metab => {
+          accumulatedChangingMetabolites[metab.id] = metab;
+        });
+
+        if (userProfile && data.solverTicks !== undefined) {
+          userProfile.solverTicks = data.solverTicks;
+        }
+
+        updateSolverStatusUI();
+        updateUserStatusUI();
+        
+        if (data.fluxes && simulation) {
+          simulation.updateFluxes(data.fluxes, data.biomass_flux);
+          isDead = data.is_dead || false;
+          
+          const overlay = document.getElementById('death-overlay');
+          if (overlay) {
+            if (isDead) {
+              overlay.classList.remove('hidden');
+            } else {
+              overlay.classList.add('hidden');
+            }
+          }
+        }
+
+        if (data.concentrations && simulation) {
+          for (const [mId, conc] of Object.entries(data.concentrations)) {
+            if (simulation.metabolites[mId]) {
+              simulation.metabolites[mId].targetConcentration = conc;
+              if (mId === 'o2_e' || mId === 'glc__D_e') {
+                simulation.metabolites[mId].concentration = conc;
+                const slider = document.getElementById(mId === 'o2_e' ? 'global-o2-slider' : 'global-glc-slider');
+                const valDisp = document.getElementById(mId === 'o2_e' ? 'global-o2-val' : 'global-glc-val');
+                if (slider) slider.value = conc;
+                if (valDisp) valDisp.textContent = conc.toFixed(1);
+              }
+            }
+          }
+        }
+        return;
+      }
+      
+      if (data.type === 'STATUS') {
+        isSolverWorking = (data.status === 'WORK');
+        updateSolverStatusUI();
+        return;
+      }
+      
+      if (data.type === 'RENAME_SESSION') {
+        updateActiveExperimentNameUI(data.name);
+        loadExperimentsList(sessionId);
+        return;
+      }
+      
+    } catch (err) {
+      console.error('[WS] Error processing message:', err);
+    }
+  };
+
+  sessionWebSocket.onclose = (e) => {
+    console.log('[WS] Connection closed:', e.reason);
+    setTimeout(() => {
+      if (userProfile && (!sessionWebSocket || sessionWebSocket.readyState === WebSocket.CLOSED)) {
+        connectSessionWebSocket();
+      }
+    }, 3000);
+  };
+
+  sessionWebSocket.onerror = (err) => {
+    console.error('[WS] WebSocket error:', err);
+  };
+}
+
 async function loadChatHistory() {
   const token = localStorage.getItem('userToken');
   try {
     const headers = { 
       'x-guest-id': guestId,
+      'x-session-id': sessionId
     };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -3988,6 +4273,17 @@ async function checkAuthStatus(isVisit = false) {
       
       updateUserStatusUI();
 
+      if (userProfile) {
+        const experimentsContainer = document.getElementById('experiments-container');
+        if (experimentsContainer) {
+          experimentsContainer.classList.remove('hidden');
+        }
+        const loadedExisting = await loadExperimentsList();
+        if (loadedExisting) {
+          connectSessionWebSocket();
+        }
+      }
+
       if (userProfile && userProfile.o2Preference !== undefined && userProfile.o2Preference !== null) {
         const dbO2 = parseFloat(userProfile.o2Preference);
         if (!isNaN(dbO2) && simulation && simulation.metabolites['o2_e']) {
@@ -4091,6 +4387,27 @@ async function handleLogout() {
   localStorage.removeItem('userToken');
   userToken = null;
   userProfile = null;
+
+  if (sessionWebSocket) {
+    try {
+      sessionWebSocket.close();
+    } catch(e) {}
+    sessionWebSocket = null;
+  }
+  
+  const experimentsContainer = document.getElementById('experiments-container');
+  if (experimentsContainer) {
+    experimentsContainer.classList.add('hidden');
+  }
+  const select = document.getElementById('experiment-select');
+  if (select) {
+    select.innerHTML = '';
+  }
+  isExperimentsListLoaded = false;
+
+  sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  sessionStorage.setItem('simulationSessionId', sessionId);
+
   await checkAuthStatus();
 }
 
@@ -4164,6 +4481,15 @@ function updateUserStatusUI() {
   const statusBar = document.getElementById('ai-chat-status-bar');
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
+
+  const experimentsContainer = document.getElementById('experiments-container');
+  if (experimentsContainer) {
+    if (userProfile) {
+      experimentsContainer.classList.remove('hidden');
+    } else {
+      experimentsContainer.classList.add('hidden');
+    }
+  }
 
 
   // Update User Tier Badge in Top Header
@@ -5043,6 +5369,7 @@ async function sendChatMessage(customMessage = null) {
     const headers = {
       'Content-Type': 'application/json',
       'x-guest-id': guestId,
+      'x-session-id': sessionId,
       'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
     if (userToken) {
@@ -5136,6 +5463,7 @@ Please evaluate my answer for biological correctness based on the current metabo
     const headers = {
       'Content-Type': 'application/json',
       'x-guest-id': guestId,
+      'x-session-id': sessionId,
       'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
     if (userToken) {
