@@ -1345,6 +1345,15 @@ function setupUIListeners() {
     });
   }
 
+  // Close solver details dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (solverDropdown && !solverDropdown.classList.contains('hidden')) {
+      if (solverBadge && !solverBadge.contains(e.target) && !solverDropdown.contains(e.target)) {
+        solverDropdown.classList.add('hidden');
+      }
+    }
+  });
+
   const solverClearBtn = document.getElementById('solver-clear-btn');
   if (solverClearBtn) {
     solverClearBtn.addEventListener('click', (e) => {
@@ -2323,7 +2332,9 @@ function populateSolverDetails() {
         const rxn = renderer.reactions.find(r => r.biggId === rxnId);
         if (rxn) {
           renderer.selectReaction(rxn.id);
-          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85, 760);
+          const dropdown = document.getElementById('solver-details-dropdown');
+          if (dropdown) dropdown.classList.add('hidden');
+          renderer.focusOnCoordinates(rxn.labelX, rxn.labelY, 0.85);
         }
       });
     });
@@ -2334,7 +2345,9 @@ function populateSolverDetails() {
         const node = renderer.metabNodes.find(n => n.biggId === metabId);
         if (node) {
           renderer.selectMetabolite(node.id);
-          renderer.focusOnCoordinates(node.x, node.y, 0.85, 760);
+          const dropdown = document.getElementById('solver-details-dropdown');
+          if (dropdown) dropdown.classList.add('hidden');
+          renderer.focusOnCoordinates(node.x, node.y, 0.85);
         }
       });
     });
