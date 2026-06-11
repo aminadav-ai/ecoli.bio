@@ -171,20 +171,6 @@ export class SolverDO {
         const stateToSave = serializeSimulation(this.simulation);
         await this.state.storage.put('sim_state', stateToSave);
         
-        // Save to D1 database for persistence if logged in
-        if (this.userEmail) {
-          this.state.waitUntil(
-            upsertSimulationSession(
-              this.env.DB,
-              this.sessionId,
-              this.userEmail,
-              this.baseName || "Experiment",
-              this.name || "Experiment",
-              JSON.stringify(stateToSave)
-            ).catch(err => console.error("[DO] Failed to upsert session in D1:", err))
-          );
-        }
-        
         // Increment solver ticks
         const newTicks = this.simulation.solverTicksBuffer || 0;
         if (newTicks > 0 && this.userEmail) {
@@ -220,6 +206,21 @@ export class SolverDO {
         
         // Delay slightly between ticks to simulate steps smoothly
         await new Promise(resolve => setTimeout(resolve, 80));
+      }
+
+      // Save to D1 database for persistence if logged in (once at the end of the loop)
+      if (this.userEmail) {
+        const finalState = serializeSimulation(this.simulation);
+        this.state.waitUntil(
+          upsertSimulationSession(
+            this.env.DB,
+            this.sessionId,
+            this.userEmail,
+            this.baseName || "Experiment",
+            this.name || "Experiment",
+            JSON.stringify(finalState)
+          ).catch(err => console.error("[DO] Failed to upsert session in D1 after loop:", err))
+        );
       }
     } catch (err) {
       console.error("[DO] Solve loop error:", err);
