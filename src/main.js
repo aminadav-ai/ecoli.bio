@@ -5306,33 +5306,29 @@ function checkScenarioObjectives() {
 function getSimulationContext() {
   if (!simulation) return {};
 
-  const concentrations = {};
-  const highConcentrations = {};
+  const environmentalParameters = {
+    oxygen_concentration: simulation.metabolites['o2_e'] ? parseFloat(simulation.metabolites['o2_e'].concentration.toFixed(3)) : 0.0,
+    glucose_concentration: simulation.metabolites['glc__D_e'] ? parseFloat(simulation.metabolites['glc__D_e'].concentration.toFixed(3)) : 0.0
+  };
+
+  const metabolitesState = {};
   for (const [id, metab] of Object.entries(simulation.metabolites)) {
-    if (metab.concentration !== (simulation.initialConcentrations[id] || 1.0)) {
-      concentrations[id] = parseFloat(metab.concentration.toFixed(3));
-    }
-    // Track high accumulation
-    if (metab.concentration > 6.0 && !metab.isBuffered) {
-      highConcentrations[id] = parseFloat(metab.concentration.toFixed(3));
-    }
+    metabolitesState[id] = {
+      name: metab.name,
+      concentration: parseFloat(metab.concentration.toFixed(4)),
+      isBuffered: metab.isBuffered || false
+    };
   }
 
-  const tweaked = {};
+  const reactionsState = {};
   for (const [id, rxn] of Object.entries(simulation.reactions)) {
-    if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
-      tweaked[id] = { vMax: rxn.vMax, km: rxn.km };
-    }
+    reactionsState[id] = {
+      name: rxn.name,
+      flux: parseFloat(rxn.flux.toFixed(4)),
+      vMax: rxn.vMax,
+      km: rxn.km
+    };
   }
-
-  // Key gateway fluxes
-  const keyFluxes = {};
-  const gatewayRxns = ['GLCptspp', 'PGI', 'PFK', 'PYK', 'PDH', 'PFL', 'G6PDH2r', 'CS', 'AKGDH', 'SUCDi', 'CYTBO3_4pp', 'EX_lac__D_e'];
-  gatewayRxns.forEach(rxnId => {
-    if (simulation.reactions[rxnId]) {
-      keyFluxes[rxnId] = parseFloat(simulation.reactions[rxnId].flux.toFixed(4));
-    }
-  });
 
   const objectiveStatus = {};
   if (activeScenarioId) {
@@ -5349,9 +5345,9 @@ function getSimulationContext() {
     scenarioObjectives: objectiveStatus,
     growthRate: simulation.reactions['BIOMASS_Ecoli_core_w_GAM'] ? parseFloat(simulation.reactions['BIOMASS_Ecoli_core_w_GAM'].flux.toFixed(4)) : 0.0,
     atpYield: simulation.reactions['ATPS4r'] ? parseFloat(simulation.reactions['ATPS4r'].flux.toFixed(4)) : 0.0,
-    accumulatedMetabolites: highConcentrations,
-    tweakedParameters: tweaked,
-    keyGatewayFluxes: keyFluxes
+    environmentalParameters,
+    metabolites: metabolitesState,
+    reactions: reactionsState
   };
 }
 
