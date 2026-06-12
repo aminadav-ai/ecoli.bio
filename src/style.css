@@ -2715,7 +2715,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   /* Full Screen AI Chat widget adjustments on mobile */
+  .ai-chat-trigger {
+    display: none !important;
+  }
+
   .ai-chat-drawer {
+    position: fixed !important;
     width: 100% !important;
     height: 100% !important;
     max-height: 100% !important;
