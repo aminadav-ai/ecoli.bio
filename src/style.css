@@ -2639,11 +2639,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .mobile-drawer-content .experiments-container {
     width: 100% !important;
     box-sizing: border-box !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 10px !important;
   }
 
   .mobile-drawer-content .custom-select-wrapper {
     width: 100%;
-    flex: 1;
     min-width: 0;
   }
 
@@ -2652,6 +2655,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
     max-width: none;
     min-width: 0 !important;
     background: rgba(255, 255, 255, 0.03);
+  }
+
+  .mobile-drawer-content .btn-new-experiment {
+    width: 100% !important;
+    text-align: center !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
   }
 
   .mobile-drawer-content .custom-select-options {
