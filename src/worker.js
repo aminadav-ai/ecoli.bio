@@ -32,7 +32,8 @@ import {
   renameSimulationSession,
   deleteSimulationSession,
   deleteChatHistoryForSession,
-  getExperimentCount
+  getExperimentCount,
+  getOrResetUserDailyTicks
 } from './d1_db.js';
 
 // ==========================================
@@ -697,6 +698,15 @@ export default {
         if (!user) {
           return new Response(JSON.stringify({ error: 'Please sign in to use the simulator.' }), {
             status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const timeZone = request.headers.get('x-timezone') || 'UTC';
+        const dailyTicks = await getOrResetUserDailyTicks(env.DB, user, timeZone);
+        if (dailyTicks >= 200) {
+          return new Response(JSON.stringify({ error: 'Дневной лимит работы симулятора (200 тиков) исчерпан. Вы сможете продолжить симуляцию завтра.' }), {
+            status: 403,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }

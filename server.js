@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
 import { trackVisit, trackChatQuery } from './tracker.js';
-import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser, bufferUserSolverTicks } from './src/supabase_db.js';
+import { pool, checkLimitAndIncrement, verifyGoogleTokenAndLogin, getUserStatus, logoutSession, simulatePremiumPayment, getUserByToken, incrementUserVisits, incrementUserQuestions, incrementUserTimeSpent, saveChatMessage, getChatHistory, updateUserO2Preference, upsertSessionState, getSessionState, clearCachedUser, bufferUserSolverTicks, getOrResetUserDailyTicks } from './src/supabase_db.js';
 import { initializeDatabase } from './src/db_init.js';
 import { solveFba, getOrCreateSimulation, serializeSimulation, deserializeSimulation, precalculateGuestState, getPrecalculatedGuestState } from './src/fba_solver_core.js';
 
@@ -84,6 +84,12 @@ app.post('/api/solve-fba', async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Please sign in to use the simulator.' });
+    }
+
+    const timeZone = req.headers['x-timezone'] || 'UTC';
+    const dailyTicks = await getOrResetUserDailyTicks(user, timeZone);
+    if (dailyTicks >= 200) {
+      return res.status(403).json({ error: 'Дневной лимит работы симулятора (200 тиков) исчерпан. Вы сможете продолжить симуляцию завтра.' });
     }
 
     const sessionId = req.headers['x-session-id'] || 'default_user';

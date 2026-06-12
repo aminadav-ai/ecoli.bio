@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     solver_ticks INTEGER DEFAULT 0,
     visits INTEGER DEFAULT 0,
     last_visit TIMESTAMP WITH TIME ZONE,
-    questions INTEGER DEFAULT 0
+    questions INTEGER DEFAULT 0,
+    daily_solver_ticks INTEGER DEFAULT 0,
+    last_solver_reset TIMESTAMP WITH TIME ZONE
 );
 
 -- 2. Create user_sessions table
@@ -74,7 +76,8 @@ BEGIN
         SELECT * FROM jsonb_to_recordset(updates) AS (email VARCHAR(255), ticks INTEGER)
     LOOP
         UPDATE users 
-        SET solver_ticks = COALESCE(solver_ticks, 0) + COALESCE(item.ticks, 0)
+        SET solver_ticks = COALESCE(solver_ticks, 0) + COALESCE(item.ticks, 0),
+            daily_solver_ticks = COALESCE(daily_solver_ticks, 0) + COALESCE(item.ticks, 0)
         WHERE email = item.email;
     END LOOP;
 END;
@@ -87,6 +90,9 @@ export async function initializeDatabase(pool) {
   try {
     await client.query('BEGIN');
     await client.query(schemaSql);
+    // Add new columns to users table if they do not exist
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_solver_ticks INTEGER DEFAULT 0');
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_solver_reset TIMESTAMP WITH TIME ZONE');
     // Explicitly drop seconds_spent column if it exists in existing database
     await client.query('ALTER TABLE users DROP COLUMN IF EXISTS seconds_spent');
     await client.query('COMMIT');

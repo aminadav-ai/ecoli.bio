@@ -754,6 +754,18 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
           }
         }
       }
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      if (res.status === 403 && errData.error && (errData.error.includes('лимит') || errData.error.includes('limit') || errData.error.includes('тиков'))) {
+        isPaused = true;
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        if (playPauseBtn) {
+          playPauseBtn.textContent = '▶ Play';
+          playPauseBtn.className = 'btn btn-secondary';
+        }
+        alert(errData.error);
+        await checkAuthStatus();
+      }
     }
   } catch (err) {
     console.error('[App] Failed to solve FBA on server:', err);
@@ -5522,17 +5534,14 @@ function showLockOverlay(mode) {
   } else if (mode === 'limit_guest') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
-    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Sign in to continue, or upgrade your plan.';
+    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Please sign in to continue.';
     if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_user') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
-    if (lockMessage) lockMessage.textContent = 'Daily query limit reached. Upgrade to Premium Basic ($5.00) or Premium Pro ($15.00) to get more queries.';
-    if (btnUpgrade) {
-      btnUpgrade.classList.remove('hidden');
-      btnUpgrade.textContent = 'Upgrade Plan';
-    }
+    if (lockMessage) lockMessage.textContent = 'Daily query limit reached. You can view your limits in your user profile. / Дневной лимит запросов исчерпан. Вы можете посмотреть свои лимиты в профиле.';
+    if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.add('hidden');
   }
 }
@@ -5568,23 +5577,9 @@ function updateUserStatusUI() {
   // 1. Update AI Chat Status Bar (if it exists)
   if (statusBar) {
     if (userProfile) {
-      const isPremium = userProfile.isPremium;
-      if (isPremium) {
-        const tierName = userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic';
-        if (userProfile.premiumTier === 2) {
-          statusBar.innerHTML = `
-            <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
-          `;
-        } else {
-          statusBar.innerHTML = `
-            <span>${tierName}: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
-          `;
-        }
-      } else {
-        statusBar.innerHTML = `
-          <span>Free: ${currentLimit.remaining} / ${currentLimit.max} left today <button id="btn-status-upgrade" class="chat-upgrade-btn">Upgrade</button></span>
-        `;
-      }
+      statusBar.innerHTML = `
+        <span>Queries remaining: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
+      `;
     } else {
       statusBar.innerHTML = `
         <span>Sign in to use the AI Metabolic Assistant</span>
@@ -5596,19 +5591,6 @@ function updateUserStatusUI() {
     if (btnStatusLogin) {
       btnStatusLogin.addEventListener('click', () => {
         openAuthModal();
-      });
-    }
-
-    const btnStatusUpgrade = document.getElementById('btn-status-upgrade');
-    if (btnStatusUpgrade) {
-      btnStatusUpgrade.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!userProfile) {
-          alert('Please sign in with Google first to purchase Premium!');
-          openAuthModal();
-          return;
-        }
-        openMockCheckout();
       });
     }
   }
@@ -5635,12 +5617,8 @@ function updateUserStatusUI() {
           <div class="user-dropdown-info">
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
-            <div class="user-dropdown-tier" style="display: flex; align-items: center; gap: 6px;">
-              <span>${tierText}</span>
-              ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
-            </div>
             <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
-            <div class="user-dropdown-limits">Solver usage: ${userProfile.solverTicks || 0} ticks</div>
+            <div class="user-dropdown-limits">Solver ticks remaining: ${userProfile.remainingSolverTicks !== undefined ? userProfile.remainingSolverTicks : 200} / 200</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -6503,7 +6481,7 @@ async function sendChatMessage(customMessage = null) {
       }
     } else {
       if (res.status === 403) {
-        appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
+        appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
         await checkAuthStatus();
       } else if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
@@ -6595,7 +6573,7 @@ Please evaluate my answer for biological correctness based on the current metabo
       }
     } else {
       if (res.status === 403) {
-        appendModelMessage(`System: Daily query limit reached. Please sign in or upgrade.`);
+        appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
         await checkAuthStatus();
       } else if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);

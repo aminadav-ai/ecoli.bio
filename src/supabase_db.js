@@ -261,6 +261,44 @@ export async function verifyGoogleTokenAndLogin(credential) {
   };
 }
 
+export async function getOrResetUserDailyTicks(user, timeZone) {
+  if (!user) return 0;
+  
+  const now = new Date();
+  const lastResetStr = user.last_solver_reset;
+  
+  let shouldReset = false;
+  if (lastResetStr) {
+    const lastReset = new Date(lastResetStr);
+    const activeTz = timeZone || 'UTC';
+    const resetDateStr = getLocalDateString(lastReset, activeTz);
+    const nowDateStr = getLocalDateString(now, activeTz);
+    if (resetDateStr && nowDateStr) {
+      shouldReset = (resetDateStr !== nowDateStr);
+    } else {
+      const diffHrs = (now - lastReset) / (1000 * 60 * 60);
+      shouldReset = (diffHrs >= 24);
+    }
+  } else {
+    shouldReset = true;
+  }
+  
+  if (shouldReset) {
+    try {
+      await pool.query(
+        'UPDATE users SET daily_solver_ticks = 0, last_solver_reset = $1 WHERE email = $2',
+        [now, user.email]
+      );
+      user.daily_solver_ticks = 0;
+      user.last_solver_reset = now;
+    } catch (err) {
+      console.error('[Postgres DB] Failed to reset daily solver ticks:', err);
+    }
+  }
+  
+  return user.daily_solver_ticks || 0;
+}
+
 // 3. Get session status, user profile & remaining limits
 export async function getUserStatus(token, ip, guestId, timeZone) {
   const user = await getUserByToken(token);
@@ -310,6 +348,8 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
     console.error('[Postgres DB] Failed to get limit count:', err);
   }
 
+  const dailyTicks = user ? await getOrResetUserDailyTicks(user, timeZone) : 0;
+
   return {
     loggedIn: !!user,
     googleClientId: process.env.GOOGLE_CLIENT_ID,
@@ -320,7 +360,9 @@ export async function getUserStatus(token, ip, guestId, timeZone) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      solverTicks: user.solver_ticks || 0
+      solverTicks: user.solver_ticks || 0,
+      dailySolverTicks: dailyTicks,
+      remainingSolverTicks: Math.max(0, 200 - dailyTicks)
     } : null,
     limit: {
       max: limitMax,

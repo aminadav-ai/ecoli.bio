@@ -143,6 +143,43 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
   };
 }
 
+export async function getOrResetUserDailyTicks(db, user, timeZone) {
+  if (!user) return 0;
+  
+  const now = new Date();
+  const lastResetStr = user.last_solver_reset;
+  
+  let shouldReset = false;
+  if (lastResetStr) {
+    const lastReset = new Date(lastResetStr);
+    const activeTz = timeZone || 'UTC';
+    const resetDateStr = getLocalDateString(lastReset, activeTz);
+    const nowDateStr = getLocalDateString(now, activeTz);
+    if (resetDateStr && nowDateStr) {
+      shouldReset = (resetDateStr !== nowDateStr);
+    } else {
+      const diffHrs = (now - lastReset) / (1000 * 60 * 60);
+      shouldReset = (diffHrs >= 24);
+    }
+  } else {
+    shouldReset = true;
+  }
+  
+  if (shouldReset) {
+    try {
+      await db.prepare(
+        'UPDATE users SET daily_solver_ticks = 0, last_solver_reset = ? WHERE email = ?'
+      ).bind(now.toISOString(), user.email).run();
+      user.daily_solver_ticks = 0;
+      user.last_solver_reset = now.toISOString();
+    } catch (err) {
+      console.error('[D1 DB] Failed to reset daily solver ticks:', err);
+    }
+  }
+  
+  return user.daily_solver_ticks || 0;
+}
+
 // 4. Get session status, user profile & remaining limits
 export async function getUserStatus(db, token, ip, guestId, timeZone) {
   const user = await getUserByToken(db, token);
@@ -190,6 +227,8 @@ export async function getUserStatus(db, token, ip, guestId, timeZone) {
     console.error('[D1 DB] Failed to get limit count:', err);
   }
 
+  const dailyTicks = user ? await getOrResetUserDailyTicks(db, user, timeZone) : 0;
+
   return {
     loggedIn: !!user,
     googleClientId: "889111185997-rfd2qv356f0454k3ovtgaao9540em9bc.apps.googleusercontent.com", // Statically configured Google Client ID
@@ -200,7 +239,9 @@ export async function getUserStatus(db, token, ip, guestId, timeZone) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      solverTicks: user.solver_ticks || 0
+      solverTicks: user.solver_ticks || 0,
+      dailySolverTicks: dailyTicks,
+      remainingSolverTicks: Math.max(0, 200 - dailyTicks)
     } : null,
     limit: {
       max: limitMax,
@@ -305,8 +346,8 @@ export async function bulkIncrementUserStats(db, updates) {
   if (!updates || updates.length === 0) return;
   try {
     const statements = updates.map(item => 
-      db.prepare('UPDATE users SET solver_ticks = solver_ticks + ? WHERE email = ?')
-        .bind(item.ticks, item.email)
+      db.prepare('UPDATE users SET solver_ticks = solver_ticks + ?, daily_solver_ticks = daily_solver_ticks + ? WHERE email = ?')
+        .bind(item.ticks, item.ticks, item.email)
     );
     await db.batch(statements);
   } catch (err) {
