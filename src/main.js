@@ -6710,6 +6710,7 @@ function makeElementsClickable(container) {
             renderer.selectReaction(info.rxn.id);
             renderer.focusOnCoordinates(info.rxn.labelX, info.rxn.labelY, 0.85);
           }
+          closeAllOtherPanels(null);
         });
 
         fragment.appendChild(span);
