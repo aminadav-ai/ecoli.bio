@@ -204,7 +204,7 @@ app.post('/api/chat', async (req, res) => {
     // Save user's question to Supabase history
     await saveChatMessage(identifier, 'user', message, context);
 
-    const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the E. coli Metabolic Live Atlas.
+    const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the ecoli.bio portal (E. coli Central Metabolism Lab).
 Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
 
 IMPORTANT: Respond in the same language as the user's query (usually Russian or English). Keep your answer concise, scientifically accurate, and encouraging.
