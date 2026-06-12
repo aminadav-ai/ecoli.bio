@@ -267,6 +267,36 @@ let activeRepressions = {};
 let selectedMetaboliteId = null;
 let selectedReactionId = null;
 
+// Mobile back button state
+let isHistoryPushed = false;
+
+function pushHistoryStateIfNeeded() {
+  if (!isHistoryPushed) {
+    history.pushState({ panelOpen: true }, '');
+    isHistoryPushed = true;
+  }
+}
+
+function popHistoryStateIfNeeded() {
+  if (isHistoryPushed) {
+    isHistoryPushed = false;
+    history.back();
+  }
+}
+
+function closeAllOverlays() {
+  closeAllOtherPanels(null);
+  closeAuthModal();
+  const geoModal = document.getElementById('geo-modal-overlay');
+  if (geoModal) {
+    geoModal.classList.add('hidden');
+  }
+  const paymentModal = document.getElementById('mock-payment-modal');
+  if (paymentModal) {
+    paymentModal.remove();
+  }
+}
+
 // Pinned Reactions state
 let pinnedReactions = [];
 try {
@@ -814,6 +844,16 @@ function gameLoop(currentTime) {
  * Configures event listeners for left panel controls and right panel details.
  */
 function setupUIListeners() {
+  if (history.state && history.state.panelOpen) {
+    history.replaceState(null, '');
+  }
+  window.addEventListener('popstate', () => {
+    if (isHistoryPushed) {
+      isHistoryPushed = false;
+      closeAllOverlays();
+    }
+  });
+
   const canvasElement = document.getElementById('pixi-canvas');
   // Play/Pause button
   const playPauseBtn = document.getElementById('play-pause-btn');
@@ -2215,6 +2255,12 @@ function closeChatDrawer() {
  * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search', 'left-panel', 'mobile-drawer'.
  */
 function closeAllOtherPanels(except) {
+  if (except !== null) {
+    pushHistoryStateIfNeeded();
+  } else {
+    popHistoryStateIfNeeded();
+  }
+
   // 1. AI Chat Drawer
   if (except !== 'chat') {
     closeChatDrawer();
@@ -3618,12 +3664,14 @@ function setupGeoSearch() {
   // Close modal button
   geoModalCloseBtn.addEventListener('click', () => {
     geoModal.classList.add('hidden');
+    popHistoryStateIfNeeded();
   });
 
   // Close modal on click outside content
   geoModal.addEventListener('click', (e) => {
     if (e.target === geoModal) {
       geoModal.classList.add('hidden');
+      popHistoryStateIfNeeded();
     }
   });
 
@@ -3769,6 +3817,7 @@ async function performGeoSearch(query, page) {
 
   // Open modal and set active query details
   geoModal.classList.remove('hidden');
+  pushHistoryStateIfNeeded();
   geoCurrentQuery = query;
   geoCurrentPage = page;
 
@@ -3846,6 +3895,7 @@ async function performGeoSearch(query, page) {
           e.stopPropagation();
           selectGeoDataset(item);
           geoModal.classList.add('hidden');
+          popHistoryStateIfNeeded();
         });
       }
 
@@ -5428,6 +5478,7 @@ function openAuthModal() {
   if (authModal) {
     authModal.classList.remove('hidden');
     renderGoogleButton();
+    pushHistoryStateIfNeeded();
   }
 }
 
@@ -5445,6 +5496,7 @@ function closeAuthModal() {
   }
   pendingChatCursorStart = null;
   pendingChatCursorEnd = null;
+  popHistoryStateIfNeeded();
 }
 
 function showLockOverlay(mode) {
@@ -5687,6 +5739,7 @@ function updateUserStatusUI() {
 
 function openMockCheckout() {
   closeAllOtherPanels(null);
+  pushHistoryStateIfNeeded();
   const overlay = document.createElement('div');
   overlay.className = 'mock-payment-overlay';
   overlay.id = 'mock-payment-modal';
@@ -5694,7 +5747,7 @@ function openMockCheckout() {
   if (userProfile && userProfile.isPremium && userProfile.premiumTier === 2) {
     overlay.innerHTML = `
       <div class="payment-card glass" style="text-align: center; max-width: 400px; padding: 32px 24px;">
-        <button class="btn-close-payment" id="btn-close-payment">✕</button>
+         <button class="btn-close-payment" id="btn-close-payment">✕</button>
         <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
         <h3 style="margin-bottom: 8px;">Active Premium Pro</h3>
         <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px 0;">You are currently subscribed to the highest tier access plan. Auto-renewal is ${userProfile.autoRenew ? 'enabled' : 'disabled'}. Thank you for your support!</p>
@@ -5702,8 +5755,8 @@ function openMockCheckout() {
       </div>
     `;
     document.body.appendChild(overlay);
-    document.getElementById('btn-close-payment').addEventListener('click', () => overlay.remove());
-    document.getElementById('btn-close-payment-ok').addEventListener('click', () => overlay.remove());
+    document.getElementById('btn-close-payment').addEventListener('click', () => { overlay.remove(); popHistoryStateIfNeeded(); });
+    document.getElementById('btn-close-payment-ok').addEventListener('click', () => { overlay.remove(); popHistoryStateIfNeeded(); });
     return;
   }
 
@@ -5792,6 +5845,7 @@ function openMockCheckout() {
   
   document.getElementById('btn-close-payment').addEventListener('click', () => {
     overlay.remove();
+    popHistoryStateIfNeeded();
   });
   
   btnConfirm.addEventListener('click', async () => {
@@ -5817,6 +5871,7 @@ function openMockCheckout() {
         setTimeout(() => {
           overlay.remove();
           checkAuthStatus();
+          popHistoryStateIfNeeded();
         }, 1500);
       } else {
         alert('Payment failed. Please try again.');
