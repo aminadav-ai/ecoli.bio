@@ -2064,7 +2064,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pin-btn.pinned {
   color: #f97316;
   background: rgba(249, 115, 22, 0.1);
-  fill: rgba(249, 115, 22, 0.2);
+}
+
+.pin-btn.pinned svg {
+  fill: rgba(249, 115, 22, 0.3) !important;
+}
+
+.pin-btn svg {
+  pointer-events: none;
 }
 
 .pinned-reactions-section {
@@ -2732,6 +2739,38 @@ input[type="range"]::-webkit-slider-thumb:hover {
     left: 0 !important;
     border-radius: 0 !important;
     z-index: 1006 !important;
+  }
+
+  /* Increase touch targets for pin buttons on mobile */
+  .pin-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .pin-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+    pointer-events: none !important;
+  }
+
+  .btn-focus-pinned,
+  .btn-unpin-pinned,
+  .btn-copy-pinned {
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 8px !important;
+    font-size: 16px !important;
+  }
+  
+  .btn-focus-pinned svg,
+  .btn-copy-pinned svg {
+    width: 16px !important;
+    height: 16px !important;
+    pointer-events: none !important;
   }
 }
 

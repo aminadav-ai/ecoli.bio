@@ -1397,20 +1397,29 @@ function setupUIListeners() {
   const pinBtn = document.getElementById('pin-rxn-btn');
   if (pinBtn) {
     pinBtn.addEventListener('click', () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       
-      const idx = pinnedReactions.indexOf(selectedReactionId);
+      const idx = pinnedReactions.indexOf(rxnId);
       if (idx > -1) {
         pinnedReactions.splice(idx, 1);
         pinBtn.classList.remove('pinned');
         pinBtn.title = 'Pin reaction to sidebar';
       } else {
-        pinnedReactions.push(selectedReactionId);
+        pinnedReactions.push(rxnId);
         pinBtn.classList.add('pinned');
         pinBtn.title = 'Unpin reaction';
       }
       
-      localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+      try {
+        localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+      } catch (err) {
+        console.warn('[App] Failed to save pinnedReactions to localStorage:', err);
+      }
       renderPinnedReactions();
     });
   }
@@ -2463,7 +2472,11 @@ function renderPinnedReactions() {
       const idx = pinnedReactions.indexOf(id);
       if (idx > -1) {
         pinnedReactions.splice(idx, 1);
-        localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+        try {
+          localStorage.setItem('pinnedReactions', JSON.stringify(pinnedReactions));
+        } catch (err) {
+          console.warn('[App] Failed to save pinnedReactions to localStorage:', err);
+        }
         renderPinnedReactions();
         
         if (selectedReactionId === id) {
