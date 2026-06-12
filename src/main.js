@@ -5540,7 +5540,7 @@ function showLockOverlay(mode) {
   } else if (mode === 'limit_user') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
-    if (lockMessage) lockMessage.textContent = 'Daily query limit reached. You can view your limits in your user profile. / Дневной лимит запросов исчерпан. Вы можете посмотреть свои лимиты в профиле.';
+    if (lockMessage) lockMessage.textContent = 'Daily query limit reached. You can view your limits in your user profile.';
     if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.add('hidden');
   }
@@ -5578,7 +5578,7 @@ function updateUserStatusUI() {
   if (statusBar) {
     if (userProfile) {
       statusBar.innerHTML = `
-        <span>Queries remaining: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
+        <span>AI chat: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
       `;
     } else {
       statusBar.innerHTML = `
@@ -5617,8 +5617,8 @@ function updateUserStatusUI() {
           <div class="user-dropdown-info">
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
-            <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
-            <div class="user-dropdown-limits">Solver ticks remaining: ${userProfile.remainingSolverTicks !== undefined ? userProfile.remainingSolverTicks : 200} / 200</div>
+            <div class="user-dropdown-limits">AI chat: ${currentLimit.remaining} / ${currentLimit.max}</div>
+            <div class="user-dropdown-limits">Solver: ${userProfile.remainingSolverTicks !== undefined ? userProfile.remainingSolverTicks : 200} / 200</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
