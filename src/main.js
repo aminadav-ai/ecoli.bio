@@ -5254,13 +5254,17 @@ function updateUserStatusUI() {
       const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
       const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
       
+      const existingDropdown = document.getElementById('user-profile-dropdown');
+      const isDropdownHidden = existingDropdown ? existingDropdown.classList.contains('hidden') : true;
+      const chevronTransform = isDropdownHidden ? '' : 'style="transform: rotate(180deg);"';
+      
       headerProfileContainer.innerHTML = `
         <div class="user-badge" id="user-profile-badge">
           <div class="user-avatar">${initial}</div>
           <span class="user-name">${userProfile.name}</span>
-          <span class="chevron-icon">▼</span>
+          <span class="chevron-icon" ${chevronTransform}>▼</span>
         </div>
-        <div id="user-profile-dropdown" class="user-dropdown glass hidden">
+        <div id="user-profile-dropdown" class="user-dropdown glass ${isDropdownHidden ? 'hidden' : ''}">
           <div class="user-dropdown-info">
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
@@ -5269,6 +5273,7 @@ function updateUserStatusUI() {
               ${showUpgrade ? `<button id="dropdown-upgrade-btn" class="chat-upgrade-btn">Upgrade</button>` : ''}
             </div>
             <div class="user-dropdown-limits">Queries remaining: ${currentLimit.remaining} / ${currentLimit.max}</div>
+            <div class="user-dropdown-limits">Solver usage: ${userProfile.solverTicks || 0} ticks</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
@@ -5328,20 +5333,6 @@ function updateUserStatusUI() {
   } else {
     if (lockOverlay) lockOverlay.classList.add('hidden');
     if (inputContainer) inputContainer.classList.remove('hidden');
-  }
-
-  // 3. Update Solver Stats Panel (Usage)
-  const statsPanel = document.getElementById('solver-stats-panel');
-  if (statsPanel) {
-    if (userProfile) {
-      statsPanel.classList.remove('hidden');
-      const usageSpan = document.getElementById('sidebar-solver-usage');
-      if (usageSpan) {
-        usageSpan.textContent = `${userProfile.solverTicks || 0} ticks`;
-      }
-    } else {
-      statsPanel.classList.add('hidden');
-    }
   }
 
   // Hide solver status badge for guests
