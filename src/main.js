@@ -1168,9 +1168,14 @@ function setupUIListeners() {
       </svg>
     `;
     copyVmaxBtn.addEventListener('click', async () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       const vmaxTextVal = document.getElementById('vmax-val').textContent;
-      const textToCopy = `${selectedReactionId} Vmax = ${vmaxTextVal}`;
+      const textToCopy = `${rxnId} Vmax = ${vmaxTextVal}`;
       
       let success = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1221,9 +1226,14 @@ function setupUIListeners() {
       </svg>
     `;
     copyKmBtn.addEventListener('click', async () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       const kmTextVal = document.getElementById('km-val').textContent;
-      const textToCopy = `${selectedReactionId} Km = ${kmTextVal}`;
+      const textToCopy = `${rxnId} Km = ${kmTextVal}`;
       
       let success = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1274,9 +1284,14 @@ function setupUIListeners() {
       </svg>
     `;
     copyFluxBtn.addEventListener('click', async () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       const fluxTextVal = document.getElementById('rxn-flux-val').textContent;
-      const textToCopy = `${selectedReactionId} Flux = ${fluxTextVal}`;
+      const textToCopy = `${rxnId} Flux = ${fluxTextVal}`;
       
       let success = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1357,9 +1372,14 @@ function setupUIListeners() {
   const copyEquationBtn = document.getElementById('copy-equation-btn');
   if (copyEquationBtn) {
     copyEquationBtn.addEventListener('click', () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       const eqText = document.getElementById('rxn-equation').textContent;
-      handleCopyClick(copyEquationBtn, `${selectedReactionId}: ${eqText}`);
+      handleCopyClick(copyEquationBtn, `${rxnId}: ${eqText}`);
     });
   }
 
@@ -1367,7 +1387,12 @@ function setupUIListeners() {
   const copyRxnNameBtn = document.getElementById('copy-rxn-name-btn');
   if (copyRxnNameBtn) {
     copyRxnNameBtn.addEventListener('click', () => {
-      if (!selectedReactionId) return;
+      let rxnId = selectedReactionId;
+      if (!rxnId) {
+        const idSpan = document.getElementById('rxn-bigg-id');
+        if (idSpan) rxnId = idSpan.textContent.trim();
+      }
+      if (!rxnId) return;
       const nameText = document.getElementById('rxn-name').textContent;
       handleCopyClick(copyRxnNameBtn, nameText);
     });
@@ -1377,7 +1402,12 @@ function setupUIListeners() {
   const copyMetabNameBtn = document.getElementById('copy-metab-name-btn');
   if (copyMetabNameBtn) {
     copyMetabNameBtn.addEventListener('click', () => {
-      if (!selectedMetaboliteId) return;
+      let metabId = selectedMetaboliteId;
+      if (!metabId) {
+        const idSpan = document.getElementById('metab-bigg-id');
+        if (idSpan) metabId = idSpan.textContent.trim();
+      }
+      if (!metabId) return;
       const nameText = document.getElementById('metab-name').textContent;
       handleCopyClick(copyMetabNameBtn, nameText);
     });
@@ -1387,9 +1417,14 @@ function setupUIListeners() {
   const copyMetabConcBtn = document.getElementById('copy-metab-conc-btn');
   if (copyMetabConcBtn) {
     copyMetabConcBtn.addEventListener('click', () => {
-      if (!selectedMetaboliteId) return;
+      let metabId = selectedMetaboliteId;
+      if (!metabId) {
+        const idSpan = document.getElementById('metab-bigg-id');
+        if (idSpan) metabId = idSpan.textContent.trim();
+      }
+      if (!metabId) return;
       const concText = document.getElementById('metab-conc-val').textContent;
-      handleCopyClick(copyMetabConcBtn, `${selectedMetaboliteId} Concentration = ${concText} mM`);
+      handleCopyClick(copyMetabConcBtn, `${metabId} Concentration = ${concText} mM`);
     });
   }
 
