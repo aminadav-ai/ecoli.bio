@@ -6705,11 +6705,9 @@ function makeElementsClickable(container) {
         span.addEventListener('click', () => {
           if (info.type === 'metabolite') {
             renderer.selectMetabolite(info.node.id);
-            handleMetaboliteSelect(info.node);
             renderer.focusOnCoordinates(info.node.x, info.node.y, 0.85);
           } else {
             renderer.selectReaction(info.rxn.id);
-            handleReactionSelect(info.rxn);
             renderer.focusOnCoordinates(info.rxn.labelX, info.rxn.labelY, 0.85);
           }
         });
