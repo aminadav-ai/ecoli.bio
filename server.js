@@ -379,8 +379,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets from 'dist' folder
-app.use(express.static(path.resolve('dist')));
+// Serve static assets from 'dist' folder with optimized caching
+app.use(express.static(path.resolve('dist'), {
+  maxAge: '1d', // Default to 1 day caching for static files
+  setHeaders: (res, filePath) => {
+    if (filePath.includes('/assets/')) {
+      // Vite hashed assets are immutable and cached forever
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('.html')) {
+      // HTML entrypoints: must revalidate to check for updates
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  }
+}));
 
 // SPA Fallback: serve index.html for all non-api routes
 app.get('*any', (req, res, next) => {

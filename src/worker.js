@@ -630,7 +630,28 @@ export default {
 
     // Serve static assets if not an API route
     if (!url.pathname.startsWith('/api/')) {
-      return await env.ASSETS.fetch(request);
+      const response = await env.ASSETS.fetch(request);
+      if (response.status === 200) {
+        const newResponse = new Response(response.body, response);
+        if (url.pathname.startsWith('/assets/')) {
+          // Vite hashed assets are immutable and can be cached forever
+          newResponse.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (
+          url.pathname.endsWith('.json') ||
+          url.pathname.endsWith('.txt') ||
+          url.pathname.endsWith('.svg') ||
+          url.pathname.endsWith('.png') ||
+          url.pathname.endsWith('.ico')
+        ) {
+          // Large static assets like metabolic maps, solver states, text and images
+          newResponse.headers.set('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        } else {
+          // HTML pages: must revalidate to check for application updates
+          newResponse.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+        return newResponse;
+      }
+      return response;
     }
 
     // CORS Headers for API
