@@ -2278,7 +2278,7 @@ function closeAllOtherPanels(except) {
         mobileMenuBtn.classList.add('open');
       }
     }
-  } else if (except !== 'experiments') {
+  } else if (except !== 'experiments' && except !== 'profile') {
     const mobileDrawer = document.getElementById('mobile-drawer');
     if (mobileDrawer) mobileDrawer.classList.remove('active');
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
