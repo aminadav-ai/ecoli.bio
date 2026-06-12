@@ -89,7 +89,7 @@ app.post('/api/solve-fba', async (req, res) => {
     const timeZone = req.headers['x-timezone'] || 'UTC';
     const dailyTicks = await getOrResetUserDailyTicks(user, timeZone);
     if (dailyTicks >= 200) {
-      return res.status(403).json({ error: 'Дневной лимит работы симулятора (200 тиков) исчерпан. Вы сможете продолжить симуляцию завтра.' });
+      return res.status(403).json({ error: 'Daily simulator limit (200 ticks) reached. You can continue the simulation tomorrow.' });
     }
 
     const sessionId = req.headers['x-session-id'] || 'default_user';

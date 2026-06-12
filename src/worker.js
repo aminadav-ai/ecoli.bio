@@ -705,7 +705,7 @@ export default {
         const timeZone = request.headers.get('x-timezone') || 'UTC';
         const dailyTicks = await getOrResetUserDailyTicks(env.DB, user, timeZone);
         if (dailyTicks >= 200) {
-          return new Response(JSON.stringify({ error: 'Дневной лимит работы симулятора (200 тиков) исчерпан. Вы сможете продолжить симуляцию завтра.' }), {
+          return new Response(JSON.stringify({ error: 'Daily simulator limit (200 ticks) reached. You can continue the simulation tomorrow.' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
