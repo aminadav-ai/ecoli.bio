@@ -3265,6 +3265,16 @@ function setupSearch() {
     }
   });
 
+  // Re-open search results on focus or click if search input is not empty
+  const showResultsIfNotEmpty = (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    if (query.length > 0) {
+      performSearch(query);
+    }
+  };
+  searchInput.addEventListener('focus', showResultsIfNotEmpty);
+  searchInput.addEventListener('click', showResultsIfNotEmpty);
+
   // Clear search on button click
   searchClearBtn.addEventListener('click', () => {
     searchInput.value = '';
