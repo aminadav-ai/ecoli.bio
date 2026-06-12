@@ -1064,7 +1064,7 @@ function setupUIListeners() {
   // Close inspector panels
   document.querySelectorAll('.close-inspector-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      hideInspector();
+      closeAllOtherPanels(null);
       renderer.clearSelection();
     });
   });
