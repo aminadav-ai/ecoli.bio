@@ -2049,7 +2049,7 @@ function closeChatDrawer() {
 
 /**
  * Closes all panel elements except the specified one to prevent visual overlap.
- * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver'.
+ * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search'.
  */
 function closeAllOtherPanels(except) {
   // 1. AI Chat Drawer
@@ -2092,6 +2092,10 @@ function closeAllOtherPanels(except) {
     if (settingsDropdown) {
       settingsDropdown.classList.add('hidden');
     }
+  }
+  // 7. Map Search Suggestions Dropdown
+  if (except !== 'search') {
+    hideSearchResults();
   }
 }
 
@@ -3770,6 +3774,7 @@ function performSearch(query) {
   }
 
   resultsDropdown.classList.remove('hidden');
+  closeAllOtherPanels('search');
 }
 
 /**
