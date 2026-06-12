@@ -2008,7 +2008,7 @@ function isMetaboliteTransportable(biggId) {
  */
 function handleMetaboliteSelect(node) {
   if (!node) {
-    hideInspector();
+    closeAllOtherPanels(null);
     return;
   }
   closeAllOtherPanels('inspector');
