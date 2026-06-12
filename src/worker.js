@@ -628,9 +628,17 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Redirect www.ecoli.bio to ecoli.bio to ensure unified Google Sign-In origin and SEO consistency
+    // 1. Force HTTPS (except for localhost/127.0.0.1)
+    const proto = request.headers.get('x-forwarded-proto') || url.protocol.slice(0, -1);
+    if (proto === 'http' && !url.hostname.includes('localhost') && !url.hostname.includes('127.0.0.1')) {
+      url.protocol = 'https:';
+      return Response.redirect(url.toString(), 301);
+    }
+
+    // 2. Redirect www.ecoli.bio to ecoli.bio to ensure unified Google Sign-In origin and SEO consistency
     if (url.hostname === 'www.ecoli.bio') {
       url.hostname = 'ecoli.bio';
+      url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
 
