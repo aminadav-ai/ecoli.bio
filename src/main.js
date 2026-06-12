@@ -5533,8 +5533,8 @@ function showLockOverlay(mode) {
     if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_guest') {
     if (lockIcon) lockIcon.textContent = '🔒';
-    if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
-    if (lockMessage) lockMessage.textContent = 'Guests are limited to 2 queries per day. Please sign in to continue.';
+    if (lockTitle) lockTitle.textContent = 'Sign In to Use Chat';
+    if (lockMessage) lockMessage.textContent = 'The AI Metabolic Assistant is available only to registered users. Please sign in to continue.';
     if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_user') {
