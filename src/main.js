@@ -1867,7 +1867,8 @@ function setupUIListeners() {
   }
   
   if (navChat && chatDrawer) {
-    navChat.addEventListener('click', () => {
+    navChat.addEventListener('click', (e) => {
+      e.stopPropagation();
       const isChatOpen = !chatDrawer.classList.contains('hidden');
       if (isChatOpen) {
         closeAllOtherPanels(null);
@@ -5981,13 +5982,17 @@ function setupScenariosAndChat() {
   }
 
   // Global click outside closes chat
-  document.addEventListener('click', () => {
+  document.addEventListener('click', (e) => {
     if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
-      const chatMessages = document.getElementById('ai-chat-messages');
-      if (chatMessages) {
-        lastChatScrollTop = chatMessages.scrollTop;
+      if (!chatDrawer.contains(e.target) && 
+          (!chatTrigger || !chatTrigger.contains(e.target)) && 
+          (!navChat || !navChat.contains(e.target))) {
+        const chatMessages = document.getElementById('ai-chat-messages');
+        if (chatMessages) {
+          lastChatScrollTop = chatMessages.scrollTop;
+        }
+        chatDrawer.classList.add('hidden');
       }
-      chatDrawer.classList.add('hidden');
     }
   });
 
