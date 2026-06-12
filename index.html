@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ecoli.bio | Central Metabolism Live Atlas</title>
+    <script>
+      if (window.location.hostname === 'www.ecoli.bio') {
+        window.location.replace('https://ecoli.bio' + window.location.pathname + window.location.search);
+      }
+    </script>
+    <title>ecoli.bio | Central Metabolism Lab</title>
     
     <!-- Preload Large Metabolic Map JSON Asset -->
     <link rel="preload" href="/iJO1366.Central metabolism.json" as="fetch" crossorigin />

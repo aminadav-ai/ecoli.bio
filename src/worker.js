@@ -628,6 +628,12 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Redirect www.ecoli.bio to ecoli.bio to ensure unified Google Sign-In origin and SEO consistency
+    if (url.hostname === 'www.ecoli.bio') {
+      url.hostname = 'ecoli.bio';
+      return Response.redirect(url.toString(), 301);
+    }
+
     // Serve static assets if not an API route
     if (!url.pathname.startsWith('/api/')) {
       const response = await env.ASSETS.fetch(request);
