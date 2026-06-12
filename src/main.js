@@ -2269,16 +2269,20 @@ function closeAllOtherPanels(except) {
   }
 
   // 5. Mobile Hamburger Drawer
-  if (except !== 'mobile-drawer') {
+  if (except === 'mobile-drawer') {
+    const mobileDrawer = document.getElementById('mobile-drawer');
+    if (mobileDrawer) mobileDrawer.classList.add('active');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn) {
+      if (!mobileMenuBtn.classList.contains('open')) {
+        mobileMenuBtn.classList.add('open');
+      }
+    }
+  } else if (except !== 'experiments') {
     const mobileDrawer = document.getElementById('mobile-drawer');
     if (mobileDrawer) mobileDrawer.classList.remove('active');
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     if (mobileMenuBtn) mobileMenuBtn.classList.remove('open');
-  } else {
-    const mobileDrawer = document.getElementById('mobile-drawer');
-    if (mobileDrawer) mobileDrawer.classList.add('active');
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    if (mobileMenuBtn) mobileMenuBtn.classList.open ? null : mobileMenuBtn.classList.add('open');
   }
 
   // 6. Experiments List
