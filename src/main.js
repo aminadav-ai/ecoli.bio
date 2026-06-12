@@ -1008,7 +1008,7 @@ function setupUIListeners() {
   const opacitySlider = document.getElementById('opacity-slider');
   const opacityVal = document.getElementById('opacity-val');
   if (opacitySlider && opacityVal) {
-    const currentOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-opacity').trim()) || 0.9;
+    const currentOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-opacity').trim()) || 1.0;
     opacitySlider.value = Math.round(currentOpacity * 100);
     opacityVal.textContent = `${Math.round(currentOpacity * 100)}%`;
 
