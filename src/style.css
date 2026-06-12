@@ -2636,13 +2636,21 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   /* Custom dropdown and settings style fixes inside Mobile Drawer */
+  .mobile-drawer-content .experiments-container {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
   .mobile-drawer-content .custom-select-wrapper {
     width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .mobile-drawer-content .custom-select-trigger {
     width: 100%;
     max-width: none;
+    min-width: 0 !important;
     background: rgba(255, 255, 255, 0.03);
   }
 
