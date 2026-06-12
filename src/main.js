@@ -756,7 +756,7 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       }
     } else {
       const errData = await res.json().catch(() => ({}));
-      if (res.status === 403 && errData.error && (errData.error.includes('лимит') || errData.error.includes('limit') || errData.error.includes('тиков'))) {
+      if (res.status === 403 && errData.error && (errData.error.toLowerCase().includes('limit') || errData.error.toLowerCase().includes('tick'))) {
         isPaused = true;
         const playPauseBtn = document.getElementById('play-pause-btn');
         if (playPauseBtn) {
