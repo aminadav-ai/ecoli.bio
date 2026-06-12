@@ -801,21 +801,28 @@ export class PixiRenderer {
     const mapCenterY = (minY + maxY) / 2;
 
     if (startupAnimation && smooth) {
-      let targetX = mapCenterX;
-      let targetY = mapCenterY;
+      const isMobile = window.innerWidth <= 768;
+      let targetX, targetY;
 
-      // Find the MDH reaction badge coordinate
-      const mdhRxn = this.reactions.find(r => r.biggId === 'MDH');
-      if (mdhRxn && mdhRxn.labelX && mdhRxn.labelY) {
-        targetX = mdhRxn.labelX;
-        targetY = mdhRxn.labelY;
+      if (isMobile) {
+        // Mobile view: focus on GLCptspp (1236.28) -> PDH (2025.86) in X, PGM (3420.73) -> PFL (4470.73) in Y
+        targetX = 1631.07;
+        targetY = 3945.73;
+        
+        // Fit width of ~920 units on mobile
+        this.targetZoom = window.innerWidth / 920;
+      } else {
+        // Desktop view: focus on GLCptspp (1236.28) -> MDH (3019.15) in X, PGM (3420.73) -> PFL (4470.73) in Y
+        targetX = 2127.71;
+        targetY = 3945.73;
+        
+        // Left sidebar is 420px. Fit width of ~2100 units in the remaining usable area
+        const usableWidth = Math.max(600, window.innerWidth - 420);
+        this.targetZoom = usableWidth / 2100;
       }
 
-      // End zoom level should be zoomed in (closer)
-      // clampedFitZoom is the scale to fit the whole map (e.g. ~0.3).
-      // We zoom in by a factor of 3.3 (so zoom target is e.g. ~1.0).
-      // We clamp it to a maximum of 1.8 to avoid zooming in too far on huge screens.
-      this.targetZoom = Math.max(0.15, Math.min(1.8, clampedFitZoom * 3.3));
+      // Clamp targetZoom to a reasonable minimum and maximum
+      this.targetZoom = Math.max(0.15, Math.min(1.5, this.targetZoom));
       
       const usableCenterX = this.getUsableCenterX();
       this.targetPosition.x = usableCenterX - targetX * this.targetZoom;
