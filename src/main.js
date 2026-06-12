@@ -5652,7 +5652,7 @@ function openMockCheckout() {
   overlay.innerHTML = `
     <div class="payment-card glass">
       <button class="btn-close-payment" id="btn-close-payment">✕</button>
-      <h3>⚡ CellFlux Premium Access</h3>
+      <h3>⚡ ecoli.bio Premium Access</h3>
       <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">Upgrade AI Chat & Scenarios</p>
       
       <div class="plan-selector">
