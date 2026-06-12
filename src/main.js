@@ -5894,11 +5894,33 @@ function setupScenariosAndChat() {
     }
   }
 
-  // Scroll listener to update lastChatScrollTop
+  // Scroll listener to update lastChatScrollTop and manage scroll-to-bottom button
   const chatMessagesEl = document.getElementById('ai-chat-messages');
+  const scrollBottomBtn = document.getElementById('ai-chat-scroll-bottom');
   if (chatMessagesEl) {
     chatMessagesEl.addEventListener('scroll', () => {
       lastChatScrollTop = chatMessagesEl.scrollTop;
+      
+      if (scrollBottomBtn) {
+        const threshold = 150;
+        const isFarUp = chatMessagesEl.scrollTop < chatMessagesEl.scrollHeight - chatMessagesEl.clientHeight - threshold;
+        if (isFarUp) {
+          scrollBottomBtn.classList.remove('hidden');
+        } else {
+          scrollBottomBtn.classList.add('hidden');
+          scrollBottomBtn.classList.remove('new-message'); // Clear badge when scrolled to bottom
+        }
+      }
+    });
+  }
+
+  // Click listener for scroll-to-bottom button
+  if (scrollBottomBtn && chatMessagesEl) {
+    scrollBottomBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chatMessagesEl.scrollTo({ top: chatMessagesEl.scrollHeight, behavior: 'smooth' });
+      scrollBottomBtn.classList.add('hidden');
+      scrollBottomBtn.classList.remove('new-message');
     });
   }
 
@@ -6665,8 +6687,21 @@ function appendModelMessage(text) {
   // Add copy button (copies the raw unparsed markdown response)
   addCopyButton(div, text);
   
+  // Check if user is currently scrolled up before appending the message
+  const threshold = 150;
+  const isFarUp = chatMessages.scrollTop < chatMessages.scrollHeight - chatMessages.clientHeight - threshold;
+  
   chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  if (isFarUp) {
+    const scrollBottomBtn = document.getElementById('ai-chat-scroll-bottom');
+    if (scrollBottomBtn) {
+      scrollBottomBtn.classList.remove('hidden');
+      scrollBottomBtn.classList.add('new-message');
+    }
+  } else {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 }
 
 

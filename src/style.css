@@ -3124,6 +3124,63 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-align: left;
 }
 
+/* Scroll to bottom button */
+.chat-scroll-bottom {
+  position: absolute;
+  bottom: 70px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4), 0 0 10px rgba(99, 102, 241, 0.2);
+  transition: all 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+  opacity: 1;
+  transform: scale(1);
+  outline: none;
+}
+
+.chat-scroll-bottom:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5), 0 0 15px rgba(99, 102, 241, 0.3);
+}
+
+.chat-scroll-bottom:active {
+  transform: scale(0.95);
+}
+
+.chat-scroll-bottom.hidden {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  display: flex !important;
+}
+
+.chat-scroll-bottom .scroll-arrow {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.chat-scroll-bottom.new-message::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #1e1b4b;
+  box-shadow: 0 0 6px #ef4444;
+}
+
 /* Floating Chat Actions */
 .chat-floating-actions {
   position: absolute;
