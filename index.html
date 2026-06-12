@@ -65,20 +65,22 @@
 
         <div class="header-actions">
           <!-- Experiments Dropdown/Control -->
-          <div id="experiments-container" class="experiments-container hidden">
-            <select id="experiment-select" class="experiment-select-dropdown" title="Select saved experiment" style="display: none;">
-              <!-- Options loaded dynamically -->
-            </select>
-            <div class="custom-select-wrapper" id="custom-experiment-select-wrapper">
-              <div class="custom-select-trigger" id="custom-experiment-select-trigger">
-                <span class="custom-select-text" id="custom-experiment-selected-text">Experiment</span>
-                <span class="custom-select-arrow">▼</span>
+          <div id="experiments-desktop-parent">
+            <div id="experiments-container" class="experiments-container hidden">
+              <select id="experiment-select" class="experiment-select-dropdown" title="Select saved experiment" style="display: none;">
+                <!-- Options loaded dynamically -->
+              </select>
+              <div class="custom-select-wrapper" id="custom-experiment-select-wrapper">
+                <div class="custom-select-trigger" id="custom-experiment-select-trigger">
+                  <span class="custom-select-text" id="custom-experiment-selected-text">Experiment</span>
+                  <span class="custom-select-arrow">▼</span>
+                </div>
+                <div class="custom-select-options glass hidden" id="custom-experiment-options">
+                  <!-- List items loaded dynamically -->
+                </div>
               </div>
-              <div class="custom-select-options glass hidden" id="custom-experiment-options">
-                <!-- List items loaded dynamically -->
-              </div>
+              <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
             </div>
-            <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
           </div>
 
           <!-- Solver Status Panel -->
@@ -133,33 +135,44 @@
                 <h3>Map Settings</h3>
                 <button id="settings-close-btn" class="close-dropdown-btn">✕</button>
               </div>
-              <div class="settings-body">
-                <div class="slider-group">
-                  <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
-                  <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
-                </div>
-                <div class="slider-group">
-                  <label for="opacity-slider">Panel Opacity: <span id="opacity-val">100%</span></label>
-                  <input type="range" id="opacity-slider" min="10" max="100" step="5" value="100" />
-                </div>
-                <div class="form-group">
-                  <label for="namespace-select">Metabolite Namespace</label>
-                  <select id="namespace-select" class="select-dropdown">
-                    <option value="common">Common Name</option>
-                    <option value="ecocyc">EcoCyc ID</option>
-                    <option value="bigg" selected>BiGG ID</option>
-                    <option value="kegg">KEGG ID</option>
-                    <option value="chebi">ChEBI ID</option>
-                    <option value="hmdb">HMDB ID</option>
-                  </select>
-                  <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
+              <div id="settings-desktop-parent">
+                <div class="settings-body">
+                  <div class="slider-group">
+                    <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
+                    <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
+                  </div>
+                  <div class="slider-group">
+                    <label for="opacity-slider">Panel Opacity: <span id="opacity-val">100%</span></label>
+                    <input type="range" id="opacity-slider" min="10" max="100" step="5" value="100" />
+                  </div>
+                  <div class="form-group">
+                    <label for="namespace-select">Metabolite Namespace</label>
+                    <select id="namespace-select" class="select-dropdown">
+                      <option value="common">Common Name</option>
+                      <option value="ecocyc">EcoCyc ID</option>
+                      <option value="bigg" selected>BiGG ID</option>
+                      <option value="kegg">KEGG ID</option>
+                      <option value="chebi">ChEBI ID</option>
+                      <option value="hmdb">HMDB ID</option>
+                    </select>
+                    <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- User Profile Container -->
-          <div id="user-profile-header-container" class="user-profile-container"></div>
+          <div id="profile-desktop-parent">
+            <div id="user-profile-header-container" class="user-profile-container"></div>
+          </div>
+
+          <!-- Hamburger menu button (hidden on desktop) -->
+          <button id="mobile-menu-btn" class="mobile-menu-btn" title="Toggle Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
         </div>
       </header>
 
@@ -621,6 +634,57 @@
             <button id="ai-chat-send-btn" class="btn btn-primary">Send</button>
           </div>
         </div>
+      </div>
+
+      <!-- Mobile Hamburger Drawer -->
+      <div id="mobile-drawer" class="mobile-drawer glass hidden">
+        <div class="mobile-drawer-header">
+          <h3>Menu</h3>
+          <button id="mobile-drawer-close" class="close-btn">&times;</button>
+        </div>
+        <div class="mobile-drawer-content">
+          <!-- Mobile Profile Section -->
+          <div class="mobile-section">
+            <h4>Profile</h4>
+            <div id="mobile-profile-container">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          <hr class="drawer-divider" />
+          
+          <!-- Mobile Experiments Section -->
+          <div class="mobile-section">
+            <h4>Experiments</h4>
+            <div id="mobile-experiments-container">
+              <!-- Placed dynamically in JS -->
+            </div>
+          </div>
+          <hr class="drawer-divider" />
+          
+          <!-- Mobile Settings Section -->
+          <div class="mobile-section">
+            <h4>Map Settings</h4>
+            <div id="mobile-settings-container">
+              <!-- Placed dynamically in JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <div id="mobile-bottom-nav" class="mobile-bottom-nav glass">
+        <button id="mobile-nav-metrics" class="mobile-nav-item">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Metrics</span>
+        </button>
+        <button id="mobile-nav-chat" class="mobile-nav-item">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">AI Chat</span>
+        </button>
+        <button id="mobile-nav-inspector" class="mobile-nav-item">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-label">Inspector</span>
+        </button>
       </div>
     </div>
     

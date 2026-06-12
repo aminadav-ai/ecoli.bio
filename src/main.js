@@ -1768,6 +1768,129 @@ function setupUIListeners() {
       }
     }
   });
+
+  // Mobile UI Listeners
+  window.addEventListener('resize', checkViewportChange);
+  checkViewportChange(); // Run once initially
+  
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileDrawer = document.getElementById('mobile-drawer');
+  const mobileDrawerClose = document.getElementById('mobile-drawer-close');
+  
+  if (mobileMenuBtn && mobileDrawer) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isActive = mobileDrawer.classList.contains('active');
+      if (isActive) {
+        closeAllOtherPanels(null);
+      } else {
+        closeAllOtherPanels('mobile-drawer');
+      }
+    });
+  }
+  
+  if (mobileDrawerClose) {
+    mobileDrawerClose.addEventListener('click', () => {
+      closeAllOtherPanels(null);
+    });
+  }
+  
+  // Close mobile drawer on click outside
+  document.addEventListener('click', (e) => {
+    if (mobileDrawer && mobileDrawer.classList.contains('active') && !mobileDrawer.contains(e.target) && !e.target.closest('#mobile-menu-btn')) {
+      closeAllOtherPanels(null);
+    }
+  });
+
+  // Mobile Bottom Navigation Buttons
+  const navMetrics = document.getElementById('mobile-nav-metrics');
+  const navChat = document.getElementById('mobile-nav-chat');
+  const navInspector = document.getElementById('mobile-nav-inspector');
+  
+  const leftPanel = document.querySelector('.left-panel');
+  const rightPanel = document.querySelector('.right-panel');
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  
+  if (navMetrics && leftPanel) {
+    navMetrics.addEventListener('click', () => {
+      const isMobileActive = leftPanel.classList.contains('mobile-active');
+      if (isMobileActive) {
+        closeAllOtherPanels(null);
+      } else {
+        closeAllOtherPanels('left-panel');
+      }
+    });
+  }
+  
+  if (navChat && chatDrawer) {
+    navChat.addEventListener('click', () => {
+      const isChatOpen = !chatDrawer.classList.contains('hidden');
+      if (isChatOpen) {
+        closeAllOtherPanels(null);
+      } else {
+        closeAllOtherPanels('chat');
+      }
+    });
+  }
+  
+  if (navInspector && rightPanel) {
+    navInspector.addEventListener('click', () => {
+      const isMobileActive = rightPanel.classList.contains('mobile-active');
+      if (isMobileActive) {
+        closeAllOtherPanels(null);
+      } else {
+        closeAllOtherPanels('inspector');
+      }
+    });
+  }
+}
+
+let isCurrentlyMobile = false;
+
+function checkViewportChange() {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile === isCurrentlyMobile) return;
+  
+  isCurrentlyMobile = isMobile;
+  
+  const experimentsContainer = document.getElementById('experiments-container');
+  const userProfileContainer = document.getElementById('user-profile-header-container');
+  const settingsBody = document.querySelector('#settings-header-container .settings-body');
+  
+  const mobileExperiments = document.getElementById('mobile-experiments-container');
+  const mobileProfile = document.getElementById('mobile-profile-container');
+  const mobileSettings = document.getElementById('mobile-settings-container');
+  
+  const desktopExperiments = document.getElementById('experiments-desktop-parent');
+  const desktopProfile = document.getElementById('profile-desktop-parent');
+  const desktopSettings = document.getElementById('settings-desktop-parent');
+  
+  if (isMobile) {
+    // Relocate elements to mobile drawer containers
+    if (experimentsContainer && mobileExperiments) {
+      mobileExperiments.appendChild(experimentsContainer);
+    }
+    if (userProfileContainer && mobileProfile) {
+      mobileProfile.appendChild(userProfileContainer);
+    }
+    if (settingsBody && mobileSettings) {
+      mobileSettings.appendChild(settingsBody);
+    }
+  } else {
+    // Relocate elements back to desktop parents
+    if (experimentsContainer && desktopExperiments) {
+      desktopExperiments.appendChild(experimentsContainer);
+    }
+    if (userProfileContainer && desktopProfile) {
+      desktopProfile.appendChild(userProfileContainer);
+    }
+    if (settingsBody && desktopSettings) {
+      desktopSettings.appendChild(settingsBody);
+    }
+    
+    // Close mobile panels when resizing back to desktop
+    closeAllOtherPanels(null);
+  }
 }
 
 /**
@@ -2049,13 +2172,19 @@ function closeChatDrawer() {
 
 /**
  * Closes all panel elements except the specified one to prevent visual overlap.
- * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search'.
+ * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search', 'left-panel', 'mobile-drawer'.
  */
 function closeAllOtherPanels(except) {
   // 1. AI Chat Drawer
   if (except !== 'chat') {
     closeChatDrawer();
+    const navChat = document.getElementById('mobile-nav-chat');
+    if (navChat) navChat.classList.remove('active');
+  } else {
+    const navChat = document.getElementById('mobile-nav-chat');
+    if (navChat) navChat.classList.add('active');
   }
+
   // 2. User Profile Dropdown
   if (except !== 'profile') {
     const userDropdown = document.getElementById('user-profile-dropdown');
@@ -2068,32 +2197,72 @@ function closeAllOtherPanels(except) {
       }
     }
   }
+
   // 3. Reaction/Metabolite Inspector Panel
   if (except !== 'inspector') {
     hideInspector();
+    const rightPanel = document.querySelector('.right-panel');
+    if (rightPanel) rightPanel.classList.remove('mobile-active');
+    const navInspector = document.getElementById('mobile-nav-inspector');
+    if (navInspector) navInspector.classList.remove('active');
+  } else {
+    const rightPanel = document.querySelector('.right-panel');
+    if (rightPanel) rightPanel.classList.add('mobile-active');
+    const navInspector = document.getElementById('mobile-nav-inspector');
+    if (navInspector) navInspector.classList.add('active');
   }
-  // 4. Experiments List
+
+  // 4. Left Panel (Metrics & Scenarios)
+  if (except !== 'left-panel') {
+    const leftPanel = document.querySelector('.left-panel');
+    if (leftPanel) leftPanel.classList.remove('mobile-active');
+    const navMetrics = document.getElementById('mobile-nav-metrics');
+    if (navMetrics) navMetrics.classList.remove('active');
+  } else {
+    const leftPanel = document.querySelector('.left-panel');
+    if (leftPanel) leftPanel.classList.add('mobile-active');
+    const navMetrics = document.getElementById('mobile-nav-metrics');
+    if (navMetrics) navMetrics.classList.add('active');
+  }
+
+  // 5. Mobile Hamburger Drawer
+  if (except !== 'mobile-drawer') {
+    const mobileDrawer = document.getElementById('mobile-drawer');
+    if (mobileDrawer) mobileDrawer.classList.remove('active');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn) mobileMenuBtn.classList.remove('open');
+  } else {
+    const mobileDrawer = document.getElementById('mobile-drawer');
+    if (mobileDrawer) mobileDrawer.classList.add('active');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn) mobileMenuBtn.classList.open ? null : mobileMenuBtn.classList.add('open');
+  }
+
+  // 6. Experiments List
   if (except !== 'experiments') {
     const customOptionsDiv = document.getElementById('custom-experiment-options');
     const customWrapper = document.getElementById('custom-experiment-select-wrapper');
     if (customOptionsDiv) customOptionsDiv.classList.add('hidden');
     if (customWrapper) customWrapper.classList.remove('open');
   }
-  // 5. Solver Activity Dropdown
+
+  // 7. Solver Activity Dropdown
   if (except !== 'solver') {
     const solverDropdown = document.getElementById('solver-details-dropdown');
     if (solverDropdown) {
       solverDropdown.classList.add('hidden');
     }
   }
-  // 6. Map Settings Dropdown
+
+  // 8. Map Settings Dropdown
   if (except !== 'settings') {
     const settingsDropdown = document.getElementById('settings-dropdown');
     if (settingsDropdown) {
       settingsDropdown.classList.add('hidden');
     }
   }
-  // 7. Map Search Suggestions Dropdown
+
+  // 9. Map Search Suggestions Dropdown
   if (except !== 'search') {
     hideSearchResults();
   }
