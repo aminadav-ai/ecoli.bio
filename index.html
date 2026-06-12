@@ -123,6 +123,37 @@
           <!-- User Tier Container -->
           <div id="user-tier-container" class="user-tier-container hidden"></div>
 
+          <!-- Map Settings Panel -->
+          <div id="settings-header-container" class="settings-container">
+            <button id="settings-toggle-btn" class="settings-badge-btn" title="Map Settings">
+              <span class="settings-icon">⚙️</span>
+            </button>
+            <div id="settings-dropdown" class="settings-dropdown glass hidden">
+              <div class="dropdown-header">
+                <h3>Map Settings</h3>
+                <button id="settings-close-btn" class="close-dropdown-btn">✕</button>
+              </div>
+              <div class="settings-body">
+                <div class="slider-group">
+                  <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
+                  <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
+                </div>
+                <div class="form-group">
+                  <label for="namespace-select">Metabolite Namespace</label>
+                  <select id="namespace-select" class="select-dropdown">
+                    <option value="common">Common Name</option>
+                    <option value="ecocyc">EcoCyc ID</option>
+                    <option value="bigg" selected>BiGG ID</option>
+                    <option value="kegg">KEGG ID</option>
+                    <option value="chebi">ChEBI ID</option>
+                    <option value="hmdb">HMDB ID</option>
+                  </select>
+                  <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- User Profile Container -->
           <div id="user-profile-header-container" class="user-profile-container"></div>
         </div>
@@ -136,40 +167,6 @@
           <div class="header-controls">
             <button id="play-pause-btn" class="btn btn-primary header-btn">⏸ Pause</button>
             <button id="reset-btn" class="btn btn-secondary header-btn">↺ Reset</button>
-          </div>
-
-          <!-- Map Settings (Gear) Trigger -->
-          <div class="settings-container">
-            <button id="settings-toggle-btn" class="settings-badge-btn" title="Map Settings">
-              <span class="settings-icon">⚙️</span>
-            </button>
-          </div>
-        </div>
-
-
-        <!-- Map Settings Dropdown -->
-        <div id="settings-dropdown" class="settings-dropdown glass hidden">
-          <div class="dropdown-header">
-            <h3>Map Settings</h3>
-            <button id="settings-close-btn" class="close-dropdown-btn">✕</button>
-          </div>
-          <div class="settings-body">
-            <div class="slider-group">
-              <label for="font-size-slider">Label Font Size: <span id="font-size-val">30px</span></label>
-              <input type="range" id="font-size-slider" min="8" max="50" step="1" value="30" />
-            </div>
-            <div class="form-group">
-              <label for="namespace-select">Metabolite Namespace</label>
-              <select id="namespace-select" class="select-dropdown">
-                <option value="common">Common Name</option>
-                <option value="ecocyc">EcoCyc ID</option>
-                <option value="bigg" selected>BiGG ID</option>
-                <option value="kegg">KEGG ID</option>
-                <option value="chebi">ChEBI ID</option>
-                <option value="hmdb">HMDB ID</option>
-              </select>
-              <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
-            </div>
           </div>
         </div>
 

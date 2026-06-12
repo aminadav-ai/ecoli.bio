@@ -1545,6 +1545,10 @@ function setupUIListeners() {
   if (settingsToggleBtn && settingsDropdown) {
     settingsToggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      const isOpening = settingsDropdown.classList.contains('hidden');
+      if (isOpening) {
+        closeAllOtherPanels('settings');
+      }
       settingsDropdown.classList.toggle('hidden');
     });
   }
@@ -2011,6 +2015,13 @@ function closeAllOtherPanels(except) {
     const solverDropdown = document.getElementById('solver-details-dropdown');
     if (solverDropdown) {
       solverDropdown.classList.add('hidden');
+    }
+  }
+  // 6. Map Settings Dropdown
+  if (except !== 'settings') {
+    const settingsDropdown = document.getElementById('settings-dropdown');
+    if (settingsDropdown) {
+      settingsDropdown.classList.add('hidden');
     }
   }
 }
