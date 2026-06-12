@@ -1,5 +1,9 @@
 /* src/style.css */
 
+:root {
+  --panel-opacity: 0.9;
+}
+
 /* Global Reset & Typography */
 * {
   box-sizing: border-box;
@@ -20,7 +24,7 @@ body, html {
 
 /* Glassmorphism utility */
 .glass {
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, var(--panel-opacity));
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.08);
