@@ -1828,7 +1828,7 @@ function setupUIListeners() {
       if (isChatOpen) {
         closeAllOtherPanels(null);
       } else {
-        closeAllOtherPanels('chat');
+        openChatDrawer();
       }
     });
   }
@@ -1982,6 +1982,11 @@ function handleMetaboliteSelect(node) {
   const mobilePopup = document.getElementById('mobile-metabolite-popup');
   if (mobilePopup) {
     mobilePopup.classList.add('hidden');
+  }
+
+  // If on mobile viewport, make the inspector panel active and highlight the bottom nav button
+  if (window.innerWidth <= 768) {
+    closeAllOtherPanels('inspector');
   }
 
   // Fill in static metadata
@@ -2197,7 +2202,10 @@ function closeAllOtherPanels(except) {
     if (navInspector) navInspector.classList.remove('active');
   } else {
     const rightPanel = document.querySelector('.right-panel');
-    if (rightPanel) rightPanel.classList.add('mobile-active');
+    if (rightPanel) {
+      rightPanel.classList.add('mobile-active');
+      rightPanel.classList.remove('hidden-panel');
+    }
     const navInspector = document.getElementById('mobile-nav-inspector');
     if (navInspector) navInspector.classList.add('active');
   }
@@ -5857,7 +5865,7 @@ function setupScenariosAndChat() {
     chatClose.addEventListener('click', (e) => {
       e.stopPropagation();
       isChatPeeking = false; // Cancel auto-close peek
-      closeChatDrawer();
+      closeAllOtherPanels(null);
     });
 
     // Send on button click

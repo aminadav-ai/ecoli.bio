@@ -2534,7 +2534,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   .left-panel.mobile-active {
-    transform: translateX(100%);
+    transform: none !important;
     left: 10px;
   }
 
@@ -2554,8 +2554,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   .right-panel.mobile-active {
-    transform: translateX(-100%);
+    transform: none !important;
     right: 10px;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   /* Mobile Drawer/Menu Styles */
