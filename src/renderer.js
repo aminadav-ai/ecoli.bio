@@ -70,6 +70,7 @@ export class PixiRenderer {
     this.hoveredReaction = null;
     this.selectedNodeId = null;
     this.selectedReactionId = null;
+    this.justSelectedSomething = false;
 
     // Label font settings
     this.baseFontSize = 30;
@@ -659,6 +660,7 @@ export class PixiRenderer {
 
       bg.on('pointerdown', (e) => {
         e.stopPropagation();
+        this.justSelectedSomething = true;
         this.selectReaction(rxn.id);
         this.onSelectReaction(rxn);
       });
@@ -1004,6 +1006,7 @@ export class PixiRenderer {
         const node = this.hitTestMetabolite(canvasX, canvasY);
 
         if (node) {
+          this.justSelectedSomething = true;
           this.selectMetabolite(node.id);
           this.onSelectMetabolite(node);
           return;
@@ -1205,6 +1208,10 @@ export class PixiRenderer {
 
     // Click on canvas background to deselect
     el.addEventListener('click', (e) => {
+      if (this.justSelectedSomething) {
+        this.justSelectedSomething = false;
+        return;
+      }
       const node = this.hitTestMetabolite(e.clientX, e.clientY);
       if (!node && !this.hoveredReaction) {
         this.clearSelection();
