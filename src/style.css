@@ -4550,3 +4550,122 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: translateY(0) scale(0.95);
 }
 
+
+
+/* Model Badge & Tooltip Styling */
+.model-badge-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 8px;
+  background: rgba(129, 140, 248, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.model-badge:hover {
+  background: rgba(129, 140, 248, 0.2);
+  border-color: rgba(129, 140, 248, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3);
+  transform: translateY(-0.5px);
+}
+
+.model-badge-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 270px;
+  padding: 16px;
+  border-radius: 12px;
+  z-index: 1000;
+  pointer-events: auto;
+  animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  text-align: left;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.model-badge-tooltip.hidden {
+  display: none !important;
+}
+
+.model-badge-tooltip .tooltip-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.model-badge-tooltip .tooltip-subtitle {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: -4px;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.model-badge-tooltip .tooltip-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.model-badge-tooltip .tooltip-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6px 4px;
+  border-radius: 6px;
+}
+
+.model-badge-tooltip .stat-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #818cf8;
+}
+
+.model-badge-tooltip .stat-lbl {
+  font-size: 9px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.model-badge-tooltip .tooltip-desc {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin: 0;
+}

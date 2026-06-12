@@ -818,6 +818,46 @@ function setupUIListeners() {
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
   });
 
+  // Model info badge tooltip interaction
+  const modelBadge = document.getElementById('model-info-badge');
+  const modelTooltip = document.getElementById('model-badge-tooltip');
+  let isTooltipPinned = false;
+
+  if (modelBadge && modelTooltip) {
+    // Show on hover
+    modelBadge.addEventListener('mouseenter', () => {
+      if (!isTooltipPinned) {
+        modelTooltip.classList.remove('hidden');
+      }
+    });
+
+    // Hide on leave if not pinned
+    modelBadge.addEventListener('mouseleave', () => {
+      if (!isTooltipPinned) {
+        modelTooltip.classList.add('hidden');
+      }
+    });
+
+    // Toggle pin on click
+    modelBadge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isTooltipPinned = !isTooltipPinned;
+      if (isTooltipPinned) {
+        modelTooltip.classList.remove('hidden');
+      } else {
+        modelTooltip.classList.add('hidden');
+      }
+    });
+
+    // Close on document click if pinned
+    document.addEventListener('click', (e) => {
+      if (isTooltipPinned && !e.target.closest('.model-badge-container')) {
+        isTooltipPinned = false;
+        modelTooltip.classList.add('hidden');
+      }
+    });
+  }
+
   // Reset/Restart handler
   const resetHandler = () => {
     if (!userProfile) {
