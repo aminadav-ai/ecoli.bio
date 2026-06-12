@@ -5686,6 +5686,7 @@ function updateUserStatusUI() {
 }
 
 function openMockCheckout() {
+  closeAllOtherPanels(null);
   const overlay = document.createElement('div');
   overlay.className = 'mock-payment-overlay';
   overlay.id = 'mock-payment-modal';
