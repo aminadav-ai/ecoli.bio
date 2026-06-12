@@ -848,7 +848,10 @@ function setupUIListeners() {
     }
   };
 
-  document.getElementById('reset-btn').addEventListener('click', resetHandler);
+  const resetBtnEl = document.getElementById('reset-btn');
+  if (resetBtnEl) {
+    resetBtnEl.addEventListener('click', resetHandler);
+  }
   
   const deathResetBtn = document.getElementById('death-reset-btn');
   if (deathResetBtn) {
