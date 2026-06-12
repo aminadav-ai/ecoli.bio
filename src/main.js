@@ -1978,20 +1978,10 @@ function handleMetaboliteSelect(node) {
   document.getElementById('inspector-metabolite').classList.remove('hidden');
   document.getElementById('inspector-panel').classList.remove('hidden-panel');
 
-  // Show/Hide mobile popup depending on viewport width
-  const isMobile = window.innerWidth <= 768;
+  // Keep mobile popup hidden since the full Inspector panel handles details on mobile
   const mobilePopup = document.getElementById('mobile-metabolite-popup');
   if (mobilePopup) {
-    if (isMobile) {
-      mobilePopup.classList.remove('hidden');
-      const mobileBiggEl = document.getElementById('mobile-metab-bigg-id-val');
-      if (mobileBiggEl) {
-        mobileBiggEl.textContent = node.biggId;
-      }
-      setTimeout(updateMobilePopupPosition, 0);
-    } else {
-      mobilePopup.classList.add('hidden');
-    }
+    mobilePopup.classList.add('hidden');
   }
 
   // Fill in static metadata
