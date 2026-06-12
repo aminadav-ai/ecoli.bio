@@ -2682,6 +2682,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
     border: none;
   }
 
+  .mobile-drawer-content .user-profile-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
   .mobile-drawer-content .user-badge {
     width: 100%;
     justify-content: space-between;
