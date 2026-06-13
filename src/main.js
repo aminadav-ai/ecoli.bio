@@ -5601,6 +5601,18 @@ async function saveO2PreferenceToDb(val) {
 function openAuthModal() {
   const authModal = document.getElementById('global-auth-modal');
   if (authModal) {
+    // Reset modal content to default initial state
+    const titleEl = document.getElementById('auth-title');
+    const messageEl = document.getElementById('auth-message');
+    const iconEl = document.querySelector('.auth-card .auth-icon');
+    
+    if (titleEl) titleEl.textContent = 'Sign In';
+    if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+    if (iconEl) {
+      iconEl.innerHTML = '👤';
+      iconEl.classList.remove('pulse-animation');
+    }
+
     authModal.classList.remove('hidden');
     renderGoogleButton();
     pushHistoryStateIfNeeded();
