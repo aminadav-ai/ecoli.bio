@@ -5,13 +5,14 @@ export default defineConfig({
   plugins: [
     obfuscator({
       options: {
-        // High level of protection but keeping performance acceptable
-        controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.75,
-        numbersToExpressions: true,
+        // Safe options for high performance in PixiJS and simulation loop
+        compact: true,
+        controlFlowFlattening: false,
+        numbersToExpressions: false,
         simplify: true,
+        stringArray: true,
         stringArrayShuffle: true,
-        splitStrings: true,
+        splitStrings: false,
         stringArrayThreshold: 0.75
       }
     })
