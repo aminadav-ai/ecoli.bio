@@ -199,7 +199,7 @@ export async function getOrResetUserDailyTicks(db, user, timeZone) {
 }
 
 // 4. Get session status, user profile & remaining limits
-export async function getUserStatus(db, token, ip, guestId, timeZone) {
+export async function getUserStatus(db, token, ip, guestId, timeZone, googleClientId = null) {
   const user = await getUserByToken(db, token);
   
   let limitMax = 2; // Default Guest limit
@@ -249,7 +249,7 @@ export async function getUserStatus(db, token, ip, guestId, timeZone) {
 
   return {
     loggedIn: !!user,
-    googleClientId: "889111185997-rfd2qv356f0454k3ovtgaao9540em9bc.apps.googleusercontent.com", // Statically configured Google Client ID
+    googleClientId: googleClientId,
     user: user ? {
       email: user.email,
       name: user.name,

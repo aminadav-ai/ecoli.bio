@@ -1151,11 +1151,11 @@ Instructions:
         const timeZone = request.headers.get('x-timezone');
         const visit = url.searchParams.get('visit') === 'true';
 
-        let status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
+        let status = await getUserStatus(env.DB, token, ip, guestId, timeZone, env.GOOGLE_CLIENT_ID);
         if (visit) {
           if (status.loggedIn && status.user) {
             await incrementUserVisits(env.DB, status.user.email);
-            status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
+            status = await getUserStatus(env.DB, token, ip, guestId, timeZone, env.GOOGLE_CLIENT_ID);
           } else {
             const sessionId = request.headers.get('x-session-id') || guestId || ip || 'unknown';
             const dateStr = new Date().toISOString().slice(0, 10);

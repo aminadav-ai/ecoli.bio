@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "dev:worker": "npx wrangler dev",
     "d1:migrate:local": "npx wrangler d1 migrations apply ecoli_db --local",
-    "d1:migrate:remote": "npx wrangler d1 migrations apply ecoli_db --remote"
+    "d1:migrate:remote": "npx wrangler d1 migrations apply ecoli_db --remote",
+    "d1:migrate:staging": "npx wrangler d1 migrations apply ecoli_db_staging --remote",
+    "deploy:staging": "npm run build && npx wrangler deploy --env staging",
+    "deploy:prod": "npm run build && npx wrangler deploy"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.4.3",

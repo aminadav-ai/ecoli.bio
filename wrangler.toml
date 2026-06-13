@@ -35,3 +35,23 @@ fallthrough = true
 # Serve static assets built by Vite
 [assets]
 directory = "./dist"
+
+[env.staging]
+name = "e-coli3-staging"
+routes = [
+  { pattern = "sim3.ecoli.bio", custom_domain = true }
+]
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "ecoli_db_staging"
+database_id = "c30c13f1-a110-4d6e-afb5-8aebf0cfea5b"
+migrations_dir = "migrations"
+
+[[env.staging.durable_objects.bindings]]
+name = "SOLVER_DO"
+class_name = "SolverDO"
+
+[[env.staging.migrations]]
+tag = "v1"
+new_classes = ["SolverDO"]
