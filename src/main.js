@@ -1941,6 +1941,9 @@ function setupUIListeners() {
 
   // Mobile UI Listeners
   window.addEventListener('resize', checkViewportChange);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', checkViewportChange);
+  }
   checkViewportChange(); // Run once initially
   
   const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -6012,6 +6015,7 @@ function showLockOverlay(mode) {
 }
 
 function updateUserStatusUI() {
+  checkViewportChange();
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
 
