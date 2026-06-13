@@ -8,6 +8,59 @@
 
 import { Simulation } from './simulation.js';
 import { PixiRenderer } from './renderer.js';
+// Floating On-Screen Logger for Mobile Viewport Debugging
+(function() {
+  const logDiv = document.createElement('div');
+  logDiv.id = 'mobile-debug-logger';
+  logDiv.style.position = 'fixed';
+  logDiv.style.top = '10px';
+  logDiv.style.left = '10px';
+  logDiv.style.right = '10px';
+  logDiv.style.height = '160px';
+  logDiv.style.background = 'rgba(0, 0, 0, 0.9)';
+  logDiv.style.color = '#00ff00';
+  logDiv.style.fontFamily = 'monospace';
+  logDiv.style.fontSize = '9px';
+  logDiv.style.lineHeight = '1.3';
+  logDiv.style.padding = '8px';
+  logDiv.style.overflowY = 'auto';
+  logDiv.style.zIndex = '999999';
+  logDiv.style.borderRadius = '8px';
+  logDiv.style.border = '1px solid #333';
+  logDiv.style.pointerEvents = 'none'; // click-through
+  
+  const title = document.createElement('div');
+  title.textContent = '🛠️ On-Screen Debug Logs (Click-Through):';
+  title.style.fontWeight = 'bold';
+  title.style.borderBottom = '1px solid #444';
+  title.style.paddingBottom = '3px';
+  title.style.marginBottom = '5px';
+  logDiv.appendChild(title);
+  
+  const list = document.createElement('div');
+  list.id = 'mobile-debug-log-list';
+  logDiv.appendChild(list);
+  
+  if (document.body) {
+    document.body.appendChild(logDiv);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(logDiv);
+    });
+  }
+  
+  const originalLog = console.log;
+  console.log = function(...args) {
+    originalLog.apply(console, args);
+    const line = document.createElement('div');
+    line.textContent = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    line.style.borderBottom = '1px solid #222';
+    line.style.padding = '2px 0';
+    list.appendChild(line);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  };
+})();
+
 function deserializeSimulation(sim, state) {
   if (!state) return;
   if (state.metabolites) {
