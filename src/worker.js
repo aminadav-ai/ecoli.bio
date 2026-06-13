@@ -634,6 +634,112 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
   }
 }
 
+// Helper to parse User Agent into OS and Browser info
+function parseUserAgent(ua = '') {
+  let os = 'Unknown OS';
+  if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  else if (ua.includes('Macintosh')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+
+  let browser = 'Unknown Browser';
+  if (ua.includes('Chrome')) browser = 'Chrome';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  else if (ua.includes('Firefox')) browser = 'Firefox';
+  else if (ua.includes('Edge')) browser = 'Edge';
+
+  return `${os} (${browser})`;
+}
+
+// Helper to send message using Telegram Bot API
+async function sendTelegramNotification(env, text) {
+  const token = env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    console.log(`[Telegram Notification (Console-only)]: ${text.replace(/<[^>]*>/g, '')}`);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML'
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[Telegram] API error: ${res.status} - ${errText}`);
+    } else {
+      console.log(`[Telegram Bot] Message sent successfully.`);
+    }
+  } catch (err) {
+    console.error('[Telegram] Failed to send message:', err);
+  }
+}
+
+// Track visits in Telegram
+async function trackWorkerVisit(env, request, identifier) {
+  try {
+    const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'Unknown IP';
+    const ua = request.headers.get('user-agent') || '';
+    const device = parseUserAgent(ua);
+    const referer = request.headers.get('referer') || 'Direct/Unknown';
+    const url = new URL(request.url);
+    const urlPath = url.pathname;
+
+    const text = `🔔 <b>New visitor on site!</b>\n\n` +
+                 `<b>User:</b> <code>${identifier}</code>\n` +
+                 `<b>Path:</b> <code>${request.method || 'GET'} ${urlPath}</code>\n` +
+                 `<b>IP:</b> <code>${ip}</code>\n` +
+                 `<b>Device:</b> <code>${device}</code>\n` +
+                 `<b>Referer:</b> <code>${referer}</code>`;
+    await sendTelegramNotification(env, text);
+  } catch (err) {
+    console.error('[Telegram Tracker] Error tracking visit:', err);
+  }
+}
+
+// Track chat queries in Telegram
+async function trackWorkerChatQuery(env, request, email, message, usageMetadata = null) {
+  try {
+    const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'Unknown IP';
+    const ua = request.headers.get('user-agent') || '';
+    const device = parseUserAgent(ua);
+
+    const safeMessage = (message || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    let tokensInfo = '';
+    if (usageMetadata) {
+      const promptTokens = usageMetadata.promptTokenCount || 0;
+      const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+      const totalTokens = usageMetadata.totalTokenCount || 0;
+      tokensInfo = `\n\n<b>Tokens:</b>\n` +
+                   `• Prompt: <b>${promptTokens}</b>\n` +
+                   `• Response: <b>${candidatesTokens}</b>\n` +
+                   `• Total: <b>${totalTokens}</b>`;
+    }
+
+    const text = `💬 <b>AI Chat Request!</b>\n\n` +
+                 `<b>User:</b> <code>${email}</code>\n` +
+                 `<b>IP:</b> <code>${ip}</code>\n` +
+                 `<b>Device:</b> <code>${device}</code>\n\n` +
+                 `<b>Prompt:</b>\n<blockquote>${safeMessage}</blockquote>` +
+                 tokensInfo;
+
+    await sendTelegramNotification(env, text);
+  } catch (err) {
+    console.error('[Telegram Tracker] Error tracking chat query:', err);
+  }
+}
+
 // ==========================================
 // 2. Default Worker Fetch Handler
 // ==========================================
@@ -1013,6 +1119,10 @@ Instructions:
         
         ctx.waitUntil(saveChatMessage(env.DB, identifier, 'model', reply));
 
+        // Track Chat Query in Telegram
+        const usageMetadata = data.usageMetadata;
+        ctx.waitUntil(trackWorkerChatQuery(env, request, limitCheck.user.email, message, usageMetadata));
+
         return new Response(JSON.stringify({ reply, count: limitCheck.count }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -1047,10 +1157,12 @@ Instructions:
           if (status.loggedIn && status.user) {
             await incrementUserVisits(env.DB, status.user.email);
             status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
+            ctx.waitUntil(trackWorkerVisit(env, request, status.user.email));
           } else {
             const sessionId = request.headers.get('x-session-id') || guestId || ip || 'unknown';
             const dateStr = new Date().toISOString().slice(0, 10);
             ctx.waitUntil(recordGuestVisit(env.DB, sessionId, dateStr));
+            ctx.waitUntil(trackWorkerVisit(env, request, `Guest (${sessionId})`));
           }
         }
         return new Response(JSON.stringify(status), {
