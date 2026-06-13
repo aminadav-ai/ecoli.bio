@@ -1162,7 +1162,11 @@ Instructions:
           } else {
             const sessionId = request.headers.get('x-session-id') || guestId || ip || 'unknown';
             const dateStr = new Date().toISOString().slice(0, 10);
-            ctx.waitUntil(recordGuestVisit(env.DB, sessionId, dateStr));
+            const userAgent = request.headers.get('user-agent');
+            const country = request.cf?.country || request.headers.get('cf-ipcountry') || null;
+            const city = request.cf?.city || null;
+            const asnOrg = request.cf?.asOrganization || (request.cf?.asn ? `ASN ${request.cf.asn}` : null) || null;
+            ctx.waitUntil(recordGuestVisit(env.DB, sessionId, dateStr, { ip, userAgent, country, city, asnOrg }));
           }
         }
         return new Response(JSON.stringify(status), {

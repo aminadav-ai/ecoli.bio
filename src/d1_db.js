@@ -374,13 +374,34 @@ export async function bulkIncrementUserStats(db, updates) {
 }
 
 // 14. Record guest visit by session and date
-export async function recordGuestVisit(db, sessionId, dateStr) {
+export async function recordGuestVisit(db, sessionId, dateStr, details = {}) {
   if (!sessionId) return;
   try {
     await db.prepare(
-      'INSERT INTO guest_visits (session_id, visit_date, visit_count) VALUES (?, ?, 1) ' +
-      'ON CONFLICT(session_id, visit_date) DO UPDATE SET visit_count = visit_count + 1'
-    ).bind(sessionId, dateStr).run();
+      'INSERT INTO guest_visits (session_id, visit_date, visit_count, ip, user_agent, country, city, asn_org, first_visit_time) ' +
+      'VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?) ' +
+      'ON CONFLICT(session_id, visit_date) DO UPDATE SET ' +
+      'visit_count = visit_count + 1, ' +
+      'ip = COALESCE(?, ip), ' +
+      'user_agent = COALESCE(?, user_agent), ' +
+      'country = COALESCE(?, country), ' +
+      'city = COALESCE(?, city), ' +
+      'asn_org = COALESCE(?, asn_org)'
+    ).bind(
+      sessionId,
+      dateStr,
+      details.ip || null,
+      details.userAgent || null,
+      details.country || null,
+      details.city || null,
+      details.asnOrg || null,
+      new Date().toISOString(),
+      details.ip || null,
+      details.userAgent || null,
+      details.country || null,
+      details.city || null,
+      details.asnOrg || null
+    ).run();
   } catch (err) {
     console.error('[D1 DB] Failed to record guest visit:', err);
   }
