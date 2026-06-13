@@ -60,6 +60,7 @@ export class SolverDO {
     this.lastFlushTime = 0;
     this.userEmail = null;
     this.totalSolverTicks = 0;
+    this.dailySolverTicks = 0;
     this.alarmScheduled = false;
 
     // Block DO concurrency until WASM solver is loaded and state is restored
@@ -187,6 +188,7 @@ export class SolverDO {
           this.simulation.solverTicksBuffer = 0;
           this.bufferedTicks += newTicks;
           this.totalSolverTicks += newTicks;
+          this.dailySolverTicks += newTicks;
           await this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
           
           if (!this.alarmScheduled) {
@@ -207,7 +209,8 @@ export class SolverDO {
           changingMetabolites: result.changingMetabolites,
           changingReactions: result.changingReactions,
           stabilized: result.stabilized,
-          solverTicks: this.totalSolverTicks || 0
+          solverTicks: this.totalSolverTicks || 0,
+          dailySolverTicks: this.dailySolverTicks || 0
         });
         
         stabilized = result.stabilized;
@@ -367,6 +370,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         if (dbTicks !== undefined) {
           this.totalSolverTicks = Math.max(this.totalSolverTicks, dbTicks);
         }
+        if (data.dailyTicks !== undefined) {
+          this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
+        }
         
         const dbSession = await getSimulationSession(this.env.DB, this.sessionId);
         if (dbSession) {
@@ -399,6 +405,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           base_name: this.baseName,
           name: this.name,
           solverTicks: this.totalSolverTicks || 0,
+          dailySolverTicks: this.dailySolverTicks || 0,
           isSolving: !!this.isSolving
         }));
         
@@ -585,6 +592,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       if (data.dbTicks !== undefined) {
         this.totalSolverTicks = Math.max(this.totalSolverTicks, data.dbTicks);
       }
+      if (data.dailyTicks !== undefined) {
+        this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
+      }
 
       const newTicks = this.simulation.solverTicksBuffer || 0;
       if (newTicks > 0 && data.userEmail) {
@@ -592,6 +602,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.bufferedTicks += newTicks;
         this.userEmail = data.userEmail;
         this.totalSolverTicks += newTicks;
+        this.dailySolverTicks += newTicks;
         this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
       }
 
@@ -608,6 +619,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
 
       result.solverTicks = this.totalSolverTicks || 0;
+      result.dailySolverTicks = this.dailySolverTicks || 0;
 
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }
@@ -731,7 +743,8 @@ export default {
             reset: body.reset,
             scenario: body.scenario,
             userEmail: user.email,
-            dbTicks: user.solver_ticks || 0
+            dbTicks: user.solver_ticks || 0,
+            dailyTicks: dailyTicks
           })
         });
 
@@ -743,6 +756,7 @@ export default {
         const result = await doRes.json();
         
         result.solverTicks = result.solverTicks !== undefined ? result.solverTicks : (user.solver_ticks || 0);
+        result.dailySolverTicks = result.dailySolverTicks !== undefined ? result.dailySolverTicks : dailyTicks;
         result.lastTimestamp = Date.now();
 
         return new Response(JSON.stringify(result), {

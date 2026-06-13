@@ -264,13 +264,26 @@ export async function verifyGoogleTokenAndLogin(credential) {
 export async function getOrResetUserDailyTicks(user, timeZone) {
   if (!user) return 0;
   
+  let activeTz = user.timezone;
+  if (!activeTz && timeZone) {
+    activeTz = timeZone;
+    try {
+      await pool.query('UPDATE users SET timezone = $1 WHERE email = $2', [activeTz, user.email]);
+      user.timezone = activeTz;
+    } catch (err) {
+      console.error('[Postgres DB] Failed to save user timezone:', err);
+    }
+  }
+  if (!activeTz) {
+    activeTz = 'UTC';
+  }
+
   const now = new Date();
   const lastResetStr = user.last_solver_reset;
   
   let shouldReset = false;
   if (lastResetStr) {
     const lastReset = new Date(lastResetStr);
-    const activeTz = timeZone || 'UTC';
     const resetDateStr = getLocalDateString(lastReset, activeTz);
     const nowDateStr = getLocalDateString(now, activeTz);
     if (resetDateStr && nowDateStr) {

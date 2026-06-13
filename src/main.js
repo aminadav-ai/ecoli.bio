@@ -710,6 +710,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
         if (data.solverTicks !== undefined) {
           userProfile.solverTicks = data.solverTicks;
         }
+        if (data.dailySolverTicks !== undefined) {
+          userProfile.dailySolverTicks = data.dailySolverTicks;
+        }
         if (data.solverLoad !== undefined) {
           userProfile.solverLoad = data.solverLoad;
         }
@@ -5088,7 +5091,8 @@ function connectSessionWebSocket() {
       sessionWebSocket.send(JSON.stringify({
         type: "INIT",
         userEmail: userProfile ? userProfile.email : null,
-        dbTicks: userProfile ? (userProfile.solverTicks || 0) : 0
+        dbTicks: userProfile ? (userProfile.solverTicks || 0) : 0,
+        dailyTicks: userProfile ? (userProfile.dailySolverTicks || 0) : 0
       }));
     }
   };
@@ -5107,8 +5111,13 @@ function connectSessionWebSocket() {
           updateActiveExperimentNameUI(data.name);
         }
         console.log('[WS DEBUG] Received INIT_STATE. solverTicks:', data.solverTicks, 'userProfile:', userProfile);
-        if (data.solverTicks !== undefined && userProfile) {
-          userProfile.solverTicks = data.solverTicks;
+        if (userProfile) {
+          if (data.solverTicks !== undefined) {
+            userProfile.solverTicks = data.solverTicks;
+          }
+          if (data.dailySolverTicks !== undefined) {
+            userProfile.dailySolverTicks = data.dailySolverTicks;
+          }
           updateUserStatusUI();
         }
         isSolverWorking = !!data.isSolving;
@@ -5130,8 +5139,13 @@ function connectSessionWebSocket() {
         });
 
         console.log('[WS DEBUG] Received TICK_UPDATE. solverTicks:', data.solverTicks, 'userProfile:', userProfile);
-        if (userProfile && data.solverTicks !== undefined) {
-          userProfile.solverTicks = data.solverTicks;
+        if (userProfile) {
+          if (data.solverTicks !== undefined) {
+            userProfile.solverTicks = data.solverTicks;
+          }
+          if (data.dailySolverTicks !== undefined) {
+            userProfile.dailySolverTicks = data.dailySolverTicks;
+          }
         }
 
         updateSolverStatusUI();
@@ -5618,7 +5632,7 @@ function updateUserStatusUI() {
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
             <div class="user-dropdown-limits">AI chat: ${currentLimit.remaining} / ${currentLimit.max}</div>
-            <div class="user-dropdown-limits">Solver: ${userProfile.remainingSolverTicks !== undefined ? userProfile.remainingSolverTicks : 200} / 200</div>
+            <div class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
           </div>
           <hr class="dropdown-divider" />
           <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>

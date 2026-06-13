@@ -141,6 +141,7 @@ app.post('/api/solve-fba', async (req, res) => {
       if (ticks > 0) {
         sim.solverTicksBuffer = 0;
         user.solver_ticks = (user.solver_ticks || 0) + ticks;
+        user.daily_solver_ticks = (user.daily_solver_ticks || 0) + ticks;
         bufferUserSolverTicks(user.email, ticks);
         console.log(`[Solver Debug] Buffered solver_ticks. New local solver_ticks: ${user.solver_ticks}`);
       }
@@ -148,8 +149,9 @@ app.post('/api/solve-fba', async (req, res) => {
 
     const totalActual = user.solver_ticks || 0;
     result.solverTicks = totalActual;
+    result.dailySolverTicks = user.daily_solver_ticks !== undefined ? user.daily_solver_ticks : (dailyTicks || 0);
     result.lastTimestamp = sim ? sim.lastTimestamp : 0;
-    console.log(`[Solver Debug] Returning solverTicks: ${totalActual}`);
+    console.log(`[Solver Debug] Returning solverTicks: ${totalActual}, dailySolverTicks: ${result.dailySolverTicks}`);
 
     return res.json(result);
   } catch (err) {

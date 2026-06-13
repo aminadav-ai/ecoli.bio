@@ -146,13 +146,26 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
 export async function getOrResetUserDailyTicks(db, user, timeZone) {
   if (!user) return 0;
   
+  let activeTz = user.timezone;
+  if (!activeTz && timeZone) {
+    activeTz = timeZone;
+    try {
+      await db.prepare('UPDATE users SET timezone = ? WHERE email = ?').bind(activeTz, user.email).run();
+      user.timezone = activeTz;
+    } catch (err) {
+      console.error('[D1 DB] Failed to save user timezone:', err);
+    }
+  }
+  if (!activeTz) {
+    activeTz = 'UTC';
+  }
+
   const now = new Date();
   const lastResetStr = user.last_solver_reset;
   
   let shouldReset = false;
   if (lastResetStr) {
     const lastReset = new Date(lastResetStr);
-    const activeTz = timeZone || 'UTC';
     const resetDateStr = getLocalDateString(lastReset, activeTz);
     const nowDateStr = getLocalDateString(now, activeTz);
     if (resetDateStr && nowDateStr) {

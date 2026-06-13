@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_visit TIMESTAMP WITH TIME ZONE,
     questions INTEGER DEFAULT 0,
     daily_solver_ticks INTEGER DEFAULT 0,
-    last_solver_reset TIMESTAMP WITH TIME ZONE
+    last_solver_reset TIMESTAMP WITH TIME ZONE,
+    timezone VARCHAR(50)
 );
 
 -- 2. Create user_sessions table
@@ -93,6 +94,7 @@ export async function initializeDatabase(pool) {
     // Add new columns to users table if they do not exist
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_solver_ticks INTEGER DEFAULT 0');
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_solver_reset TIMESTAMP WITH TIME ZONE');
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50)');
     // Explicitly drop seconds_spent column if it exists in existing database
     await client.query('ALTER TABLE users DROP COLUMN IF EXISTS seconds_spent');
     await client.query('COMMIT');
