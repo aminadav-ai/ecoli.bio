@@ -656,8 +656,11 @@ function parseUserAgent(ua = '') {
 async function sendTelegramNotification(env, text) {
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
+  const mode = env.MODE || 'production';
+  const textWithMode = `⚙️ <b>Mode:</b> <code>${mode}</code>\n\n` + text;
+
   if (!token || !chatId) {
-    console.log(`[Telegram Notification (Console-only)]: ${text.replace(/<[^>]*>/g, '')}`);
+    console.log(`[Telegram Notification (Console-only)]: ${textWithMode.replace(/<[^>]*>/g, '')}`);
     return;
   }
 
@@ -667,7 +670,7 @@ async function sendTelegramNotification(env, text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text,
+        text: textWithMode,
         parse_mode: 'HTML'
       })
     });
