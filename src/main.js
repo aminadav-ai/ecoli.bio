@@ -5978,8 +5978,6 @@ function updateUserStatusUI() {
   if (headerProfileContainer) {
     if (userProfile) {
       const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
-      const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
-      
       const existingDropdown = document.getElementById('user-profile-dropdown');
       const isDropdownHidden = existingDropdown ? existingDropdown.classList.contains('hidden') : true;
       const chevronTransform = isDropdownHidden ? '' : 'style="transform: rotate(180deg);"';
