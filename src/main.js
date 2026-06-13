@@ -5592,7 +5592,7 @@ function updateUserStatusUI() {
   if (statusBar) {
     if (userProfile) {
       statusBar.innerHTML = `
-        <span>AI chat: ${currentLimit.remaining} / ${currentLimit.max} left today</span>
+        <span>AI chat: ${currentLimit.count} / ${currentLimit.max} spent today</span>
       `;
     } else {
       statusBar.innerHTML = `
@@ -5631,7 +5631,7 @@ function updateUserStatusUI() {
           <div class="user-dropdown-info">
             <div class="user-dropdown-name">${userProfile.name}</div>
             <div class="user-dropdown-email">${userProfile.email || ''}</div>
-            <div class="user-dropdown-limits">AI chat: ${currentLimit.remaining} / ${currentLimit.max}</div>
+            <div class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
             <div class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
           </div>
           <hr class="dropdown-divider" />
@@ -6488,9 +6488,10 @@ async function sendChatMessage(customMessage = null) {
       aiChatHistory.push({ role: 'user', text: message });
       aiChatHistory.push({ role: 'model', text: data.reply });
       
-      // Update remaining limits dynamically
-      if (typeof data.remaining !== 'undefined') {
-        currentLimit.remaining = data.remaining;
+      // Update count dynamically
+      if (typeof data.count !== 'undefined') {
+        currentLimit.count = data.count;
+        currentLimit.remaining = Math.max(0, currentLimit.max - data.count);
         updateUserStatusUI();
       }
     } else {
@@ -6580,9 +6581,10 @@ Please evaluate my answer for biological correctness based on the current metabo
       aiChatHistory.push({ role: 'user', text: `[Reflection Check]: ${answer}` });
       aiChatHistory.push({ role: 'model', text: data.reply });
       
-      // Update remaining limits dynamically
-      if (typeof data.remaining !== 'undefined') {
-        currentLimit.remaining = data.remaining;
+      // Update count dynamically
+      if (typeof data.count !== 'undefined') {
+        currentLimit.count = data.count;
+        currentLimit.remaining = Math.max(0, currentLimit.max - data.count);
         updateUserStatusUI();
       }
     } else {

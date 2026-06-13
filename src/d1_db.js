@@ -70,16 +70,16 @@ export async function checkLimitAndIncrement(db, ip, guestId, authToken, timeZon
         await db.prepare(
           'UPDATE chat_limits SET count = 1, last_reset = ?, timezone = ? WHERE identifier = ?'
         ).bind(now.toISOString(), timeZone || 'UTC', identifier).run();
-        return { allowed: true, isPremium, user, remaining: limitMax - 1 };
+        return { allowed: true, isPremium, user, count: 1 };
       } else {
         if (record.count >= limitMax) {
-          return { allowed: false, isPremium, user, remaining: 0 };
+          return { allowed: false, isPremium, user, count: record.count };
         } else {
           const newCount = record.count + 1;
           await db.prepare(
             'UPDATE chat_limits SET count = ? WHERE identifier = ?'
           ).bind(newCount, identifier).run();
-          return { allowed: true, isPremium, user, remaining: limitMax - newCount };
+          return { allowed: true, isPremium, user, count: newCount };
         }
       }
     } else {
@@ -87,11 +87,11 @@ export async function checkLimitAndIncrement(db, ip, guestId, authToken, timeZon
         'INSERT INTO chat_limits (identifier, count, last_reset, timezone) VALUES (?, ?, ?, ?) ' +
         'ON CONFLICT (identifier) DO UPDATE SET count = 1, last_reset = excluded.last_reset, timezone = excluded.timezone'
       ).bind(identifier, 1, now.toISOString(), timeZone || 'UTC').run();
-      return { allowed: true, isPremium, user, remaining: limitMax - 1 };
+      return { allowed: true, isPremium, user, count: 1 };
     }
   } catch (err) {
     console.error('[D1 DB] Check limit error:', err);
-    return { allowed: true, isPremium, user, remaining: 1 };
+    return { allowed: true, isPremium, user, count: 0 };
   }
 }
 

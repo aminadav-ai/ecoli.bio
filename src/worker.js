@@ -1013,7 +1013,7 @@ Instructions:
         
         ctx.waitUntil(saveChatMessage(env.DB, identifier, 'model', reply));
 
-        return new Response(JSON.stringify({ reply, remaining: limitCheck.remaining }), {
+        return new Response(JSON.stringify({ reply, count: limitCheck.count }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
