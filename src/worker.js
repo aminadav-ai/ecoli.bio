@@ -762,9 +762,24 @@ export default {
 
     // Serve static assets if not an API route
     if (!url.pathname.startsWith('/api/')) {
+      const isStagingDomain = url.hostname !== 'ecoli.bio' && url.hostname !== 'www.ecoli.bio';
+
+      // Intercept robots.txt on staging domains to prevent search crawlers
+      if (url.pathname === '/robots.txt' && isStagingDomain) {
+        return new Response('User-agent: *\nDisallow: /\n', {
+          headers: {
+            'Content-Type': 'text/plain; charset=UTF-8',
+            'X-Robots-Tag': 'noindex, nofollow'
+          }
+        });
+      }
+
       const response = await env.ASSETS.fetch(request);
       if (response.status === 200) {
         const newResponse = new Response(response.body, response);
+        if (isStagingDomain) {
+          newResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
+        }
         if (url.pathname.startsWith('/assets/')) {
           // Vite hashed assets are immutable and can be cached forever
           newResponse.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
@@ -781,6 +796,11 @@ export default {
           // HTML pages: must revalidate to check for application updates
           newResponse.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
         }
+        return newResponse;
+      }
+      if (isStagingDomain && response) {
+        const newResponse = new Response(response.body, response);
+        newResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
         return newResponse;
       }
       return response;
