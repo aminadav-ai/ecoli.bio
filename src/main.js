@@ -5424,6 +5424,11 @@ function initGoogleAuth(clientId) {
   });
   
   renderGoogleButton();
+
+  // Initialize Google One Tap for frictionless login in the same window
+  google.accounts.id.prompt((notification) => {
+    console.log('[Google Auth] One Tap notification:', notification);
+  });
 }
 
 function renderGoogleButton() {
@@ -5435,13 +5440,37 @@ function renderGoogleButton() {
     container.appendChild(btnDiv);
     google.accounts.id.renderButton(
       document.getElementById('global-google-signin-btn'),
-      { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
+      { 
+        theme: 'filled_blue', 
+        size: 'large', 
+        type: 'standard', 
+        text: 'signin_with',
+        shape: 'pill',
+        width: 280,
+        logo_alignment: 'left'
+      }
     );
   }
 }
 
 async function handleGoogleCredentialResponse(response) {
+  const titleEl = document.getElementById('auth-title');
+  const messageEl = document.getElementById('auth-message');
+  const container = document.getElementById('global-google-signin-btn-container');
+  const iconEl = document.querySelector('.auth-card .auth-icon');
+
   try {
+    // Show verification indicator spinner inside the modal
+    if (titleEl) titleEl.textContent = 'Verifying...';
+    if (messageEl) messageEl.textContent = 'Authenticating with Google and establishing your session...';
+    if (container) {
+      container.innerHTML = '<div class="auth-loading-spinner"></div>';
+    }
+    if (iconEl) {
+      iconEl.innerHTML = '⚡';
+      iconEl.classList.add('pulse-animation');
+    }
+
     const res = await fetch('/api/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5451,11 +5480,15 @@ async function handleGoogleCredentialResponse(response) {
       const data = await res.json();
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
-      await checkAuthStatus(true);
+      
       const msg = pendingChatMessage;
-      pendingChatCursorStart = null;
-      pendingChatCursorEnd = null;
+      
+      // Close modal immediately so UI is responsive
       closeAuthModal();
+      
+      // Perform background session checks
+      await checkAuthStatus(true);
+      
       if (msg) {
         const chatInput = document.getElementById('ai-chat-input');
         if (chatInput) {
@@ -5466,9 +5499,28 @@ async function handleGoogleCredentialResponse(response) {
     } else {
       const err = await res.json();
       showToast(`Google Auth failed: ${err.error}`, 'error');
+      
+      // Restore modal initial state
+      if (titleEl) titleEl.textContent = 'Sign In';
+      if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+      if (iconEl) {
+        iconEl.innerHTML = '👤';
+        iconEl.classList.remove('pulse-animation');
+      }
+      renderGoogleButton();
     }
   } catch (err) {
     console.error('Google credential validation error:', err);
+    showToast('An error occurred during authentication.', 'error');
+    
+    // Restore modal initial state
+    if (titleEl) titleEl.textContent = 'Sign In';
+    if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+    if (iconEl) {
+      iconEl.innerHTML = '👤';
+      iconEl.classList.remove('pulse-animation');
+    }
+    renderGoogleButton();
   }
 }
 
