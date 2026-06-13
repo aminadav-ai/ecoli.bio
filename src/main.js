@@ -5525,6 +5525,74 @@ function closeAuthModal() {
   popHistoryStateIfNeeded();
 }
 
+function openFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  const textarea = document.getElementById('feedback-text');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (textarea) {
+      textarea.value = '';
+      textarea.focus();
+    }
+  }
+}
+
+function closeFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+async function handleFeedbackSubmit() {
+  const textarea = document.getElementById('feedback-text');
+  const btn = document.getElementById('btn-submit-feedback');
+  if (!textarea || !btn) return;
+
+  const text = textarea.value.trim();
+  if (!text) {
+    alert('Please enter your feedback text.');
+    textarea.focus();
+    return;
+  }
+
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    alert('You must be logged in to submit feedback.');
+    closeFeedbackModal();
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ feedback: text })
+    });
+
+    if (res.ok) {
+      alert('Thank you for your feedback!');
+      closeFeedbackModal();
+    } else {
+      const data = await res.json();
+      alert(`Error: ${data.error || 'Failed to send feedback.'}`);
+    }
+  } catch (err) {
+    console.error('Failed to submit feedback:', err);
+    alert('Network error. Failed to send feedback.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 function showLockOverlay(mode) {
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const lockTitle = document.getElementById('lock-title');
@@ -5661,6 +5729,16 @@ function updateUserStatusUI() {
           openAuthModal();
         });
       }
+    }
+  }
+
+  // Update Feedback button visibility
+  const feedbackSection = document.getElementById('feedback-section');
+  if (feedbackSection) {
+    if (userProfile) {
+      feedbackSection.classList.remove('hidden');
+    } else {
+      feedbackSection.classList.add('hidden');
     }
   }
   
@@ -6053,6 +6131,37 @@ function setupScenariosAndChat() {
   if (btnLockSignin) {
     btnLockSignin.addEventListener('click', () => {
       openAuthModal();
+    });
+  }
+
+  // Feedback Modal event listeners
+  const btnFeedback = document.getElementById('btn-feedback');
+  if (btnFeedback) {
+    btnFeedback.addEventListener('click', () => {
+      openFeedbackModal();
+    });
+  }
+
+  const btnCloseFeedback = document.getElementById('btn-close-feedback');
+  if (btnCloseFeedback) {
+    btnCloseFeedback.addEventListener('click', () => {
+      closeFeedbackModal();
+    });
+  }
+
+  const btnSubmitFeedback = document.getElementById('btn-submit-feedback');
+  if (btnSubmitFeedback) {
+    btnSubmitFeedback.addEventListener('click', () => {
+      handleFeedbackSubmit();
+    });
+  }
+
+  const feedbackModal = document.getElementById('feedback-modal');
+  if (feedbackModal) {
+    feedbackModal.addEventListener('click', (e) => {
+      if (e.target === feedbackModal) {
+        closeFeedbackModal();
+      }
     });
   }
 

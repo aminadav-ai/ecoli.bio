@@ -1225,6 +1225,45 @@ Instructions:
         });
       }
 
+      // 8. Feedback submission
+      if (url.pathname === '/api/feedback' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+
+        if (!user) {
+          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { feedback } = await request.json();
+        if (!feedback || !feedback.trim()) {
+          return new Response(JSON.stringify({ error: 'Feedback message cannot be empty.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
+        const safeFeedback = feedback
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        const alertText = `📝 <b>New Feedback Received!</b>\n\n` +
+                          `<b>User:</b> <code>${user.email}</code>\n` +
+                          `<b>IP:</b> <code>${ip}</code>\n\n` +
+                          `<b>Feedback:</b>\n<blockquote>${safeFeedback}</blockquote>`;
+
+        ctx.waitUntil(sendTelegramNotification(env, alertText));
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // 10. User preferences endpoint (stub)
       if (url.pathname === '/api/user/preferences' && request.method === 'PATCH') {
         return new Response(JSON.stringify({ success: true }), {

@@ -300,6 +300,11 @@
               </div>
             </div>
           </section>
+
+          <!-- Feedback Section (Visible to authorized users only) -->
+          <div id="feedback-section" class="feedback-section hidden" style="margin-top: 1.5rem; padding: 0 4px;">
+            <button id="btn-feedback" class="btn btn-secondary w-100" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease;">💬 Send your feedback</button>
+          </div>
         </div>
 
         <!-- Tab 2: Interactive Learning Scenarios -->
@@ -590,6 +595,18 @@
           <div id="global-google-signin-btn-container" class="google-signin-btn-container">
             <!-- Google auth button will render here -->
           </div>
+        </div>
+      </div>
+
+      <!-- Feedback Modal -->
+      <div id="feedback-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass" style="max-width: 400px; width: 100%;">
+          <button id="btn-close-feedback" class="btn-close-auth">✕</button>
+          <span class="auth-icon">💬</span>
+          <h3>Send Feedback</h3>
+          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">We would love to hear your thoughts, bug reports, or feature requests!</p>
+          <textarea id="feedback-text" placeholder="Type your feedback here..." style="width: 100%; height: 120px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px; color: #f1f5f9; font-family: inherit; font-size: 13.5px; outline: none; transition: border-color 0.2s; resize: none; box-sizing: border-box;" autocomplete="off"></textarea>
+          <button id="btn-submit-feedback" class="btn btn-primary w-100" style="margin-top: 16px; height: 38px;">Send Feedback</button>
         </div>
       </div>
 
