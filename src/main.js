@@ -271,16 +271,20 @@ let selectedReactionId = null;
 let isHistoryPushed = false;
 
 function pushHistoryStateIfNeeded() {
+  console.log('[pushHistoryStateIfNeeded] isHistoryPushed:', isHistoryPushed);
   if (!isHistoryPushed) {
     history.pushState({ panelOpen: true }, '');
     isHistoryPushed = true;
+    console.log('[pushHistoryStateIfNeeded] state pushed, isHistoryPushed is now true');
   }
 }
 
 function popHistoryStateIfNeeded() {
+  console.log('[popHistoryStateIfNeeded] isHistoryPushed:', isHistoryPushed);
   if (isHistoryPushed) {
     isHistoryPushed = false;
     history.back();
+    console.log('[popHistoryStateIfNeeded] history.back() called, isHistoryPushed is now false');
   }
 }
 
@@ -1896,7 +1900,9 @@ function setupUIListeners() {
   
   // Close mobile drawer on click outside
   document.addEventListener('click', (e) => {
+    console.log('[document click] target:', e.target, 'id:', e.target?.id, 'class:', e.target?.className, 'mobileDrawer active:', mobileDrawer?.classList.contains('active'));
     if (mobileDrawer && mobileDrawer.classList.contains('active') && !mobileDrawer.contains(e.target) && !e.target.closest('#mobile-menu-btn')) {
+      console.log('[document click] outside active mobile drawer -> closing');
       closeAllOtherPanels(null);
     }
   });
@@ -2270,6 +2276,7 @@ function closeChatDrawer() {
  * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search', 'left-panel', 'mobile-drawer'.
  */
 function closeAllOtherPanels(except) {
+  console.log('[closeAllOtherPanels] except:', except, 'mobileDrawer active:', document.getElementById('mobile-drawer')?.classList.contains('active'), 'mobileMenuBtn open:', document.getElementById('mobile-menu-btn')?.classList.contains('open'));
   if (except !== null) {
     pushHistoryStateIfNeeded();
   } else {
