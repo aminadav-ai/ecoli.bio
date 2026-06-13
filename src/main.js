@@ -5282,6 +5282,13 @@ async function checkAuthStatus(isVisit = false) {
     // Guest user - immediately configure guest mode locally and load static state
     console.log('[Auth] Guest user detected (no token). Bypassing /api/auth/status query.');
 
+    // Initialize Google One Tap ONLY if user is a guest (no token)
+    if (googleAuthInitialized && typeof google !== 'undefined') {
+      google.accounts.id.prompt((notification) => {
+        console.log('[Google Auth] One Tap notification:', notification);
+      });
+    }
+
     // Fetch auth status in background to populate googleClientId and limits
     const guestHeaders = { 
       'x-guest-id': guestId,
@@ -5425,10 +5432,12 @@ function initGoogleAuth(clientId) {
   
   renderGoogleButton();
 
-  // Initialize Google One Tap for frictionless login in the same window
-  google.accounts.id.prompt((notification) => {
-    console.log('[Google Auth] One Tap notification:', notification);
-  });
+  // Initialize Google One Tap for frictionless login in the same window (only for guest users)
+  if (!localStorage.getItem('userToken')) {
+    google.accounts.id.prompt((notification) => {
+      console.log('[Google Auth] One Tap notification:', notification);
+    });
+  }
 }
 
 function renderGoogleButton() {
