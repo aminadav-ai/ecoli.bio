@@ -6007,7 +6007,12 @@ function updateUserStatusUI() {
             <div class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
           </div>
           <hr class="dropdown-divider" />
-          <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">Log out</button>
+          <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
+            <svg class="logout-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width: 14px; height: 14px; stroke: currentColor;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Log out</span>
+          </button>
         </div>
       `;
       
