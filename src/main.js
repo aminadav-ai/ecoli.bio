@@ -5561,7 +5561,6 @@ function showLockOverlay(mode) {
 }
 
 function updateUserStatusUI() {
-  const statusBar = document.getElementById('ai-chat-status-bar');
   const lockOverlay = document.getElementById('ai-chat-lock-overlay');
   const inputContainer = document.querySelector('.chat-input-container');
 
@@ -5586,27 +5585,6 @@ function updateUserStatusUI() {
   const contextBtn = document.getElementById('ai-chat-context-btn');
   if (contextBtn) {
     contextBtn.classList.remove('hidden');
-  }
-  
-  // 1. Update AI Chat Status Bar (if it exists)
-  if (statusBar) {
-    if (userProfile) {
-      statusBar.innerHTML = `
-        <span>AI chat: ${currentLimit.count} / ${currentLimit.max} spent today</span>
-      `;
-    } else {
-      statusBar.innerHTML = `
-        <span>Sign in to use the AI Metabolic Assistant</span>
-        <button id="btn-status-login" class="chat-status-login-btn">Sign in</button>
-      `;
-    }
-    
-    const btnStatusLogin = document.getElementById('btn-status-login');
-    if (btnStatusLogin) {
-      btnStatusLogin.addEventListener('click', () => {
-        openAuthModal();
-      });
-    }
   }
   
   // 2. Update Top Header User Profile Badge / Dropdown

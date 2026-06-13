@@ -3298,75 +3298,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.chat-header {
-  padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.65);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
-.chat-title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chat-logo {
-  font-size: 22px;
-}
-
-.chat-title-group h3 {
-  font-family: 'Outfit', sans-serif;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin: 0;
-}
-
-.chat-status {
-  font-size: 10px;
-  color: #10b981;
-  display: block;
-}
-
-.chat-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chat-header-btn {
-  background: transparent;
-  border: none;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-}
-
-.chat-header-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.chat-header-btn.close-btn {
-  font-size: 14px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-header-btn.close-btn:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
 
 /* Collapsible Context Panel */
 .chat-context-panel {
@@ -3548,55 +3480,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
 }
 
-/* Chat status bar (limits/login info) */
-.chat-status-bar {
-  padding: 6px 12px;
-  background: rgba(99, 102, 241, 0.12);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
-  font-size: 11px;
-  color: #a5b4fc;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 28px;
-}
 
-.chat-logout-btn {
-  background: none;
-  border: none;
-  color: #fca5a5;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-  margin-left: 6px;
-  font-size: 10.5px;
-}
-
-.chat-logout-btn:hover {
-  color: #f87171;
-}
-
-.chat-upgrade-btn {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  border: none;
-  color: #0f172a;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
-  margin-left: 6px;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.chat-upgrade-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
-}
 
 /* Chat lock overlay */
 .chat-lock-overlay {
