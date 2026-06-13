@@ -5526,6 +5526,11 @@ function closeAuthModal() {
 }
 
 function openFeedbackModal() {
+  const token = localStorage.getItem('userToken');
+  if (!token) {
+    alert('You must be logged in to submit feedback.');
+    return;
+  }
   const modal = document.getElementById('feedback-modal');
   const textarea = document.getElementById('feedback-text');
   if (modal) {
@@ -5556,7 +5561,7 @@ async function handleFeedbackSubmit() {
     return;
   }
 
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('userToken');
   if (!token) {
     alert('You must be logged in to submit feedback.');
     closeFeedbackModal();
