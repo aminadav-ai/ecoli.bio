@@ -5979,7 +5979,6 @@ function updateUserStatusUI() {
     if (userProfile) {
       const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
       const tierText = userProfile.isPremium ? (userProfile.premiumTier === 2 ? '⚡ Premium Pro' : '💎 Premium Basic') : 'Free Plan';
-      const showUpgrade = !userProfile.isPremium || userProfile.premiumTier !== 2;
       
       const existingDropdown = document.getElementById('user-profile-dropdown');
       const isDropdownHidden = existingDropdown ? existingDropdown.classList.contains('hidden') : true;
