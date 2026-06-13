@@ -5031,7 +5031,7 @@ async function handleDeleteExperiment(exp) {
   const hasChat = exp.chat_count > 0;
   
   if (!isDefault || hasChat) {
-    const confirmed = confirm(`Delete experiment "${exp.name}"?`);
+    const confirmed = await showConfirm(`Delete experiment "${exp.name}"?`);
     if (!confirmed) return;
   }
   
@@ -5604,6 +5604,144 @@ function showToast(message, type = 'success') {
       toast.remove();
     }, 300);
   }, 3000);
+}
+
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.background = 'rgba(15, 23, 42, 0.65)';
+    overlay.style.backdropFilter = 'blur(8px)';
+    overlay.style.webkitBackdropFilter = 'blur(8px)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '20000';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.2s ease';
+
+    // Modal Card
+    const card = document.createElement('div');
+    card.style.background = 'rgba(23, 23, 37, 0.95)';
+    card.style.border = '1px solid rgba(99, 102, 241, 0.3)';
+    card.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+    card.style.borderRadius = '16px';
+    card.style.padding = '24px';
+    card.style.width = '380px';
+    card.style.maxWidth = '90%';
+    card.style.fontFamily = "'Inter', sans-serif";
+    card.style.color = '#e2e8f0';
+    card.style.transform = 'scale(0.9)';
+    card.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
+
+    // Icon & Header
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '12px';
+    header.style.marginBottom = '16px';
+
+    const icon = document.createElement('div');
+    icon.innerHTML = '⚠️';
+    icon.style.fontSize = '24px';
+
+    const title = document.createElement('div');
+    title.textContent = 'Confirm Action';
+    title.style.fontWeight = '600';
+    title.style.fontSize = '17px';
+    title.style.color = '#f8fafc';
+
+    header.appendChild(icon);
+    header.appendChild(title);
+    card.appendChild(header);
+
+    // Body Message
+    const body = document.createElement('div');
+    body.textContent = message;
+    body.style.fontSize = '14px';
+    body.style.lineHeight = '1.6';
+    body.style.color = '#94a3b8';
+    body.style.marginBottom = '24px';
+    card.appendChild(body);
+
+    // Buttons Container
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.justifyContent = 'flex-end';
+    actions.style.gap = '12px';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancel';
+    btnCancel.style.background = 'transparent';
+    btnCancel.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+    btnCancel.style.color = '#94a3b8';
+    btnCancel.style.padding = '8px 16px';
+    btnCancel.style.borderRadius = '8px';
+    btnCancel.style.cursor = 'pointer';
+    btnCancel.style.fontSize = '13.5px';
+    btnCancel.style.fontWeight = '500';
+    btnCancel.style.transition = 'all 0.2s';
+    btnCancel.onmouseover = () => {
+      btnCancel.style.background = 'rgba(255, 255, 255, 0.05)';
+      btnCancel.style.color = '#e2e8f0';
+    };
+    btnCancel.onmouseout = () => {
+      btnCancel.style.background = 'transparent';
+      btnCancel.style.color = '#94a3b8';
+    };
+
+    const btnConfirm = document.createElement('button');
+    btnConfirm.textContent = 'Delete';
+    btnConfirm.style.background = '#ef4444';
+    btnConfirm.style.border = 'none';
+    btnConfirm.style.color = '#ffffff';
+    btnConfirm.style.padding = '8px 16px';
+    btnConfirm.style.borderRadius = '8px';
+    btnConfirm.style.cursor = 'pointer';
+    btnConfirm.style.fontSize = '13.5px';
+    btnConfirm.style.fontWeight = '600';
+    btnConfirm.style.transition = 'all 0.2s';
+    btnConfirm.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)';
+    btnConfirm.onmouseover = () => {
+      btnConfirm.style.background = '#dc2626';
+      btnConfirm.style.boxShadow = '0 4px 16px rgba(220, 38, 38, 0.3)';
+    };
+    btnConfirm.onmouseout = () => {
+      btnConfirm.style.background = '#ef4444';
+      btnConfirm.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)';
+    };
+
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnConfirm);
+    card.appendChild(actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    const cleanup = (val) => {
+      overlay.style.opacity = '0';
+      card.style.transform = 'scale(0.9)';
+      setTimeout(() => {
+        overlay.remove();
+        resolve(val);
+      }, 200);
+    };
+
+    btnCancel.onclick = () => cleanup(false);
+    btnConfirm.onclick = () => cleanup(true);
+    overlay.onclick = (e) => {
+      if (e.target === overlay) cleanup(false);
+    };
+
+    setTimeout(() => {
+      overlay.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    }, 10);
+  });
 }
 
 function openFeedbackModal() {
