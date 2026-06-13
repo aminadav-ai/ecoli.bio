@@ -5585,6 +5585,7 @@ async function handleFeedbackSubmit() {
     if (res.ok) {
       alert('Thank you for your feedback!');
       closeFeedbackModal();
+      closeAllOtherPanels(null);
     } else {
       const data = await res.json();
       alert(`Error: ${data.error || 'Failed to send feedback.'}`);
