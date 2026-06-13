@@ -59,6 +59,20 @@ import { PixiRenderer } from './renderer.js';
     list.appendChild(line);
     logDiv.scrollTop = logDiv.scrollHeight;
   };
+
+  // Periodically log layout state
+  setInterval(() => {
+    const drawer = document.getElementById('mobile-drawer');
+    const btn = document.getElementById('mobile-menu-btn');
+    const nav = document.getElementById('mobile-bottom-nav');
+    console.log('[layout-debug]', 
+                'w:', window.innerWidth, 
+                'h:', window.innerHeight,
+                'isMob:', typeof isCurrentlyMobile !== 'undefined' ? isCurrentlyMobile : 'undef',
+                'drawer:', drawer ? drawer.className : 'null', 
+                'btn:', btn ? btn.className : 'null', 
+                'nav:', nav ? window.getComputedStyle(nav).display : 'null');
+  }, 2000);
 })();
 
 function deserializeSimulation(sim, state) {
