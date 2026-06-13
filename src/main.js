@@ -5605,7 +5605,9 @@ function openAuthModal() {
 
 function closeAuthModal() {
   const authModal = document.getElementById('global-auth-modal');
+  let wasModalOpen = false;
   if (authModal) {
+    wasModalOpen = !authModal.classList.contains('hidden');
     authModal.classList.add('hidden');
   }
   pendingChatMessage = null;
@@ -5617,7 +5619,10 @@ function closeAuthModal() {
   }
   pendingChatCursorStart = null;
   pendingChatCursorEnd = null;
-  popHistoryStateIfNeeded();
+  
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
 }
 
 function showToast(message, type = 'success') {
