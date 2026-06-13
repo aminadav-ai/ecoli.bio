@@ -279,28 +279,7 @@ export async function logoutSession(db, token) {
   }
 }
 
-// 6. Simulate Premium Payment
-export async function simulatePremiumPayment(db, token, tier, autoRenew) {
-  const user = await getUserByToken(db, token);
-  if (!user) {
-    throw new Error('Unauthorized or invalid session.');
-  }
 
-  const premiumUntil = new Date();
-  premiumUntil.setDate(premiumUntil.getDate() + 30);
-  const chosenTier = parseInt(tier, 10) === 2 ? 2 : 1;
-
-  await db.prepare(
-    'UPDATE users SET premium_until = ?, premium_tier = ?, auto_renew = ? WHERE email = ?'
-  ).bind(premiumUntil.toISOString(), chosenTier, autoRenew ? 1 : 0, user.email).run();
-
-  return {
-    success: true,
-    premiumUntil: premiumUntil.toISOString(),
-    premiumTier: chosenTier,
-    autoRenew: !!autoRenew
-  };
-}
 
 // 7. Increment user visits/login count
 export async function incrementUserVisits(db, email) {

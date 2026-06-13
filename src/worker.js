@@ -19,7 +19,6 @@ import {
   verifyGoogleTokenAndLogin, 
   getUserStatus, 
   logoutSession, 
-  simulatePremiumPayment, 
   saveChatMessage, 
   getChatHistory, 
   bulkIncrementUserStats,
@@ -1232,22 +1231,7 @@ Instructions:
         });
       }
 
-      // 7. Simulate payment
-      if (url.pathname === '/api/payments/simulate' && request.method === 'POST') {
-        const authHeader = request.headers.get('authorization');
-        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        if (!token) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        const { tier, autoRenew } = await request.json();
-        const result = await simulatePremiumPayment(env.DB, token, tier, autoRenew);
-        return new Response(JSON.stringify(result), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
+
 
       // 8. Feedback submission
       if (url.pathname === '/api/feedback' && request.method === 'POST') {

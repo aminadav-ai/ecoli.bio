@@ -292,10 +292,6 @@ function closeAllOverlays() {
   if (geoModal) {
     geoModal.classList.add('hidden');
   }
-  const paymentModal = document.getElementById('mock-payment-modal');
-  if (paymentModal) {
-    paymentModal.remove();
-  }
 }
 
 // Pinned Reactions state
@@ -5923,7 +5919,6 @@ function showLockOverlay(mode) {
   const lockTitle = document.getElementById('lock-title');
   const lockMessage = document.getElementById('lock-message');
   const lockIcon = document.getElementById('lock-icon');
-  const btnUpgrade = document.getElementById('btn-upgrade-premium');
   const btnLockSignin = document.getElementById('btn-lock-signin');
   const inputContainer = document.querySelector('.chat-input-container');
 
@@ -5936,19 +5931,16 @@ function showLockOverlay(mode) {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Sign In to Use Chat';
     if (lockMessage) lockMessage.textContent = 'The AI Metabolic Assistant is available only to registered users. Please sign in to continue.';
-    if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_guest') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Sign In to Use Chat';
     if (lockMessage) lockMessage.textContent = 'The AI Metabolic Assistant is available only to registered users. Please sign in to continue.';
-    if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.remove('hidden');
   } else if (mode === 'limit_user') {
     if (lockIcon) lockIcon.textContent = '🔒';
     if (lockTitle) lockTitle.textContent = 'Daily Limit Reached';
     if (lockMessage) lockMessage.textContent = 'Daily query limit reached. You can view your limits in your user profile.';
-    if (btnUpgrade) btnUpgrade.classList.add('hidden');
     if (btnLockSignin) btnLockSignin.classList.add('hidden');
   }
 }
@@ -6019,7 +6011,6 @@ function updateUserStatusUI() {
       const badge = document.getElementById('user-profile-badge');
       const dropdown = document.getElementById('user-profile-dropdown');
       const logoutBtn = document.getElementById('header-logout-btn');
-      const dropdownUpgradeBtn = document.getElementById('dropdown-upgrade-btn');
       
       if (badge && dropdown) {
         badge.addEventListener('click', (e) => {
@@ -6041,13 +6032,6 @@ function updateUserStatusUI() {
         logoutBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           handleLogout();
-        });
-      }
-
-      if (dropdownUpgradeBtn) {
-        dropdownUpgradeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openMockCheckout();
         });
       }
     } else {
@@ -6116,155 +6100,7 @@ function updateUserStatusUI() {
   }
 }
 
-function openMockCheckout() {
-  closeAllOtherPanels(null);
-  pushHistoryStateIfNeeded();
-  const overlay = document.createElement('div');
-  overlay.className = 'mock-payment-overlay';
-  overlay.id = 'mock-payment-modal';
-  
-  if (userProfile && userProfile.isPremium && userProfile.premiumTier === 2) {
-    overlay.innerHTML = `
-      <div class="payment-card glass" style="text-align: center; max-width: 400px; padding: 32px 24px;">
-         <button class="btn-close-payment" id="btn-close-payment">✕</button>
-        <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
-        <h3 style="margin-bottom: 8px;">Active Premium Pro</h3>
-        <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px 0;">You are currently subscribed to the highest tier access plan. Auto-renewal is ${userProfile.autoRenew ? 'enabled' : 'disabled'}. Thank you for your support!</p>
-        <button class="btn btn-primary w-100" id="btn-close-payment-ok" style="height: 40px; font-weight: 700;">Ok</button>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    document.getElementById('btn-close-payment').addEventListener('click', () => { overlay.remove(); popHistoryStateIfNeeded(); });
-    document.getElementById('btn-close-payment-ok').addEventListener('click', () => { overlay.remove(); popHistoryStateIfNeeded(); });
-    return;
-  }
 
-  const isBasicActive = userProfile && userProfile.isPremium && userProfile.premiumTier === 1;
-  let selectedTier = isBasicActive ? 2 : 1;
-  let selectedPrice = isBasicActive ? "15.00" : "5.00";
-  
-  overlay.innerHTML = `
-    <div class="payment-card glass">
-      <button class="btn-close-payment" id="btn-close-payment">✕</button>
-      <h3>⚡ ecoli.bio Premium Access</h3>
-      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0;">Upgrade AI Chat & Scenarios</p>
-      
-      <div class="plan-selector">
-        ${isBasicActive ? '' : `
-        <div class="plan-card active" id="plan-tier-1" data-tier="1" data-price="5.00">
-          <h4>💎 Basic</h4>
-          <p>100 queries/day</p>
-          <div class="price">$5.00</div>
-        </div>
-        `}
-        <div class="plan-card ${isBasicActive ? 'active' : ''}" id="plan-tier-2" data-tier="2" data-price="15.00">
-          <h4>⚡ Pro</h4>
-          <p>500 queries/day</p>
-          <div class="price">$15.00</div>
-        </div>
-      </div>
-      
-      <div class="card-input-group">
-        <div>
-          <label>Card Number</label>
-          <input type="text" placeholder="4000 1234 5678 9010" id="pay-card-num" value="4000 1234 5678 9010" />
-        </div>
-        <div class="payment-row">
-          <div>
-            <label>Expiry Date</label>
-            <input type="text" placeholder="12/28" id="pay-card-exp" value="12/28" />
-          </div>
-          <div>
-            <label>CVC</label>
-            <input type="text" placeholder="123" id="pay-card-cvc" value="123" />
-          </div>
-        </div>
-        <div>
-          <label>Cardholder Name</label>
-          <input type="text" placeholder="John Doe" id="pay-card-name" value="${userProfile ? userProfile.name : 'John Doe'}" />
-        </div>
-      </div>
-
-      <!-- Auto-Renew Checkbox -->
-      <div class="auto-renew-checkbox-group">
-        <input type="checkbox" id="pay-auto-renew" />
-        <label for="pay-auto-renew">Auto-renew subscription monthly</label>
-      </div>
-      
-      <button class="btn btn-primary w-100" id="btn-confirm-payment" style="height: 40px; font-weight: 700; margin-top: 16px;">Pay $${selectedPrice}</button>
-      <p style="font-size: 10px; color: #64748b; text-align: center; margin: 12px 0 0 0;">🔐 Simulated sandbox payment. No real money will be charged.</p>
-    </div>
-  `;
-  
-  document.body.appendChild(overlay);
-  
-  const card1 = document.getElementById('plan-tier-1');
-  const card2 = document.getElementById('plan-tier-2');
-  const btnConfirm = document.getElementById('btn-confirm-payment');
-  
-  if (card1) {
-    card1.addEventListener('click', () => {
-      card1.classList.add('active');
-      if (card2) card2.classList.remove('active');
-      selectedTier = 1;
-      selectedPrice = "5.00";
-      btnConfirm.textContent = `Pay $${selectedPrice}`;
-    });
-  }
-  
-  if (card2) {
-    card2.addEventListener('click', () => {
-      card2.classList.add('active');
-      if (card1) card1.classList.remove('active');
-      selectedTier = 2;
-      selectedPrice = "15.00";
-      btnConfirm.textContent = `Pay $${selectedPrice}`;
-    });
-  }
-  
-  document.getElementById('btn-close-payment').addEventListener('click', () => {
-    overlay.remove();
-    popHistoryStateIfNeeded();
-  });
-  
-  btnConfirm.addEventListener('click', async () => {
-    btnConfirm.disabled = true;
-    btnConfirm.textContent = 'Processing transaction...';
-    
-    const autoRenewCheckbox = document.getElementById('pay-auto-renew');
-    const autoRenew = autoRenewCheckbox ? autoRenewCheckbox.checked : false;
-    
-    const token = localStorage.getItem('userToken');
-    try {
-      const res = await fetch('/api/payments/simulate', {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ tier: selectedTier, autoRenew })
-      });
-      if (res.ok) {
-        btnConfirm.textContent = '✓ Payment Successful!';
-        btnConfirm.style.backgroundColor = '#10b981';
-        setTimeout(() => {
-          overlay.remove();
-          checkAuthStatus();
-          popHistoryStateIfNeeded();
-        }, 1500);
-      } else {
-        showToast('Payment failed. Please try again.', 'error');
-        btnConfirm.disabled = false;
-        btnConfirm.textContent = `Pay $${selectedPrice}`;
-      }
-    } catch (e) {
-      console.error(e);
-      showToast('Payment request error.', 'error');
-      btnConfirm.disabled = false;
-      btnConfirm.textContent = `Pay $${selectedPrice}`;
-    }
-  });
-}
 
 function setupScenariosAndChat() {
   // 1. Setup Tab Switching in Left Sidebar
@@ -6435,13 +6271,7 @@ function setupScenariosAndChat() {
     }
   });
 
-  // Upgrade to Premium Button
-  const btnUpgrade = document.getElementById('btn-upgrade-premium');
-  if (btnUpgrade) {
-    btnUpgrade.addEventListener('click', () => {
-      openMockCheckout();
-    });
-  }
+
 
   // Decoupled Global Auth Modal triggers
   const btnCloseAuth = document.getElementById('btn-close-auth');
