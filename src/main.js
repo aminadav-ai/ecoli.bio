@@ -5541,10 +5541,75 @@ function closeAuthModal() {
   popHistoryStateIfNeeded();
 }
 
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container') || (() => {
+    const el = document.createElement('div');
+    el.id = 'toast-container';
+    el.style.position = 'fixed';
+    el.style.top = '24px';
+    el.style.left = '50%';
+    el.style.transform = 'translateX(-50%)';
+    el.style.zIndex = '10000';
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+    el.style.gap = '8px';
+    el.style.pointerEvents = 'none';
+    document.body.appendChild(el);
+    return el;
+  })();
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.style.background = 'rgba(15, 23, 42, 0.9)';
+  toast.style.border = '1px solid rgba(99, 102, 241, 0.4)';
+  toast.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)';
+  toast.style.backdropFilter = 'blur(12px)';
+  toast.style.webkitBackdropFilter = 'blur(12px)';
+  toast.style.borderRadius = '12px';
+  toast.style.padding = '12px 24px';
+  toast.style.color = '#e2e8f0';
+  toast.style.fontFamily = "'Inter', sans-serif";
+  toast.style.fontSize = '13.5px';
+  toast.style.fontWeight = '500';
+  toast.style.display = 'flex';
+  toast.style.alignItems = 'center';
+  toast.style.gap = '10px';
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateY(-20px)';
+  toast.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+  toast.style.pointerEvents = 'auto';
+
+  if (type === 'success') {
+    toast.style.borderLeft = '4px solid #10b981';
+    toast.innerHTML = `<span style="color: #10b981; font-size: 16px;">✓</span> <span>${message}</span>`;
+  } else {
+    toast.style.borderLeft = '4px solid #ef4444';
+    toast.innerHTML = `<span style="color: #ef4444; font-size: 16px;">⚠️</span> <span>${message}</span>`;
+  }
+
+  container.appendChild(toast);
+
+  // Trigger reflow
+  toast.offsetHeight;
+
+  // Animate in
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateY(0)';
+
+  // Remove toast after 3 seconds
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+
 function openFeedbackModal() {
   const token = localStorage.getItem('userToken');
   if (!token) {
-    alert('You must be logged in to submit feedback.');
+    showToast('You must be logged in to submit feedback.', 'error');
     return;
   }
   const modal = document.getElementById('feedback-modal');
@@ -5572,14 +5637,14 @@ async function handleFeedbackSubmit() {
 
   const text = textarea.value.trim();
   if (!text) {
-    alert('Please enter your feedback text.');
+    showToast('Please enter your feedback text.', 'error');
     textarea.focus();
     return;
   }
 
   const token = localStorage.getItem('userToken');
   if (!token) {
-    alert('You must be logged in to submit feedback.');
+    showToast('You must be logged in to submit feedback.', 'error');
     closeFeedbackModal();
     return;
   }
@@ -5599,16 +5664,16 @@ async function handleFeedbackSubmit() {
     });
 
     if (res.ok) {
-      alert('Thank you for your feedback!');
       closeFeedbackModal();
       closeAllOtherPanels(null);
+      showToast('Thank you for your feedback!', 'success');
     } else {
       const data = await res.json();
-      alert(`Error: ${data.error || 'Failed to send feedback.'}`);
+      showToast(`Error: ${data.error || 'Failed to send feedback.'}`, 'error');
     }
   } catch (err) {
     console.error('Failed to submit feedback:', err);
-    alert('Network error. Failed to send feedback.');
+    showToast('Network error. Failed to send feedback.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
