@@ -109,6 +109,10 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
     throw new Error('Email field is missing in Google credential payload.');
   }
 
+  // Check if user already exists before inserting
+  const existingUser = await db.prepare('SELECT email FROM users WHERE email = ?').bind(email).first();
+  const isNewUser = !existingUser;
+
   // Create user in DB (upsert)
   await db.prepare(
     'INSERT INTO users (email, name) VALUES (?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name'
@@ -131,6 +135,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
 
   return {
     token,
+    isNewUser,
     user: {
       email: user.email,
       name: user.name,

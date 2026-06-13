@@ -682,25 +682,21 @@ async function sendTelegramNotification(env, text) {
   }
 }
 
-// Track visits in Telegram
-async function trackWorkerVisit(env, request, identifier) {
+// Track new user signup in Telegram
+async function trackUserSignup(env, request, email, name) {
   try {
     const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'Unknown IP';
     const ua = request.headers.get('user-agent') || '';
     const device = parseUserAgent(ua);
-    const referer = request.headers.get('referer') || 'Direct/Unknown';
-    const url = new URL(request.url);
-    const urlPath = url.pathname;
 
-    const text = `🔔 <b>New visitor on site!</b>\n\n` +
-                 `<b>User:</b> <code>${identifier}</code>\n` +
-                 `<b>Path:</b> <code>${request.method || 'GET'} ${urlPath}</code>\n` +
+    const text = `🆕 <b>New user registered!</b>\n\n` +
+                 `<b>Name:</b> <code>${name}</code>\n` +
+                 `<b>Email:</b> <code>${email}</code>\n` +
                  `<b>IP:</b> <code>${ip}</code>\n` +
-                 `<b>Device:</b> <code>${device}</code>\n` +
-                 `<b>Referer:</b> <code>${referer}</code>`;
+                 `<b>Device:</b> <code>${device}</code>`;
     await sendTelegramNotification(env, text);
   } catch (err) {
-    console.error('[Telegram Tracker] Error tracking visit:', err);
+    console.error('[Telegram Tracker] Error tracking user signup:', err);
   }
 }
 
@@ -1138,6 +1134,9 @@ Instructions:
           });
         }
         const session = await verifyGoogleTokenAndLogin(env.DB, credential);
+        if (session.isNewUser) {
+          ctx.waitUntil(trackUserSignup(env, request, session.user.email, session.user.name));
+        }
         return new Response(JSON.stringify(session), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -1157,12 +1156,10 @@ Instructions:
           if (status.loggedIn && status.user) {
             await incrementUserVisits(env.DB, status.user.email);
             status = await getUserStatus(env.DB, token, ip, guestId, timeZone);
-            ctx.waitUntil(trackWorkerVisit(env, request, status.user.email));
           } else {
             const sessionId = request.headers.get('x-session-id') || guestId || ip || 'unknown';
             const dateStr = new Date().toISOString().slice(0, 10);
             ctx.waitUntil(recordGuestVisit(env.DB, sessionId, dateStr));
-            ctx.waitUntil(trackWorkerVisit(env, request, `Guest (${sessionId})`));
           }
         }
         return new Response(JSON.stringify(status), {
