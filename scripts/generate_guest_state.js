@@ -1,7 +1,33 @@
 import fs from 'fs';
 import path from 'path';
 import highsLoader from 'highs';
-import { precalculateGuestState, getPrecalculatedGuestState } from '../src/fba_solver_core.js';
+import { initializeNewSimulation, solveFba, serializeSimulation } from '../src/fba_solver_worker.js';
+
+let precalculatedGuestState = null;
+
+function precalculateGuestState(highs, staticLpHeader) {
+  const sim = initializeNewSimulation();
+  if (!sim) return;
+  
+  sim.metabolites['o2_e'].concentration = 0.2;
+  sim.metabolites['o2_e'].targetConcentration = 0.2;
+  sim.metabolites['glc__D_e'].concentration = 10.0;
+  sim.metabolites['glc__D_e'].targetConcentration = 10.0;
+  
+  for (let i = 0; i < 20; i++) {
+    const concs = {};
+    for (const [mId, metab] of Object.entries(sim.metabolites)) {
+      concs[mId] = metab.concentration;
+    }
+    solveFba(highs, staticLpHeader, concs, {}, sim, { skipSimTick: false });
+  }
+  
+  precalculatedGuestState = serializeSimulation(sim);
+}
+
+function getPrecalculatedGuestState() {
+  return precalculatedGuestState;
+}
 
 async function main() {
   console.log('[Guest State Generator] Initializing HiGHS solver...');

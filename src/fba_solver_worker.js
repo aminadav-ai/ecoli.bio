@@ -2,8 +2,8 @@
 // FBA solver core adapted for Cloudflare Workers (no fs/path dependencies)
 
 import { Simulation } from './simulation.js';
-import staticBoundsRaw from './static_bounds.json';
-import escherMapDataRaw from '../public/iJO1366.Central metabolism.json';
+import staticBoundsRaw from './static_bounds.json' assert { type: 'json' };
+import escherMapDataRaw from '../public/iJO1366.Central metabolism.json' assert { type: 'json' };
 
 const staticBounds = staticBoundsRaw.default || staticBoundsRaw;
 const escherMapData = escherMapDataRaw.default || escherMapDataRaw;
