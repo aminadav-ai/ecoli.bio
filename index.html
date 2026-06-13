@@ -25,7 +25,9 @@
 
     <!-- Configure Google Client ID statically -->
     <script type="text/javascript">
-      window.GOOGLE_CLIENT_ID = "889111185997-rfd2qv356f0454k3ovtgaao9540em9bc.apps.googleusercontent.com";
+      if (window.location.hostname === 'ecoli.bio' || window.location.hostname === 'www.ecoli.bio') {
+        window.GOOGLE_CLIENT_ID = "889111185997-rfd2qv356f0454k3ovtgaao9540em9bc.apps.googleusercontent.com";
+      }
     </script>
 
   </head>

@@ -5282,17 +5282,33 @@ async function checkAuthStatus(isVisit = false) {
     // Guest user - immediately configure guest mode locally and load static state
     console.log('[Auth] Guest user detected (no token). Bypassing /api/auth/status query.');
 
-    if (isVisit) {
-      // Fire-and-forget query to record guest visit on the server
-      const headers = { 
-        'x-guest-id': guestId,
-        'x-session-id': sessionId,
-        'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
-      };
-      fetch('/api/auth/status?visit=true', { headers }).catch(err => {
-        console.error('[Auth] Failed to send guest visit notification:', err);
+    // Fetch auth status in background to populate googleClientId and limits
+    const guestHeaders = { 
+      'x-guest-id': guestId,
+      'x-session-id': sessionId,
+      'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+    const statusUrl = isVisit ? '/api/auth/status?visit=true' : '/api/auth/status';
+    fetch(statusUrl, { headers: guestHeaders })
+      .then(res => {
+        if (res.ok) return res.json();
+      })
+      .then(data => {
+        if (data) {
+          if (data.limit) {
+            currentLimit = data.limit;
+          }
+          if (data.googleClientId) {
+            googleClientId = data.googleClientId;
+            if (!googleAuthInitialized) {
+              initGoogleAuth(googleClientId);
+            }
+          }
+        }
+      })
+      .catch(err => {
+        console.error('[Auth] Failed to fetch guest status in background:', err);
       });
-    }
 
     userProfile = null;
     updateUserStatusUI();
