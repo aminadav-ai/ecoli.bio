@@ -469,7 +469,7 @@ async function bootstrap() {
     mapData = await res.json();
   } catch (error) {
     console.error('[App] Failed to load iJO1366.Central metabolism.json local asset:', error);
-    alert('Failed to load local metabolic map asset.');
+    showToast('Failed to load local metabolic map asset.', 'error');
     return;
   }
 
@@ -766,7 +766,7 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
           playPauseBtn.textContent = '▶ Play';
           playPauseBtn.className = 'btn btn-secondary';
         }
-        alert(errData.error);
+        showToast(errData.error, 'error');
         await checkAuthStatus();
       }
     }
@@ -4426,7 +4426,7 @@ async function performGeoAnalysis() {
     if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
 
     if (!geminiData.canMap || !geminiData.states || geminiData.states.length === 0) {
-      alert('Analysis concluded that these conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).');
+      showToast('Analysis concluded that these conditions cannot be mapped to the core metabolic model (or no relevant data points were extracted).', 'error');
       if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
       return;
     }
@@ -4474,7 +4474,7 @@ async function performGeoAnalysis() {
     console.error('[GEO Analysis Error] ', err);
     if (geoAnalysisLoading) geoAnalysisLoading.classList.add('hidden');
     if (geoAnalyzeBtn) geoAnalyzeBtn.classList.remove('hidden');
-    alert(`Analysis failed: ${err.message || 'Unknown network error'}`);
+    showToast(`Analysis failed: ${err.message || 'Unknown network error'}`, 'error');
   }
 }
 
@@ -4785,7 +4785,7 @@ async function loadExperimentsList(selectedId = null) {
       
       if (!exists && isExperimentsListLoaded) {
         if (!isDeletingLocally) {
-          alert("This experiment was deleted from another session of this user.");
+          showToast("This experiment was deleted from another session of this user.", 'error');
         }
         if (list.length > 0) {
           sessionId = list[0].id;
@@ -5019,7 +5019,7 @@ async function saveRename(id, newName) {
       await loadExperimentsList(sessionId);
     } else {
       const err = await res.json();
-      alert(`Failed to rename: ${err.error || 'Unknown error'}`);
+      showToast(`Failed to rename: ${err.error || 'Unknown error'}`, 'error');
     }
   } catch (err) {
     console.error('Failed to rename experiment:', err);
@@ -5055,14 +5055,14 @@ async function handleDeleteExperiment(exp) {
     if (res.ok) {
       await loadExperimentsList();
     } else if (res.status === 409) {
-      alert("Cannot delete this experiment because it is open in other tabs.");
+      showToast("Cannot delete this experiment because it is open in other tabs.", 'error');
     } else {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Failed to delete the experiment.");
+      showToast(data.error || "Failed to delete the experiment.", 'error');
     }
   } catch (err) {
     console.error('Failed to delete experiment:', err);
-    alert("An error occurred while deleting the experiment.");
+    showToast("An error occurred while deleting the experiment.", 'error');
   } finally {
     isDeletingLocally = false;
   }
@@ -5465,7 +5465,7 @@ async function handleGoogleCredentialResponse(response) {
       }
     } else {
       const err = await res.json();
-      alert(`Google Auth failed: ${err.error}`);
+      showToast(`Google Auth failed: ${err.error}`, 'error');
     }
   } catch (err) {
     console.error('Google credential validation error:', err);
@@ -6009,13 +6009,13 @@ function openMockCheckout() {
           popHistoryStateIfNeeded();
         }, 1500);
       } else {
-        alert('Payment failed. Please try again.');
+        showToast('Payment failed. Please try again.', 'error');
         btnConfirm.disabled = false;
         btnConfirm.textContent = `Pay $${selectedPrice}`;
       }
     } catch (e) {
       console.error(e);
-      alert('Payment request error.');
+      showToast('Payment request error.', 'error');
       btnConfirm.disabled = false;
       btnConfirm.textContent = `Pay $${selectedPrice}`;
     }
@@ -6693,7 +6693,7 @@ async function submitReflectionAnswer() {
   if (!answerInput) return;
   const answer = answerInput.value.trim();
   if (!answer) {
-    alert('Please write an answer to the question before submitting.');
+    showToast('Please write an answer to the question before submitting.', 'error');
     return;
   }
 
