@@ -5286,6 +5286,12 @@ async function checkAuthStatus(isVisit = false) {
     if (googleAuthInitialized && typeof google !== 'undefined') {
       google.accounts.id.prompt((notification) => {
         console.log('[Google Auth] One Tap notification:', notification);
+        if (notification.isNotDisplayed()) {
+          console.warn('[Google Auth] One Tap not displayed. Reason:', notification.getNotDisplayedReason());
+        }
+        if (notification.isSkippedMoment()) {
+          console.warn('[Google Auth] One Tap skipped. Reason:', notification.getSkippedReason());
+        }
       });
     }
 
@@ -5436,6 +5442,12 @@ function initGoogleAuth(clientId) {
   if (!localStorage.getItem('userToken')) {
     google.accounts.id.prompt((notification) => {
       console.log('[Google Auth] One Tap notification:', notification);
+      if (notification.isNotDisplayed()) {
+        console.warn('[Google Auth] One Tap not displayed. Reason:', notification.getNotDisplayedReason());
+      }
+      if (notification.isSkippedMoment()) {
+        console.warn('[Google Auth] One Tap skipped. Reason:', notification.getSkippedReason());
+      }
     });
   }
 }
