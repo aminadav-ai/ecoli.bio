@@ -8,72 +8,6 @@
 
 import { Simulation } from './simulation.js';
 import { PixiRenderer } from './renderer.js';
-// Floating On-Screen Logger for Mobile Viewport Debugging
-(function() {
-  const logDiv = document.createElement('div');
-  logDiv.id = 'mobile-debug-logger';
-  logDiv.style.position = 'fixed';
-  logDiv.style.top = '10px';
-  logDiv.style.left = '10px';
-  logDiv.style.right = '10px';
-  logDiv.style.height = '160px';
-  logDiv.style.background = 'rgba(0, 0, 0, 0.9)';
-  logDiv.style.color = '#00ff00';
-  logDiv.style.fontFamily = 'monospace';
-  logDiv.style.fontSize = '9px';
-  logDiv.style.lineHeight = '1.3';
-  logDiv.style.padding = '8px';
-  logDiv.style.overflowY = 'auto';
-  logDiv.style.zIndex = '999999';
-  logDiv.style.borderRadius = '8px';
-  logDiv.style.border = '1px solid #333';
-  logDiv.style.pointerEvents = 'none'; // click-through
-  
-  const title = document.createElement('div');
-  title.textContent = '🛠️ On-Screen Debug Logs (Click-Through):';
-  title.style.fontWeight = 'bold';
-  title.style.borderBottom = '1px solid #444';
-  title.style.paddingBottom = '3px';
-  title.style.marginBottom = '5px';
-  logDiv.appendChild(title);
-  
-  const list = document.createElement('div');
-  list.id = 'mobile-debug-log-list';
-  logDiv.appendChild(list);
-  
-  if (document.body) {
-    document.body.appendChild(logDiv);
-  } else {
-    document.addEventListener('DOMContentLoaded', () => {
-      document.body.appendChild(logDiv);
-    });
-  }
-  
-  const originalLog = console.log;
-  console.log = function(...args) {
-    originalLog.apply(console, args);
-    const line = document.createElement('div');
-    line.textContent = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-    line.style.borderBottom = '1px solid #222';
-    line.style.padding = '2px 0';
-    list.appendChild(line);
-    logDiv.scrollTop = logDiv.scrollHeight;
-  };
-
-  // Periodically log layout state
-  setInterval(() => {
-    const drawer = document.getElementById('mobile-drawer');
-    const btn = document.getElementById('mobile-menu-btn');
-    const nav = document.getElementById('mobile-bottom-nav');
-    console.log('[layout-debug]', 
-                'w:', window.innerWidth, 
-                'h:', window.innerHeight,
-                'isMob:', typeof isCurrentlyMobile !== 'undefined' ? isCurrentlyMobile : 'undef',
-                'drawer:', drawer ? drawer.className : 'null', 
-                'btn:', btn ? btn.className : 'null', 
-                'nav:', nav ? window.getComputedStyle(nav).display : 'null');
-  }, 2000);
-})();
 
 function deserializeSimulation(sim, state) {
   if (!state) return;
@@ -338,20 +272,16 @@ let selectedReactionId = null;
 let isHistoryPushed = false;
 
 function pushHistoryStateIfNeeded() {
-  console.log('[pushHistoryStateIfNeeded] isHistoryPushed:', isHistoryPushed);
   if (!isHistoryPushed) {
     history.pushState({ panelOpen: true }, '');
     isHistoryPushed = true;
-    console.log('[pushHistoryStateIfNeeded] state pushed, isHistoryPushed is now true');
   }
 }
 
 function popHistoryStateIfNeeded() {
-  console.log('[popHistoryStateIfNeeded] isHistoryPushed:', isHistoryPushed);
   if (isHistoryPushed) {
     isHistoryPushed = false;
     history.back();
-    console.log('[popHistoryStateIfNeeded] history.back() called, isHistoryPushed is now false');
   }
 }
 
@@ -1970,9 +1900,7 @@ function setupUIListeners() {
   
   // Close mobile drawer on click outside
   document.addEventListener('click', (e) => {
-    console.log('[document click] target:', e.target, 'id:', e.target?.id, 'class:', e.target?.className, 'mobileDrawer active:', mobileDrawer?.classList.contains('active'));
     if (mobileDrawer && mobileDrawer.classList.contains('active') && !mobileDrawer.contains(e.target) && !e.target.closest('#mobile-menu-btn')) {
-      console.log('[document click] outside active mobile drawer -> closing');
       closeAllOtherPanels(null);
     }
   });
@@ -2346,7 +2274,6 @@ function closeChatDrawer() {
  * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search', 'left-panel', 'mobile-drawer'.
  */
 function closeAllOtherPanels(except) {
-  console.log('[closeAllOtherPanels] except:', except, 'mobileDrawer active:', document.getElementById('mobile-drawer')?.classList.contains('active'), 'mobileMenuBtn open:', document.getElementById('mobile-menu-btn')?.classList.contains('open'));
   if (except !== null) {
     pushHistoryStateIfNeeded();
   } else {
