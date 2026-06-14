@@ -2340,7 +2340,7 @@ function closeAllOtherPanels(except) {
   // 3. Reaction/Metabolite Inspector Panel
   const isMobile = window.innerWidth <= 768;
   if (except !== 'inspector') {
-    const shouldHideInspector = isMobile || (except === 'chat' || except === null);
+    const shouldHideInspector = isMobile || (except === 'chat' || except === 'mobile-drawer' || except === null);
     if (shouldHideInspector) {
       hideInspector();
       const rightPanel = document.querySelector('.right-panel');
