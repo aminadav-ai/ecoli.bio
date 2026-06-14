@@ -154,6 +154,12 @@ export function calculateBounds(concentrations, parameters) {
       continue;
     }
 
+    if (rxnId === 'EX_glc__D_e') {
+      const glcConcVal = concentrations['glc__D_e'] !== undefined ? concentrations['glc__D_e'] : 10.0;
+      bounds[rxnId] = { lowerBound: -glcConcVal, upperBound: 1000.0 };
+      continue;
+    }
+
     let defaultVmax = 10.0;
     let defaultKm = 0.8;
 
