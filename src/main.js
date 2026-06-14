@@ -1903,10 +1903,12 @@ function setupUIListeners() {
 
   // Mobile Bottom Navigation Buttons
   const navMetrics = document.getElementById('mobile-nav-metrics');
+  const navScenarios = document.getElementById('mobile-nav-scenarios');
   const navChat = document.getElementById('mobile-nav-chat');
   const navInspector = document.getElementById('mobile-nav-inspector');
   
-  const leftPanel = document.querySelector('.left-panel');
+  const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+  const scenariosPanel = document.getElementById('scenarios-panel');
   const rightPanel = document.querySelector('.right-panel');
   const chatDrawer = document.getElementById('ai-chat-drawer');
   
@@ -1923,11 +1925,32 @@ function setupUIListeners() {
       } else {
         const isHidden = leftPanel.classList.contains('hidden-panel');
         if (isHidden) {
-          leftPanel.classList.remove('hidden-panel');
-          navMetrics.classList.add('active');
+          closeAllOtherPanels('left-panel');
         } else {
           leftPanel.classList.add('hidden-panel');
           navMetrics.classList.remove('active');
+        }
+      }
+    });
+  }
+
+  if (navScenarios && scenariosPanel) {
+    navScenarios.addEventListener('click', () => {
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        const isMobileActive = scenariosPanel.classList.contains('mobile-active');
+        if (isMobileActive) {
+          closeAllOtherPanels(null);
+        } else {
+          closeAllOtherPanels('scenarios');
+        }
+      } else {
+        const isHidden = scenariosPanel.classList.contains('hidden-panel');
+        if (isHidden) {
+          closeAllOtherPanels('scenarios');
+        } else {
+          scenariosPanel.classList.add('hidden-panel');
+          navScenarios.classList.remove('active');
         }
       }
     });
@@ -1999,10 +2022,12 @@ function checkViewportChange() {
   // Handle class synchronization on viewport switch
   const width = window.innerWidth;
   const isMobile = width <= 768;
-  const leftPanel = document.querySelector('.left-panel');
+  const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+  const scenariosPanel = document.getElementById('scenarios-panel');
   const rightPanel = document.querySelector('.right-panel');
   const chatDrawer = document.getElementById('ai-chat-drawer');
   const navMetrics = document.getElementById('mobile-nav-metrics');
+  const navScenarios = document.getElementById('mobile-nav-scenarios');
   const navChat = document.getElementById('mobile-nav-chat');
   const navInspector = document.getElementById('mobile-nav-inspector');
 
@@ -2014,6 +2039,10 @@ function checkViewportChange() {
       leftPanel.classList.remove('hidden-panel');
       leftPanel.classList.remove('mobile-active');
     }
+    if (scenariosPanel) {
+      scenariosPanel.classList.add('hidden-panel');
+      scenariosPanel.classList.remove('mobile-active');
+    }
     if (rightPanel) {
       rightPanel.classList.remove('mobile-active');
       rightPanel.classList.add('hidden-panel'); // starts hidden on both
@@ -2021,6 +2050,7 @@ function checkViewportChange() {
     closeChatDrawer();
     
     if (navMetrics) navMetrics.classList.remove('active');
+    if (navScenarios) navScenarios.classList.remove('active');
     if (navChat) navChat.classList.remove('active');
     if (navInspector) navInspector.classList.remove('active');
 
@@ -2303,29 +2333,31 @@ function closeChatDrawer() {
   }
 }
 
-/**
- * Closes all panel elements except the specified one to prevent visual overlap.
- * Participating panels: 'chat', 'profile', 'inspector', 'experiments', 'solver', 'settings', 'search', 'left-panel', 'mobile-drawer'.
- */
 function closeAllOtherPanels(except) {
+  const isMobile = window.innerWidth <= 768;
+
   if (except !== null) {
     pushHistoryStateIfNeeded();
   } else {
     popHistoryStateIfNeeded();
   }
 
+  // --- Right-side / General Panels Mutual Exclusion ---
+  
   // 1. AI Chat Drawer
-  if (except !== 'chat') {
+  const shouldCloseChat = isMobile ? (except !== 'chat') : (except !== 'chat' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseChat) {
     closeChatDrawer();
     const navChat = document.getElementById('mobile-nav-chat');
     if (navChat) navChat.classList.remove('active');
-  } else {
+  } else if (except === 'chat') {
     const navChat = document.getElementById('mobile-nav-chat');
     if (navChat) navChat.classList.add('active');
   }
 
   // 2. User Profile Dropdown
-  if (except !== 'profile') {
+  const shouldCloseProfile = isMobile ? (except !== 'profile') : (except !== 'profile' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseProfile) {
     const userDropdown = document.getElementById('user-profile-dropdown');
     if (userDropdown) {
       userDropdown.classList.add('hidden');
@@ -2338,9 +2370,8 @@ function closeAllOtherPanels(except) {
   }
 
   // 3. Reaction/Metabolite Inspector Panel
-  const isMobile = window.innerWidth <= 768;
   if (except !== 'inspector') {
-    const shouldHideInspector = isMobile || (except === 'chat' || except === 'mobile-drawer' || except === null);
+    const shouldHideInspector = isMobile || (except !== 'left-panel' && except !== 'scenarios');
     if (shouldHideInspector) {
       hideInspector();
       const rightPanel = document.querySelector('.right-panel');
@@ -2358,30 +2389,11 @@ function closeAllOtherPanels(except) {
     if (navInspector) navInspector.classList.add('active');
   }
 
-  // 4. Left Panel (Metrics & Scenarios)
-  if (isMobile) {
-    if (except !== 'left-panel') {
-      const leftPanel = document.querySelector('.left-panel');
-      if (leftPanel) leftPanel.classList.remove('mobile-active');
-      const navMetrics = document.getElementById('mobile-nav-metrics');
-      if (navMetrics) navMetrics.classList.remove('active');
-    } else {
-      const leftPanel = document.querySelector('.left-panel');
-      if (leftPanel) leftPanel.classList.add('mobile-active');
-      const navMetrics = document.getElementById('mobile-nav-metrics');
-      if (navMetrics) navMetrics.classList.add('active');
-    }
-  } else {
-    // On desktop, left-panel only shows when specifically requested (e.g. from scenarios tab switch/logic)
-    if (except === 'left-panel') {
-      const leftPanel = document.querySelector('.left-panel');
-      if (leftPanel) leftPanel.classList.remove('hidden-panel');
-      const navMetrics = document.getElementById('mobile-nav-metrics');
-      if (navMetrics) navMetrics.classList.add('active');
-    }
-  }
-
-  // 5. Mobile Hamburger Drawer
+  // 4. Mobile Hamburger Drawer
+  const shouldCloseMobileDrawer = isMobile 
+    ? (except !== 'mobile-drawer') 
+    : (except !== 'mobile-drawer' && except !== 'left-panel' && except !== 'scenarios' && except !== 'experiments' && except !== 'profile');
+  
   if (except === 'mobile-drawer') {
     const mobileDrawer = document.getElementById('mobile-drawer');
     if (mobileDrawer) {
@@ -2394,7 +2406,7 @@ function closeAllOtherPanels(except) {
         mobileMenuBtn.classList.add('open');
       }
     }
-  } else if (except !== 'experiments' && except !== 'profile') {
+  } else if (shouldCloseMobileDrawer) {
     const mobileDrawer = document.getElementById('mobile-drawer');
     if (mobileDrawer) {
       mobileDrawer.classList.remove('active');
@@ -2404,33 +2416,95 @@ function closeAllOtherPanels(except) {
     if (mobileMenuBtn) mobileMenuBtn.classList.remove('open');
   }
 
-  // 6. Experiments List
-  if (except !== 'experiments') {
+  // 5. Experiments List
+  const shouldCloseExperiments = isMobile ? (except !== 'experiments') : (except !== 'experiments' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseExperiments) {
     const customOptionsDiv = document.getElementById('custom-experiment-options');
     const customWrapper = document.getElementById('custom-experiment-select-wrapper');
     if (customOptionsDiv) customOptionsDiv.classList.add('hidden');
     if (customWrapper) customWrapper.classList.remove('open');
   }
 
-  // 7. Solver Activity Dropdown
-  if (except !== 'solver') {
+  // 6. Solver Activity Dropdown
+  const shouldCloseSolver = isMobile ? (except !== 'solver') : (except !== 'solver' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseSolver) {
     const solverDropdown = document.getElementById('solver-details-dropdown');
     if (solverDropdown) {
       solverDropdown.classList.add('hidden');
     }
   }
 
-  // 8. Map Settings Dropdown
-  if (except !== 'settings') {
+  // 7. Map Settings Dropdown
+  const shouldCloseSettings = isMobile ? (except !== 'settings') : (except !== 'settings' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseSettings) {
     const settingsDropdown = document.getElementById('settings-dropdown');
     if (settingsDropdown) {
       settingsDropdown.classList.add('hidden');
     }
   }
 
-  // 9. Map Search Suggestions Dropdown
-  if (except !== 'search') {
+  // 8. Search Dropdown
+  const shouldCloseSearch = isMobile ? (except !== 'search') : (except !== 'search' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseSearch) {
     hideSearchResults();
+  }
+
+  // --- Left-side Panels (Metrics & Scenarios) Mutual Exclusion ---
+  
+  // 9. Left Panel (Metrics & Pinned Reactions)
+  if (isMobile) {
+    if (except !== 'left-panel') {
+      const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+      if (leftPanel) leftPanel.classList.remove('mobile-active');
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.remove('active');
+    } else {
+      const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+      if (leftPanel) leftPanel.classList.add('mobile-active');
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.add('active');
+    }
+  } else {
+    if (except === 'scenarios') {
+      const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+      if (leftPanel) {
+        leftPanel.classList.add('hidden-panel');
+      }
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.remove('active');
+    } else if (except === 'left-panel') {
+      const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
+      if (leftPanel) {
+        leftPanel.classList.remove('hidden-panel');
+      }
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.add('active');
+    }
+  }
+
+  // 10. Scenarios Panel
+  const scenariosPanel = document.getElementById('scenarios-panel');
+  const navScenarios = document.getElementById('mobile-nav-scenarios');
+  if (isMobile) {
+    if (except !== 'scenarios') {
+      if (scenariosPanel) scenariosPanel.classList.remove('mobile-active');
+      if (navScenarios) navScenarios.classList.remove('active');
+    } else {
+      if (scenariosPanel) scenariosPanel.classList.add('mobile-active');
+      if (navScenarios) navScenarios.classList.add('active');
+    }
+  } else {
+    if (except === 'left-panel') {
+      if (scenariosPanel) {
+        scenariosPanel.classList.add('hidden-panel');
+      }
+      if (navScenarios) navScenarios.classList.remove('active');
+    } else if (except === 'scenarios') {
+      if (scenariosPanel) {
+        scenariosPanel.classList.remove('hidden-panel');
+      }
+      if (navScenarios) navScenarios.classList.add('active');
+    }
   }
 }
 
@@ -6156,27 +6230,7 @@ function updateUserStatusUI() {
 
 
 function setupScenariosAndChat() {
-  // 1. Setup Tab Switching in Left Sidebar
-  const btnMetrics = document.getElementById('tab-metrics');
-  const btnScenarios = document.getElementById('tab-scenarios');
-  const contentMetrics = document.getElementById('tab-content-metrics');
-  const contentScenarios = document.getElementById('tab-content-scenarios');
-
-  if (btnMetrics && btnScenarios && contentMetrics && contentScenarios) {
-    btnMetrics.addEventListener('click', () => {
-      btnMetrics.classList.add('active');
-      btnScenarios.classList.remove('active');
-      contentMetrics.classList.remove('hidden');
-      contentScenarios.classList.add('hidden');
-    });
-
-    btnScenarios.addEventListener('click', () => {
-      btnScenarios.classList.add('active');
-      btnMetrics.classList.remove('active');
-      contentScenarios.classList.remove('hidden');
-      contentMetrics.classList.add('hidden');
-    });
-  }
+  // 1. Setup Tab Switching in Left Sidebar (Removed, now managed as separate sidebars via bottom dock)
 
   // 2. Setup Scenario Cards Clicks
   const cards = document.querySelectorAll('.scenario-card');

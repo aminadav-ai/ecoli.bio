@@ -179,7 +179,7 @@
       </header>
 
       <!-- Left Overlay Panel (Global Controls & Overview) -->
-      <aside class="left-panel panel glass">
+      <aside id="metrics-panel" class="left-panel panel glass">
         <!-- Simulation Control Bar -->
         <div class="simulation-control-bar">
           <!-- Play / Pause / Reset / Speed -->
@@ -213,12 +213,6 @@
         </div>
 
 
-        <!-- Sidebar Navigation Tabs -->
-        <div class="panel-tabs">
-          <button id="tab-metrics" class="panel-tab active">Metrics</button>
-          <button id="tab-scenarios" class="panel-tab">Scenarios 🎓</button>
-        </div>
-
         <!-- Tab 1: Metrics & Pinned Reactions -->
         <div id="tab-content-metrics" class="tab-content">
           <section class="strain-section">
@@ -249,42 +243,61 @@
                 <span id="metric-atp" class="metric-value">12.5 mM/s</span>
               </div>
             </div>
-            <div class="sparkline-container">
-              <span class="sparkline-title">Growth Rate Trend</span>
-              <canvas id="growth-sparkline"></canvas>
+            
+            <div class="metrics-grid" style="margin-top: 12px;">
+              <div class="metric-card">
+                <div class="metric-header-row">
+                  <span class="metric-label">Gluc. Uptake</span>
+                  <button id="copy-gluc-btn" class="copy-id-btn" title="Copy Glucose Uptake">
+                    <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <span id="metric-gluc" class="metric-value">10.0 mM/s</span>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header-row">
+                  <span class="metric-label">O₂ Uptake</span>
+                  <button id="copy-o2-btn" class="copy-id-btn" title="Copy Oxygen Uptake">
+                    <svg class="copy-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <span id="metric-o2" class="metric-value">18.5 mM/s</span>
+              </div>
             </div>
           </section>
 
-          <section class="environment-section" style="margin-top: 1.5rem;">
-            <h2>Environmental Parameters</h2>
-            <div class="param-slider">
-              <div class="param-label-row">
-                <label for="global-o2-slider" class="click-focus-env" data-metab-id="o2_e">Oxygen Supply (o2_e)</label>
-                <span id="global-o2-val" class="code-font">1.0</span>
-              </div>
-              <div class="slider-with-btn-row">
-                <input type="range" id="global-o2-slider" min="0.0" max="2.0" step="0.1" value="1.0" />
-                <button id="copy-global-o2-btn" class="copy-id-btn" title="Copy Oxygen Supply Code">
-                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                </button>
-              </div>
+          <!-- Metabolic Performance Trends -->
+          <section class="trends-section">
+            <h2>Performance Trends</h2>
+            <div class="trend-card">
+              <span class="trend-label">Growth Rate Trend</span>
+              <canvas id="growth-trend-canvas" class="trend-canvas"></canvas>
             </div>
-            <div class="param-slider" style="margin-top: 1rem;">
-              <div class="param-label-row">
-                <label for="global-glc-slider" class="click-focus-env" data-metab-id="glc__D_e">Glucose Supply (glc__D_e)</label>
-                <span id="global-glc-val" class="code-font">10.0</span>
+          </section>
+
+          <!-- Environment Parameter Control Sliders -->
+          <section class="strain-section">
+            <h2>Environmental Parameters</h2>
+            <div class="slider-group">
+              <div class="slider-container">
+                <div class="slider-header">
+                  <span class="slider-label click-focus-env" data-metab-id="o2_e" style="cursor: pointer; text-decoration: underline;" title="Click to locate on map">Oxygen Supply <span class="bigg-label">(o2_e)</span></span>
+                  <span id="val-o2" class="slider-value code-font">18.50</span>
+                </div>
+                <input type="range" id="slider-o2" min="0" max="40" step="0.5" value="18.5" />
               </div>
-              <div class="slider-with-btn-row">
-                <input type="range" id="global-glc-slider" min="0.0" max="20.0" step="0.5" value="10.0" />
-                <button id="copy-global-glc-btn" class="copy-id-btn" title="Copy Glucose Supply Code">
-                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                </button>
+              <div class="slider-container">
+                <div class="slider-header">
+                  <span class="slider-label click-focus-env" data-metab-id="glc__D_e" style="cursor: pointer; text-decoration: underline;" title="Click to locate on map">Glucose Supply <span class="bigg-label">(glc__D_e)</span></span>
+                  <span id="val-gluc" class="slider-value code-font">10.00</span>
+                </div>
+                <input type="range" id="slider-gluc" min="0" max="25" step="0.5" value="10.0" />
               </div>
             </div>
           </section>
@@ -303,9 +316,11 @@
             <button id="btn-feedback" class="btn btn-secondary" style="display: inline-flex; width: auto; padding: 0 24px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease;">Send your feedback</button>
           </div>
         </div>
+      </aside>
 
-        <!-- Tab 2: Interactive Learning Scenarios -->
-        <div id="tab-content-scenarios" class="tab-content hidden">
+      <!-- Left Overlay Panel (Interactive Learning Scenarios) -->
+      <aside id="scenarios-panel" class="left-panel panel glass hidden-panel">
+        <div id="tab-content-scenarios" class="tab-content">
           <h2>Learning Scenarios</h2>
           <div class="scenarios-list" id="scenarios-list-container">
             <div class="scenario-card" data-scenario="oxygen_switch">
@@ -697,6 +712,10 @@
         <button id="mobile-nav-metrics" class="mobile-nav-item">
           <span class="nav-icon">📊</span>
           <span class="nav-label">Metrics</span>
+        </button>
+        <button id="mobile-nav-scenarios" class="mobile-nav-item">
+          <span class="nav-icon">🎓</span>
+          <span class="nav-label">Scenarios</span>
         </button>
         <button id="mobile-nav-chat" class="mobile-nav-item">
           <span class="nav-icon">💬</span>
