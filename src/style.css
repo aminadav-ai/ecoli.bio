@@ -54,7 +54,7 @@ body, html {
   left: 20px;
   right: 20px;
   height: 60px;
-  z-index: 10;
+  z-index: 1010; /* Stack above panels and drawer so hamburger button is visible */
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -2477,6 +2477,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  padding-top: 80px; /* Leave space for the floating app-header */
 }
 
 .mobile-drawer.active {
@@ -2498,12 +2499,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .mobile-drawer-header .close-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0 8px;
+  display: none !important; /* Hidden because the main header's hamburger/cross button will overlap and handle closing */
 }
 
 .mobile-drawer-content {
@@ -2708,6 +2704,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .mobile-drawer {
     width: 80%;
     max-width: 340px;
+    padding-top: 65px; /* Adjust top padding for smaller mobile app-header */
   }
 
   /* Bottom Navigation styling */
