@@ -2865,10 +2865,10 @@ function updateSolverStatusUI() {
 
   if (isSolverWorking) {
     badge.className = 'solver-badge work' + (userProfile ? '' : ' hidden');
-    text.textContent = 'WORK';
+    text.textContent = 'SOLVING';
   } else {
     badge.className = 'solver-badge relax' + (userProfile ? '' : ' hidden');
-    text.textContent = 'RELAX';
+    text.textContent = 'STABLE';
   }
 
   // Auto-update solver details if dropdown is open and active
