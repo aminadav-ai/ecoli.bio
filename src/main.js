@@ -449,15 +449,6 @@ async function handleCopyClick(btn, textToCopy) {
  * Bootstraps the application, loading assets and launching the loops.
  */
 async function bootstrap() {
-  // Restore saved panel opacity immediately to prevent flicker
-  const savedOpacity = localStorage.getItem('panel_opacity');
-  if (savedOpacity !== null) {
-    const opacity = parseFloat(savedOpacity);
-    if (!isNaN(opacity) && opacity >= 0.1 && opacity <= 1.0) {
-      document.documentElement.style.setProperty('--panel-opacity', opacity);
-    }
-  }
-
   // 1. Fetch official Escher JSON map local asset
   let mapData;
   try {
@@ -991,22 +982,7 @@ function setupUIListeners() {
     }
   });
 
-  // Panel opacity slider
-  const opacitySlider = document.getElementById('opacity-slider');
-  const opacityVal = document.getElementById('opacity-val');
-  if (opacitySlider && opacityVal) {
-    const currentOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--panel-opacity').trim()) || 1.0;
-    opacitySlider.value = Math.round(currentOpacity * 100);
-    opacityVal.textContent = `${Math.round(currentOpacity * 100)}%`;
 
-    opacitySlider.addEventListener('input', (e) => {
-      const pct = parseInt(e.target.value, 10);
-      opacityVal.textContent = `${pct}%`;
-      const opacity = pct / 100;
-      document.documentElement.style.setProperty('--panel-opacity', opacity);
-      localStorage.setItem('panel_opacity', opacity);
-    });
-  }
 
   // Namespace select listener
   const namespaceSelect = document.getElementById('namespace-select');
