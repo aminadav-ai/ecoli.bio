@@ -1156,6 +1156,12 @@ Instructions:
           });
         }
         const session = await verifyGoogleTokenAndLogin(env.DB, credential);
+        if (session.limitReached) {
+          return new Response(JSON.stringify({ error: 'registration_limit_reached' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
         if (session.isNewUser) {
           ctx.waitUntil(trackUserSignup(env, request, session.user.email, session.user.name));
         }

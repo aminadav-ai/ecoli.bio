@@ -5525,7 +5525,11 @@ async function handleGoogleCredentialResponse(response) {
       }
     } else {
       const err = await res.json();
-      showToast(`Google Auth failed: ${err.error}`, 'error');
+      if (err.error === 'registration_limit_reached') {
+        showToast('Registration is currently restricted because the website is under testing.', 'error');
+      } else {
+        showToast(`Google Auth failed: ${err.error}`, 'error');
+      }
       
       // Restore modal initial state
       if (titleEl) titleEl.textContent = 'Sign In';

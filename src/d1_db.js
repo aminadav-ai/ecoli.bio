@@ -1,6 +1,9 @@
 // src/d1_db.js
 // Cloudflare D1 (SQLite) database helper functions
 
+// Limit of registered users allowed to log in (can be updated for debugging, e.g. "MAX_USERS_LIMIT = 2")
+export const MAX_USERS_LIMIT = 200;
+
 // Helper to get local date string for timezone comparison
 function getLocalDateString(date, timeZone) {
   if (!timeZone) return null;
@@ -112,6 +115,14 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
   // Check if user already exists before inserting
   const existingUser = await db.prepare('SELECT email FROM users WHERE email = ?').bind(email).first();
   const isNewUser = !existingUser;
+
+  if (isNewUser) {
+    const countRow = await db.prepare('SELECT COUNT(*) as count FROM users').first();
+    const currentCount = countRow ? countRow.count : 0;
+    if (currentCount >= MAX_USERS_LIMIT) {
+      return { limitReached: true };
+    }
+  }
 
   // Create user in DB (upsert)
   await db.prepare(
