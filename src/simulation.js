@@ -19,6 +19,7 @@ export class Simulation {
     this.tickCounter = 0;
     this.isDead = false;
     this.normalFluxes = {};
+    this.latestFluxes = {};
 
 
     // Define cofactors and inorganic molecules to buffer (hold at constant physiological concentrations)
@@ -366,6 +367,7 @@ export class Simulation {
    * Updates reaction fluxes in client simulation state.
    */
   updateFluxes(fluxes, biomassFlux) {
+    this.latestFluxes = fluxes || {};
     const reactionMapping = {
       'PPKr': 'PPK',
       'PPK2r': 'PPK2',

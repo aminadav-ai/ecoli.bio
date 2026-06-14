@@ -2954,6 +2954,16 @@ function updateUIPanelValues() {
   const currentAtpYield = atpsFlux;
   document.getElementById('metric-atp').textContent = `${currentAtpYield.toFixed(1)} mM/s`;
 
+  // Update Glucose Uptake Rate dynamically
+  const glcFlux = simulation.latestFluxes ? (simulation.latestFluxes['EX_glc__D_e'] || 0) : 0;
+  const currentGlcUptake = Math.max(0.0, -glcFlux);
+  document.getElementById('metric-gluc').textContent = `${currentGlcUptake.toFixed(1)} mM/s`;
+
+  // Update Oxygen Uptake Rate dynamically
+  const o2Flux = simulation.latestFluxes ? (simulation.latestFluxes['EX_o2_e'] || 0) : 0;
+  const currentO2Uptake = Math.max(0.0, -o2Flux);
+  document.getElementById('metric-o2').textContent = `${currentO2Uptake.toFixed(1)} mM/s`;
+
   // Draw growth rate trend line
   drawGrowthSparkline();
 
