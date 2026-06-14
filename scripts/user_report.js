@@ -2,6 +2,7 @@
 
 import { argv } from 'process';
 import { execSync } from 'child_process';
+import { MAX_USERS_LIMIT } from '../src/d1_db.js';
 
 let isLocal = argv.includes('--local');
 let isStaging = argv.includes('--staging');
@@ -107,7 +108,7 @@ if (users.length === 0) {
 
 console.log('--------------------------------------------------------------------------------------------------------');
 console.log(`SUMMARY STATISTICS:`);
-console.log(`- Total Registered Users:  ${totalUsers}`);
+console.log(`- Total Registered Users:  ${totalUsers} (Limit: ${MAX_USERS_LIMIT})`);
 console.log(`- Premium Basic Users:     ${premiumBasicCount}`);
 console.log(`- Premium Pro Users:       ${premiumProCount}`);
 console.log(`- Total Visits:            ${totalVisits}`);
