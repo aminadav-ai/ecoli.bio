@@ -6227,7 +6227,16 @@ function updateUserStatusUI() {
     chatTrigger.classList.remove('hidden');
   }
 
-  // Hide play/pause and reset buttons for guests
+  // Hide play/pause and reset buttons for guests, and hide the entire simulation controls section
+  const simControlsSection = document.getElementById('mobile-simulation-controls-section');
+  if (simControlsSection) {
+    if (userProfile) {
+      simControlsSection.classList.remove('hidden');
+    } else {
+      simControlsSection.classList.add('hidden');
+    }
+  }
+
   const playPauseBtn = document.getElementById('play-pause-btn');
   const resetBtn = document.getElementById('reset-btn');
   if (playPauseBtn) {

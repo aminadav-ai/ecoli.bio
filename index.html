@@ -672,43 +672,46 @@
           <hr class="drawer-divider" />
           
           <!-- Simulation Controls Section -->
-          <div class="mobile-section">
-            <h4>Simulation Controls</h4>
-            <div class="header-controls" style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-              <button id="play-pause-btn" class="btn btn-primary header-btn" style="margin: 0; height: 38px; width: auto; min-width: 90px; padding: 0 16px;">⏸ Pause</button>
-              <div class="model-badge-container" style="position: relative;">
-                <span class="model-badge" id="model-info-badge">iJO1366</span>
-                <div class="model-badge-tooltip glass hidden" id="model-badge-tooltip">
-                  <div class="tooltip-title">iJO1366 Model</div>
-                  <div class="tooltip-subtitle">Genome-Scale Reconstruction of E. coli K-12</div>
-                  <div class="tooltip-stats">
-                    <div class="tooltip-stat-item">
-                      <span class="stat-num">1,366</span>
-                      <span class="stat-lbl">genes</span>
+          <div id="mobile-simulation-controls-section" class="hidden">
+            <div class="mobile-section">
+              <h4>Simulation Controls</h4>
+              <div class="header-controls" style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                <button id="play-pause-btn" class="btn btn-primary header-btn" style="margin: 0; height: 38px; width: auto; min-width: 90px; padding: 0 16px;">⏸ Pause</button>
+                <div class="model-badge-container" style="position: relative;">
+                  <span class="model-badge" id="model-info-badge">iJO1366</span>
+                  <div class="model-badge-tooltip glass hidden" id="model-badge-tooltip">
+                    <div class="tooltip-title">iJO1366 Model</div>
+                    <div class="tooltip-subtitle">Genome-Scale Reconstruction of E. coli K-12</div>
+                    <div class="tooltip-stats">
+                      <div class="tooltip-stat-item">
+                        <span class="stat-num">1,366</span>
+                        <span class="stat-lbl">genes</span>
+                      </div>
+                      <div class="tooltip-stat-item">
+                        <span class="stat-num">2,251</span>
+                        <span class="stat-lbl">reactions</span>
+                      </div>
+                      <div class="tooltip-stat-item">
+                        <span class="stat-num">1,136</span>
+                        <span class="stat-lbl">metabolites</span>
+                      </div>
                     </div>
-                    <div class="tooltip-stat-item">
-                      <span class="stat-num">2,251</span>
-                      <span class="stat-lbl">reactions</span>
+                    <div class="tooltip-desc">
+                      This serves as a highly accurate mathematical and computational platform for simulating bacterial growth, predicting metabolic fluxes, and analyzing cellular phenotypes.
                     </div>
-                    <div class="tooltip-stat-item">
-                      <span class="stat-num">1,136</span>
-                      <span class="stat-lbl">metabolites</span>
-                    </div>
-                  </div>
-                  <div class="tooltip-desc">
-                    This serves as a highly accurate mathematical and computational platform for simulating bacterial growth, predicting metabolic fluxes, and analyzing cellular phenotypes.
                   </div>
                 </div>
               </div>
             </div>
+            <hr class="drawer-divider" />
           </div>
 
           <!-- Feedback Section (Visible to authorized users only) -->
           <div id="feedback-section" class="feedback-section hidden" style="margin-top: 12px; padding: 0 4px;">
             <button id="btn-feedback" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease; border-radius: 8px;">Send your feedback</button>
+            <hr class="drawer-divider" style="margin-top: 12px; margin-left: -4px; margin-right: -4px;" />
           </div>
 
-          <hr class="drawer-divider" />
           
           <!-- Mobile Settings Section -->
           <div class="mobile-section">
