@@ -3207,12 +3207,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* AI Chatbot Widget */
 .ai-chat-widget {
   position: fixed;
+  top: 100px;
   bottom: 20px;
   right: 20px;
+  width: 500px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   pointer-events: none;
 }
 
@@ -3265,12 +3266,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* Chat Drawer */
 .ai-chat-drawer {
   position: absolute;
+  top: 0;
   bottom: 0;
   right: 0;
   width: 500px;
-  height: calc(100vh - 140px);
-  max-height: 700px;
-  min-height: 400px;
+  height: 100%;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
