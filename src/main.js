@@ -5445,14 +5445,8 @@ async function checkAuthStatus(isVisit = false) {
         const guestRes = await fetch('/guest_state.json');
         if (guestRes.ok) {
           const guestState = await guestRes.json();
-          if (guestState.concentrations) {
-            for (const [mId, conc] of Object.entries(guestState.concentrations)) {
-              if (simulation.metabolites[mId]) {
-                simulation.metabolites[mId].concentration = conc;
-                simulation.metabolites[mId].targetConcentration = conc;
-              }
-            }
-          }
+          simulation.reset();
+          deserializeSimulation(simulation, guestState);
           if (guestState.fluxes) {
             simulation.updateFluxes(guestState.fluxes, guestState.biomass_flux || 0);
             isDead = guestState.is_dead || false;
