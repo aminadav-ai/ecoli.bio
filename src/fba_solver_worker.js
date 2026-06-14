@@ -62,6 +62,14 @@ export function deserializeSimulation(sim, state) {
       }
     }
   }
+  if (state.fluxes) {
+    for (const [rId, flux] of Object.entries(state.fluxes)) {
+      if (sim.reactions[rId]) {
+        sim.reactions[rId].flux = flux;
+      }
+    }
+    sim.latestFluxes = state.fluxes;
+  }
   sim.isDead = !!state.isDead;
   sim.tickCounter = state.tickCounter || 0;
   sim.lastTimestamp = state.lastTimestamp || 0;
