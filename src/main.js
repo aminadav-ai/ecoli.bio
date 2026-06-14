@@ -474,6 +474,25 @@ async function bootstrap() {
     handleReactionSelect
   );
   renderer.getLabelText = getLabelTextForNamespace;
+
+  // Wait for Google Fonts to be ready to prevent blank/invisible labels on startup
+  if (document.fonts) {
+    try {
+      await document.fonts.ready;
+    } catch (e) {
+      console.warn('[App] Error waiting for document fonts to load:', e);
+    }
+    
+    // Also listen to any subsequent font loads/swaps (especially useful on slow mobile networks)
+    document.fonts.addEventListener('loadingdone', () => {
+      console.log('[App] Font face set updated. Redrawing text labels.');
+      if (renderer) {
+        renderer.createStaticTexts();
+        renderer.createReactionBadges();
+      }
+    });
+  }
+
   await renderer.init(mapData);
 
   // Check if any map metabolites are missing from our namespace database
