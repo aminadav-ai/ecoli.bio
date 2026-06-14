@@ -4,12 +4,15 @@ import { argv } from 'process';
 import { execSync } from 'child_process';
 
 let isLocal = argv.includes('--local');
+let isStaging = argv.includes('--staging');
 
 const dbTarget = isLocal ? '' : '--remote';
+const dbName = isStaging ? 'ecoli_db_staging' : 'ecoli_db';
+const envFlag = isStaging ? '--env staging' : '';
 
 function runQuery(sql) {
   try {
-    const cmd = `npx wrangler d1 execute ecoli_db ${dbTarget} --json --command "${sql.replace(/"/g, '\\"')}"`;
+    const cmd = `npx wrangler d1 execute ${dbName} ${dbTarget} ${envFlag} --json --command "${sql.replace(/"/g, '\\"')}"`;
     const output = execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
     const parsed = JSON.parse(output);
     // Support different wrangler JSON output structures
@@ -31,7 +34,7 @@ function runQuery(sql) {
 
 console.log('========================================================================================================');
 console.log('                                       USER ACCOUNT REPORT                                              ');
-console.log(` Target Database: ${isLocal ? 'Local (SQLite)' : 'Remote (Cloudflare D1)'}`);
+console.log(` Target Database: ${isLocal ? 'Local (SQLite)' : (isStaging ? 'Staging D1 (Remote)' : 'Production D1 (Remote)')}`);
 console.log('========================================================================================================');
 
 // Fetch user data
