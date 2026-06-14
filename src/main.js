@@ -2455,12 +2455,18 @@ function closeAllOtherPanels(except) {
   if (isMobile) {
     if (except !== 'left-panel') {
       const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
-      if (leftPanel) leftPanel.classList.remove('mobile-active');
+      if (leftPanel) {
+        leftPanel.classList.remove('mobile-active');
+        leftPanel.classList.add('hidden-panel');
+      }
       const navMetrics = document.getElementById('mobile-nav-metrics');
       if (navMetrics) navMetrics.classList.remove('active');
     } else {
       const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
-      if (leftPanel) leftPanel.classList.add('mobile-active');
+      if (leftPanel) {
+        leftPanel.classList.add('mobile-active');
+        leftPanel.classList.remove('hidden-panel');
+      }
       const navMetrics = document.getElementById('mobile-nav-metrics');
       if (navMetrics) navMetrics.classList.add('active');
     }
@@ -2487,10 +2493,16 @@ function closeAllOtherPanels(except) {
   const navScenarios = document.getElementById('mobile-nav-scenarios');
   if (isMobile) {
     if (except !== 'scenarios') {
-      if (scenariosPanel) scenariosPanel.classList.remove('mobile-active');
+      if (scenariosPanel) {
+        scenariosPanel.classList.remove('mobile-active');
+        scenariosPanel.classList.add('hidden-panel');
+      }
       if (navScenarios) navScenarios.classList.remove('active');
     } else {
-      if (scenariosPanel) scenariosPanel.classList.add('mobile-active');
+      if (scenariosPanel) {
+        scenariosPanel.classList.add('mobile-active');
+        scenariosPanel.classList.remove('hidden-panel');
+      }
       if (navScenarios) navScenarios.classList.add('active');
     }
   } else {

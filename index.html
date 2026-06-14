@@ -179,40 +179,8 @@
       </header>
 
       <!-- Left Overlay Panel (Global Controls & Overview) -->
+      <!-- Left Overlay Panel (Global Controls & Overview) -->
       <aside id="metrics-panel" class="left-panel panel glass">
-        <!-- Simulation Control Bar -->
-        <div class="simulation-control-bar">
-          <!-- Play / Pause / Reset / Speed -->
-          <div class="header-controls">
-            <button id="play-pause-btn" class="btn btn-primary header-btn">⏸ Pause</button>
-            <div class="model-badge-container">
-              <span class="model-badge" id="model-info-badge">iJO1366</span>
-              <div class="model-badge-tooltip glass hidden" id="model-badge-tooltip">
-                <div class="tooltip-title">iJO1366 Model</div>
-                <div class="tooltip-subtitle">Genome-Scale Reconstruction of E. coli K-12</div>
-                <div class="tooltip-stats">
-                  <div class="tooltip-stat-item">
-                    <span class="stat-num">1,366</span>
-                    <span class="stat-lbl">genes</span>
-                  </div>
-                  <div class="tooltip-stat-item">
-                    <span class="stat-num">2,251</span>
-                    <span class="stat-lbl">reactions</span>
-                  </div>
-                  <div class="tooltip-stat-item">
-                    <span class="stat-num">1,136</span>
-                    <span class="stat-lbl">metabolites</span>
-                  </div>
-                </div>
-                <div class="tooltip-desc">
-                  This serves as a highly accurate mathematical and computational platform for simulating bacterial growth, predicting metabolic fluxes, and analyzing cellular phenotypes.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
         <!-- Tab 1: Metrics & Pinned Reactions -->
         <div id="tab-content-metrics" class="tab-content">
           <section class="strain-section">
@@ -273,36 +241,47 @@
           </section>
 
           <!-- Metabolic Performance Trends -->
-          <section class="trends-section">
-            <h2>Performance Trends</h2>
-            <div class="trend-card">
-              <span class="trend-label">Growth Rate Trend</span>
-              <canvas id="growth-trend-canvas" class="trend-canvas"></canvas>
-            </div>
-          </section>
+          <div class="sparkline-container">
+            <span class="sparkline-title">Growth Rate Trend</span>
+            <canvas id="growth-sparkline"></canvas>
+          </div>
 
           <!-- Environment Parameter Control Sliders -->
-          <section class="strain-section">
+          <section class="environment-section" style="margin-top: 1.5rem;">
             <h2>Environmental Parameters</h2>
-            <div class="slider-group">
-              <div class="slider-container">
-                <div class="slider-header">
-                  <span class="slider-label click-focus-env" data-metab-id="o2_e" style="cursor: pointer; text-decoration: underline;" title="Click to locate on map">Oxygen Supply <span class="bigg-label">(o2_e)</span></span>
-                  <span id="val-o2" class="slider-value code-font">18.50</span>
-                </div>
-                <input type="range" id="slider-o2" min="0" max="40" step="0.5" value="18.5" />
+            <div class="param-slider">
+              <div class="param-label-row">
+                <label for="global-o2-slider" class="click-focus-env" data-metab-id="o2_e">Oxygen Supply (o2_e)</label>
+                <span id="global-o2-val" class="code-font">1.0</span>
               </div>
-              <div class="slider-container">
-                <div class="slider-header">
-                  <span class="slider-label click-focus-env" data-metab-id="glc__D_e" style="cursor: pointer; text-decoration: underline;" title="Click to locate on map">Glucose Supply <span class="bigg-label">(glc__D_e)</span></span>
-                  <span id="val-gluc" class="slider-value code-font">10.00</span>
-                </div>
-                <input type="range" id="slider-gluc" min="0" max="25" step="0.5" value="10.0" />
+              <div class="slider-with-btn-row">
+                <input type="range" id="global-o2-slider" min="0.0" max="2.0" step="0.1" value="1.0" />
+                <button id="copy-global-o2-btn" class="copy-id-btn" title="Copy Oxygen Supply Code">
+                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="param-slider" style="margin-top: 1rem;">
+              <div class="param-label-row">
+                <label for="global-glc-slider" class="click-focus-env" data-metab-id="glc__D_e">Glucose Supply (glc__D_e)</label>
+                <span id="global-glc-val" class="code-font">10.0</span>
+              </div>
+              <div class="slider-with-btn-row">
+                <input type="range" id="global-glc-slider" min="0.0" max="20.0" step="0.5" value="10.0" />
+                <button id="copy-global-glc-btn" class="copy-id-btn" title="Copy Glucose Supply Code">
+                  <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
               </div>
             </div>
           </section>
 
-          <section class="pinned-reactions-section">
+          <section class="pinned-reactions-section" style="margin-top: 1.5rem;">
             <h2>Pinned Reactions</h2>
             <div id="pinned-reactions-container" class="pinned-reactions-list">
               <div class="pinned-placeholder">
@@ -310,11 +289,6 @@
               </div>
             </div>
           </section>
-
-          <!-- Feedback Section (Visible to authorized users only) -->
-          <div id="feedback-section" class="feedback-section hidden" style="margin-top: 1.5rem; text-align: center;">
-            <button id="btn-feedback" class="btn btn-secondary" style="display: inline-flex; width: auto; padding: 0 24px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease;">Send your feedback</button>
-          </div>
         </div>
       </aside>
 
@@ -695,6 +669,45 @@
               <!-- Placed dynamically in JS -->
             </div>
           </div>
+          <hr class="drawer-divider" />
+          
+          <!-- Simulation Controls Section -->
+          <div class="mobile-section">
+            <h4>Simulation Controls</h4>
+            <div class="header-controls" style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+              <button id="play-pause-btn" class="btn btn-primary header-btn" style="margin: 0; height: 38px; width: auto; min-width: 90px; padding: 0 16px;">⏸ Pause</button>
+              <div class="model-badge-container" style="position: relative;">
+                <span class="model-badge" id="model-info-badge">iJO1366</span>
+                <div class="model-badge-tooltip glass hidden" id="model-badge-tooltip">
+                  <div class="tooltip-title">iJO1366 Model</div>
+                  <div class="tooltip-subtitle">Genome-Scale Reconstruction of E. coli K-12</div>
+                  <div class="tooltip-stats">
+                    <div class="tooltip-stat-item">
+                      <span class="stat-num">1,366</span>
+                      <span class="stat-lbl">genes</span>
+                    </div>
+                    <div class="tooltip-stat-item">
+                      <span class="stat-num">2,251</span>
+                      <span class="stat-lbl">reactions</span>
+                    </div>
+                    <div class="tooltip-stat-item">
+                      <span class="stat-num">1,136</span>
+                      <span class="stat-lbl">metabolites</span>
+                    </div>
+                  </div>
+                  <div class="tooltip-desc">
+                    This serves as a highly accurate mathematical and computational platform for simulating bacterial growth, predicting metabolic fluxes, and analyzing cellular phenotypes.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feedback Section (Visible to authorized users only) -->
+          <div id="feedback-section" class="feedback-section hidden" style="margin-top: 12px; padding: 0 4px;">
+            <button id="btn-feedback" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease; border-radius: 8px;">Send your feedback</button>
+          </div>
+
           <hr class="drawer-divider" />
           
           <!-- Mobile Settings Section -->
