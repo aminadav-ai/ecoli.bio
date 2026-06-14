@@ -475,15 +475,8 @@ async function bootstrap() {
   );
   renderer.getLabelText = getLabelTextForNamespace;
 
-  // Wait for Google Fonts to be ready to prevent blank/invisible labels on startup
+  // Listen to font loading completion to redraw labels with correct dimensions (especially useful on slow mobile networks)
   if (document.fonts) {
-    try {
-      await document.fonts.ready;
-    } catch (e) {
-      console.warn('[App] Error waiting for document fonts to load:', e);
-    }
-    
-    // Also listen to any subsequent font loads/swaps (especially useful on slow mobile networks)
     document.fonts.addEventListener('loadingdone', () => {
       console.log('[App] Font face set updated. Redrawing text labels.');
       if (renderer) {
@@ -550,15 +543,25 @@ async function bootstrap() {
   requestAnimationFrame(gameLoop);
   console.log('[App] Metabolic Simulator bootstrapped.');
 
-  // Hide the initial loading overlay
-  const loadingOverlay = document.getElementById('map-loading-overlay');
-  if (loadingOverlay) {
-    loadingOverlay.classList.add('fade-out');
-    // Remove from DOM after transition completes to save resources
-    setTimeout(() => {
-      loadingOverlay.remove();
-    }, 500);
-  }
+  // Hide the initial loading overlay after a frame to ensure PixiJS has rendered the map
+  requestAnimationFrame(() => {
+    // Force a manual render of the PixiJS app to guarantee the first frame is drawn
+    if (renderer && renderer.app) {
+      try {
+        renderer.app.render();
+      } catch (e) {
+        console.warn('[App] Error forcing initial render:', e);
+      }
+    }
+    const loadingOverlay = document.getElementById('map-loading-overlay');
+    if (loadingOverlay) {
+      loadingOverlay.classList.add('fade-out');
+      // Remove from DOM after transition completes to save resources
+      setTimeout(() => {
+        loadingOverlay.remove();
+      }, 500);
+    }
+  });
 }
 
 // Throttle utility with leading and trailing edge support to rate-limit server calls
