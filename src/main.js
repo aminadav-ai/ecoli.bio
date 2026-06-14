@@ -1912,11 +1912,23 @@ function setupUIListeners() {
   
   if (navMetrics && leftPanel) {
     navMetrics.addEventListener('click', () => {
-      const isMobileActive = leftPanel.classList.contains('mobile-active');
-      if (isMobileActive) {
-        closeAllOtherPanels(null);
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        const isMobileActive = leftPanel.classList.contains('mobile-active');
+        if (isMobileActive) {
+          closeAllOtherPanels(null);
+        } else {
+          closeAllOtherPanels('left-panel');
+        }
       } else {
-        closeAllOtherPanels('left-panel');
+        const isHidden = leftPanel.classList.contains('hidden-panel');
+        if (isHidden) {
+          leftPanel.classList.remove('hidden-panel');
+          navMetrics.classList.add('active');
+        } else {
+          leftPanel.classList.add('hidden-panel');
+          navMetrics.classList.remove('active');
+        }
       }
     });
   }
@@ -1924,9 +1936,15 @@ function setupUIListeners() {
   if (navChat && chatDrawer) {
     navChat.addEventListener('click', (e) => {
       e.stopPropagation();
+      const isMobile = window.innerWidth <= 768;
       const isChatOpen = !chatDrawer.classList.contains('hidden');
       if (isChatOpen) {
-        closeAllOtherPanels(null);
+        if (isMobile) {
+          closeAllOtherPanels(null);
+        } else {
+          closeChatDrawer();
+          navChat.classList.remove('active');
+        }
       } else {
         openChatDrawer();
       }
@@ -1935,17 +1953,29 @@ function setupUIListeners() {
   
   if (navInspector && rightPanel) {
     navInspector.addEventListener('click', () => {
-      const isMobileActive = rightPanel.classList.contains('mobile-active');
-      if (isMobileActive) {
-        closeAllOtherPanels(null);
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        const isMobileActive = rightPanel.classList.contains('mobile-active');
+        if (isMobileActive) {
+          closeAllOtherPanels(null);
+        } else {
+          closeAllOtherPanels('inspector');
+        }
       } else {
-        closeAllOtherPanels('inspector');
+        const isHidden = rightPanel.classList.contains('hidden-panel');
+        if (isHidden) {
+          closeAllOtherPanels('inspector');
+        } else {
+          hideInspector();
+          rightPanel.classList.remove('mobile-active');
+          navInspector.classList.remove('active');
+        }
       }
     });
   }
 }
 
-let isCurrentlyMobile = false;
+let isCurrentlyMobile = null;
 
 function checkViewportChange() {
   const experimentsContainer = document.getElementById('experiments-container');
@@ -1964,6 +1994,40 @@ function checkViewportChange() {
   }
   if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
     mobileSettings.appendChild(settingsBody);
+  }
+
+  // Handle class synchronization on viewport switch
+  const width = window.innerWidth;
+  const isMobile = width <= 768;
+  const leftPanel = document.querySelector('.left-panel');
+  const rightPanel = document.querySelector('.right-panel');
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  const navMetrics = document.getElementById('mobile-nav-metrics');
+  const navChat = document.getElementById('mobile-nav-chat');
+  const navInspector = document.getElementById('mobile-nav-inspector');
+
+  if (isMobile !== isCurrentlyMobile) {
+    isCurrentlyMobile = isMobile;
+    
+    // Close/reset panels when switching viewport to ensure clean state
+    if (leftPanel) {
+      leftPanel.classList.remove('hidden-panel');
+      leftPanel.classList.remove('mobile-active');
+    }
+    if (rightPanel) {
+      rightPanel.classList.remove('mobile-active');
+      rightPanel.classList.add('hidden-panel'); // starts hidden on both
+    }
+    closeChatDrawer();
+    
+    if (navMetrics) navMetrics.classList.remove('active');
+    if (navChat) navChat.classList.remove('active');
+    if (navInspector) navInspector.classList.remove('active');
+
+    // On desktop, we want metrics open by default
+    if (!isMobile) {
+      if (navMetrics) navMetrics.classList.add('active');
+    }
   }
 }
 
@@ -2274,12 +2338,16 @@ function closeAllOtherPanels(except) {
   }
 
   // 3. Reaction/Metabolite Inspector Panel
+  const isMobile = window.innerWidth <= 768;
   if (except !== 'inspector') {
-    hideInspector();
-    const rightPanel = document.querySelector('.right-panel');
-    if (rightPanel) rightPanel.classList.remove('mobile-active');
-    const navInspector = document.getElementById('mobile-nav-inspector');
-    if (navInspector) navInspector.classList.remove('active');
+    const shouldHideInspector = isMobile || (except === 'chat' || except === null);
+    if (shouldHideInspector) {
+      hideInspector();
+      const rightPanel = document.querySelector('.right-panel');
+      if (rightPanel) rightPanel.classList.remove('mobile-active');
+      const navInspector = document.getElementById('mobile-nav-inspector');
+      if (navInspector) navInspector.classList.remove('active');
+    }
   } else {
     const rightPanel = document.querySelector('.right-panel');
     if (rightPanel) {
@@ -2291,16 +2359,26 @@ function closeAllOtherPanels(except) {
   }
 
   // 4. Left Panel (Metrics & Scenarios)
-  if (except !== 'left-panel') {
-    const leftPanel = document.querySelector('.left-panel');
-    if (leftPanel) leftPanel.classList.remove('mobile-active');
-    const navMetrics = document.getElementById('mobile-nav-metrics');
-    if (navMetrics) navMetrics.classList.remove('active');
+  if (isMobile) {
+    if (except !== 'left-panel') {
+      const leftPanel = document.querySelector('.left-panel');
+      if (leftPanel) leftPanel.classList.remove('mobile-active');
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.remove('active');
+    } else {
+      const leftPanel = document.querySelector('.left-panel');
+      if (leftPanel) leftPanel.classList.add('mobile-active');
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.add('active');
+    }
   } else {
-    const leftPanel = document.querySelector('.left-panel');
-    if (leftPanel) leftPanel.classList.add('mobile-active');
-    const navMetrics = document.getElementById('mobile-nav-metrics');
-    if (navMetrics) navMetrics.classList.add('active');
+    // On desktop, left-panel only shows when specifically requested (e.g. from scenarios tab switch/logic)
+    if (except === 'left-panel') {
+      const leftPanel = document.querySelector('.left-panel');
+      if (leftPanel) leftPanel.classList.remove('hidden-panel');
+      const navMetrics = document.getElementById('mobile-nav-metrics');
+      if (navMetrics) navMetrics.classList.add('active');
+    }
   }
 
   // 5. Mobile Hamburger Drawer
