@@ -278,18 +278,29 @@ body, html {
 }
 
 /* Hide scrollbar for layout cleanliness */
-.panel::-webkit-scrollbar {
+.panel::-webkit-scrollbar,
+.mobile-drawer-content::-webkit-scrollbar {
   width: 6px;
 }
-.panel::-webkit-scrollbar-track {
+.panel::-webkit-scrollbar-track,
+.mobile-drawer-content::-webkit-scrollbar-track {
   background: transparent;
 }
-.panel::-webkit-scrollbar-thumb {
+.panel::-webkit-scrollbar-thumb,
+.mobile-drawer-content::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
-.panel::-webkit-scrollbar-thumb:hover {
+.panel::-webkit-scrollbar-thumb:hover,
+.mobile-drawer-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox support */
+.panel,
+.mobile-drawer-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 /* Panel Sections */
