@@ -2370,7 +2370,7 @@ function closeAllOtherPanels(except) {
   // 4. Mobile Hamburger Drawer
   const shouldCloseMobileDrawer = isMobile 
     ? (except !== 'mobile-drawer' && except !== 'experiments' && except !== 'custom-namespace') 
-    : (except !== 'mobile-drawer' && except !== 'left-panel' && except !== 'scenarios' && except !== 'experiments' && except !== 'profile');
+    : (except !== 'mobile-drawer' && except !== 'left-panel' && except !== 'scenarios' && except !== 'experiments' && except !== 'profile' && except !== 'custom-namespace');
   
   if (except === 'mobile-drawer') {
     const mobileDrawer = document.getElementById('mobile-drawer');
