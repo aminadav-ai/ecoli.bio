@@ -2,7 +2,7 @@
 // Cloudflare D1 (SQLite) database helper functions
 
 // Limit of registered users allowed to log in (can be updated for debugging, e.g. "MAX_USERS_LIMIT = 2")
-export const MAX_USERS_LIMIT = 200;
+export const MAX_USERS_LIMIT = 2;
 
 // Helper to get local date string for timezone comparison
 function getLocalDateString(date, timeZone) {
