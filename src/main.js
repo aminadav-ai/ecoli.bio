@@ -1765,6 +1765,14 @@ function setupUIListeners() {
 
   // Close solver details dropdown when clicking outside
   document.addEventListener('click', (e) => {
+    if (window.innerWidth > 768 && (
+        e.target.closest('#metrics-panel') || 
+        e.target.closest('#scenarios-panel') || 
+        e.target.closest('#mobile-nav-metrics') || 
+        e.target.closest('#mobile-nav-scenarios')
+    )) {
+      return;
+    }
     if (solverDropdown && !solverDropdown.classList.contains('hidden')) {
       if (solverBadge && !solverBadge.contains(e.target) && !solverDropdown.contains(e.target)) {
         solverDropdown.classList.add('hidden');
@@ -1896,6 +1904,14 @@ function setupUIListeners() {
   
   // Close mobile drawer on click outside
   document.addEventListener('click', (e) => {
+    if (window.innerWidth > 768 && (
+        e.target.closest('#metrics-panel') || 
+        e.target.closest('#scenarios-panel') || 
+        e.target.closest('#mobile-nav-metrics') || 
+        e.target.closest('#mobile-nav-scenarios')
+    )) {
+      return;
+    }
     if (mobileDrawer && mobileDrawer.classList.contains('active') && !mobileDrawer.contains(e.target) && !e.target.closest('#mobile-menu-btn')) {
       closeAllOtherPanels(null);
     }
@@ -3721,6 +3737,14 @@ function setupSearch() {
 
   // Close search suggestions on click outside
   document.addEventListener('click', (e) => {
+    if (window.innerWidth > 768 && (
+        e.target.closest('#metrics-panel') || 
+        e.target.closest('#scenarios-panel') || 
+        e.target.closest('#mobile-nav-metrics') || 
+        e.target.closest('#mobile-nav-scenarios')
+    )) {
+      return;
+    }
     if (!e.target.closest('.search-container')) {
       hideSearchResults();
     }
@@ -6378,6 +6402,14 @@ function setupScenariosAndChat() {
 
   // Global click outside closes chat
   document.addEventListener('click', (e) => {
+    if (window.innerWidth > 768 && (
+        e.target.closest('#metrics-panel') || 
+        e.target.closest('#scenarios-panel') || 
+        e.target.closest('#mobile-nav-metrics') || 
+        e.target.closest('#mobile-nav-scenarios')
+    )) {
+      return;
+    }
     if (chatDrawer && !chatDrawer.classList.contains('hidden')) {
       if (!chatDrawer.contains(e.target) && 
           (!chatTrigger || !chatTrigger.contains(e.target)) && 
