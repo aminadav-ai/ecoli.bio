@@ -145,7 +145,7 @@
                   </div>
                   <div class="form-group">
                     <label for="namespace-select">Metabolite Namespace</label>
-                    <select id="namespace-select" class="select-dropdown">
+                    <select id="namespace-select" class="select-dropdown" style="display: none;">
                       <option value="common">Common Name</option>
                       <option value="ecocyc">EcoCyc ID</option>
                       <option value="bigg" selected>BiGG ID</option>
@@ -153,7 +153,35 @@
                       <option value="chebi">ChEBI ID</option>
                       <option value="hmdb">HMDB ID</option>
                     </select>
-                    <p id="namespace-desc" class="namespace-desc">Standard for genome-scale metabolic models (E. coli K-12).</p>
+
+                    <!-- Custom select UI -->
+                    <div class="custom-select-wrapper" id="custom-namespace-select-wrapper" style="width: 100%; margin-top: 4px; box-sizing: border-box;">
+                      <div class="custom-select-trigger" id="custom-namespace-select-trigger" style="min-width: 100%; max-width: 100%; box-sizing: border-box;">
+                        <span class="custom-select-text" id="custom-namespace-selected-text">BiGG ID</span>
+                        <span class="custom-select-arrow">▼</span>
+                      </div>
+                      <div class="custom-select-options glass hidden" id="custom-namespace-options" style="width: 100% !important; box-sizing: border-box;">
+                        <div class="custom-select-option selected" data-value="bigg">
+                          <span class="custom-select-option-text">BiGG ID</span>
+                        </div>
+                        <div class="custom-select-option" data-value="common">
+                          <span class="custom-select-option-text">Common Name</span>
+                        </div>
+                        <div class="custom-select-option" data-value="ecocyc">
+                          <span class="custom-select-option-text">EcoCyc ID</span>
+                        </div>
+                        <div class="custom-select-option" data-value="kegg">
+                          <span class="custom-select-option-text">KEGG ID</span>
+                        </div>
+                        <div class="custom-select-option" data-value="chebi">
+                          <span class="custom-select-option-text">ChEBI ID</span>
+                        </div>
+                        <div class="custom-select-option" data-value="hmdb">
+                          <span class="custom-select-option-text">HMDB ID</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p id="namespace-desc" class="namespace-desc" style="margin-top: 8px;">Standard for genome-scale metabolic models (E. coli K-12).</p>
                   </div>
                 </div>
               </div>

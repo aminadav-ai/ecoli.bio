@@ -1004,6 +1004,57 @@ function setupUIListeners() {
     }
   });
 
+  // Custom Namespace Dropdown UI Setup
+  const customNamespaceSelectWrapper = document.getElementById('custom-namespace-select-wrapper');
+  const customNamespaceSelectTrigger = document.getElementById('custom-namespace-select-trigger');
+  const customNamespaceOptions = document.getElementById('custom-namespace-options');
+  const customNamespaceSelectedText = document.getElementById('custom-namespace-selected-text');
+
+  if (customNamespaceSelectWrapper && customNamespaceSelectTrigger && customNamespaceOptions && customNamespaceSelectedText) {
+    // Toggle dropdown
+    customNamespaceSelectTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      customNamespaceOptions.classList.toggle('hidden');
+      customNamespaceSelectWrapper.classList.toggle('open');
+      if (!customNamespaceOptions.classList.contains('hidden')) {
+        closeAllOtherPanels('custom-namespace');
+      }
+    });
+
+    // Handle option click
+    customNamespaceOptions.querySelectorAll('.custom-select-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = option.getAttribute('data-value');
+        
+        // Update selection state
+        customNamespaceOptions.querySelectorAll('.custom-select-option').forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+        
+        // Update text
+        customNamespaceSelectedText.textContent = option.querySelector('.custom-select-option-text').textContent;
+        
+        // Close dropdown
+        customNamespaceOptions.classList.add('hidden');
+        customNamespaceSelectWrapper.classList.remove('open');
+        
+        // Sync original hidden select and trigger change event
+        if (namespaceSelect) {
+          namespaceSelect.value = val;
+          namespaceSelect.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!customNamespaceSelectWrapper.contains(e.target)) {
+        customNamespaceOptions.classList.add('hidden');
+        customNamespaceSelectWrapper.classList.remove('open');
+      }
+    });
+  }
+
   // Map zoom controls
   const btnZoomIn = document.getElementById('btn-zoom-in');
   const btnZoomOut = document.getElementById('btn-zoom-out');
@@ -2374,6 +2425,15 @@ function closeAllOtherPanels(except) {
   const shouldCloseSearch = isMobile ? (except !== 'search') : (except !== 'search' && except !== 'left-panel' && except !== 'scenarios');
   if (shouldCloseSearch) {
     hideSearchResults();
+  }
+
+  // 8.5. Custom Namespace List
+  const shouldCloseNamespace = isMobile ? (except !== 'custom-namespace') : (except !== 'custom-namespace' && except !== 'left-panel' && except !== 'scenarios');
+  if (shouldCloseNamespace) {
+    const customOptionsDiv = document.getElementById('custom-namespace-options');
+    const customWrapper = document.getElementById('custom-namespace-select-wrapper');
+    if (customOptionsDiv) customOptionsDiv.classList.add('hidden');
+    if (customWrapper) customWrapper.classList.remove('open');
   }
 
   // --- Left-side Panels (Metrics & Scenarios) Mutual Exclusion ---
