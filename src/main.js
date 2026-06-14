@@ -6070,6 +6070,15 @@ function updateUserStatusUI() {
     }
   }
 
+  const mobileExperimentsSection = document.getElementById('mobile-experiments-section');
+  if (mobileExperimentsSection) {
+    if (userProfile) {
+      mobileExperimentsSection.classList.remove('hidden');
+    } else {
+      mobileExperimentsSection.classList.add('hidden');
+    }
+  }
+
 
   // Update User Tier Badge in Top Header (Always hidden per user request)
   const userTierContainer = document.getElementById('user-tier-container');
