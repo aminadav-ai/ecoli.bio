@@ -16,7 +16,10 @@ export function serializeSimulation(sim) {
   const state = {
     metabolites: {},
     parameters: {},
+    fluxes: {},
+    biomass_flux: sim.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0.0,
     isDead: sim.isDead || false,
+    is_dead: sim.isDead || false,
     tickCounter: sim.tickCounter || 0,
     lastTimestamp: sim.lastTimestamp || 0
   };
@@ -27,12 +30,16 @@ export function serializeSimulation(sim) {
     };
   }
   for (const [rId, rxn] of Object.entries(sim.reactions)) {
+    state.fluxes[rId] = rxn.flux;
     if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
       state.parameters[rId] = {
         vMax: rxn.vMax,
         km: rxn.km
       };
     }
+  }
+  if (sim.latestFluxes) {
+    state.fluxes = { ...state.fluxes, ...sim.latestFluxes };
   }
   return state;
 }
