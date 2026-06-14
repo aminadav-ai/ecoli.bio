@@ -2369,7 +2369,7 @@ function closeAllOtherPanels(except) {
 
   // 4. Mobile Hamburger Drawer
   const shouldCloseMobileDrawer = isMobile 
-    ? (except !== 'mobile-drawer') 
+    ? (except !== 'mobile-drawer' && except !== 'experiments' && except !== 'custom-namespace') 
     : (except !== 'mobile-drawer' && except !== 'left-panel' && except !== 'scenarios' && except !== 'experiments' && except !== 'profile');
   
   if (except === 'mobile-drawer') {
@@ -2413,7 +2413,9 @@ function closeAllOtherPanels(except) {
   }
 
   // 7. Map Settings Dropdown
-  const shouldCloseSettings = isMobile ? (except !== 'settings') : (except !== 'settings' && except !== 'left-panel' && except !== 'scenarios');
+  const shouldCloseSettings = isMobile 
+    ? (except !== 'settings' && except !== 'custom-namespace') 
+    : (except !== 'settings' && except !== 'left-panel' && except !== 'scenarios' && except !== 'custom-namespace');
   if (shouldCloseSettings) {
     const settingsDropdown = document.getElementById('settings-dropdown');
     if (settingsDropdown) {
