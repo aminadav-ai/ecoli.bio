@@ -473,25 +473,7 @@ async function bootstrap() {
   // 2. Initialize simulation engine
   simulation = new Simulation(mapData);
 
-  // Restore saved oxygen preference
-  const savedO2 = localStorage.getItem('global_o2_e');
-  if (savedO2 !== null) {
-    const o2Val = parseFloat(savedO2);
-    if (!isNaN(o2Val) && simulation.metabolites['o2_e']) {
-      simulation.metabolites['o2_e'].concentration = o2Val;
-      simulation.metabolites['o2_e'].targetConcentration = o2Val;
-    }
-  }
-
-  // Restore saved glucose preference
-  const savedGlc = localStorage.getItem('global_glc__D_e');
-  if (savedGlc !== null) {
-    const glcVal = parseFloat(savedGlc);
-    if (!isNaN(glcVal) && simulation.metabolites['glc__D_e']) {
-      simulation.metabolites['glc__D_e'].concentration = glcVal;
-      simulation.metabolites['glc__D_e'].targetConcentration = glcVal;
-    }
-  }
+  // (Saved environmental preferences in localStorage removed as per user request, stored in experiment session instead)
 
   // 3. Initialize visual renderer
   const canvasElement = document.getElementById('pixi-canvas');
@@ -997,12 +979,7 @@ function setupUIListeners() {
 
     globalO2Slider.addEventListener('change', (e) => {
       if (!userProfile) return;
-      const val = parseFloat(e.target.value);
       if (simulation && simulation.metabolites['o2_e']) {
-        if (!activeScenarioId) {
-          localStorage.setItem('global_o2_e', val);
-          saveO2PreferenceToDb(val);
-        }
         wakeUpSolver();
         updateFbaBounds(performance.now());
       }
@@ -1034,11 +1011,7 @@ function setupUIListeners() {
 
     globalGlcSlider.addEventListener('change', (e) => {
       if (!userProfile) return;
-      const val = parseFloat(e.target.value);
       if (simulation && simulation.metabolites['glc__D_e']) {
-        if (!activeScenarioId) {
-          localStorage.setItem('global_glc__D_e', val);
-        }
         wakeUpSolver();
         updateFbaBounds(performance.now());
       }

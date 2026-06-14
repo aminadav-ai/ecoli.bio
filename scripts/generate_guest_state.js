@@ -9,8 +9,8 @@ function precalculateGuestState(highs, staticLpHeader) {
   const sim = initializeNewSimulation();
   if (!sim) return;
   
-  sim.metabolites['o2_e'].concentration = 0.2;
-  sim.metabolites['o2_e'].targetConcentration = 0.2;
+  sim.metabolites['o2_e'].concentration = 18.5;
+  sim.metabolites['o2_e'].targetConcentration = 18.5;
   sim.metabolites['glc__D_e'].concentration = 10.0;
   sim.metabolites['glc__D_e'].targetConcentration = 10.0;
   
