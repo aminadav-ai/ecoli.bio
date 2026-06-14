@@ -979,14 +979,14 @@ function setupUIListeners() {
     globalO2Slider.addEventListener('input', (e) => {
       if (!userProfile) {
         e.preventDefault();
-        const prevVal = (simulation && simulation.metabolites['o2_e']) ? simulation.metabolites['o2_e'].concentration : 0.2;
+        const prevVal = (simulation && simulation.metabolites['o2_e']) ? simulation.metabolites['o2_e'].concentration : 18.5;
         globalO2Slider.value = prevVal;
-        globalO2Val.textContent = prevVal.toFixed(1);
+        globalO2Val.textContent = prevVal.toFixed(2);
         openAuthModal();
         return;
       }
       const val = parseFloat(e.target.value);
-      globalO2Val.textContent = val.toFixed(1);
+      globalO2Val.textContent = val.toFixed(2);
       if (simulation && simulation.metabolites['o2_e']) {
         simulation.metabolites['o2_e'].concentration = val;
         simulation.metabolites['o2_e'].targetConcentration = val;
@@ -1018,12 +1018,12 @@ function setupUIListeners() {
         e.preventDefault();
         const prevVal = (simulation && simulation.metabolites['glc__D_e']) ? simulation.metabolites['glc__D_e'].concentration : 10.0;
         globalGlcSlider.value = prevVal;
-        globalGlcVal.textContent = prevVal.toFixed(1);
+        globalGlcVal.textContent = prevVal.toFixed(2);
         openAuthModal();
         return;
       }
       const val = parseFloat(e.target.value);
-      globalGlcVal.textContent = val.toFixed(1);
+      globalGlcVal.textContent = val.toFixed(2);
       if (simulation && simulation.metabolites['glc__D_e']) {
         simulation.metabolites['glc__D_e'].concentration = val;
         simulation.metabolites['glc__D_e'].targetConcentration = val;
@@ -1389,7 +1389,7 @@ function setupUIListeners() {
   if (copyGlobalO2Btn) {
     copyGlobalO2Btn.addEventListener('click', () => {
       const val = document.getElementById('global-o2-slider').value;
-      handleCopyClick(copyGlobalO2Btn, `o2_e Concentration = ${parseFloat(val).toFixed(1)} mM`);
+      handleCopyClick(copyGlobalO2Btn, `o2_e Concentration = ${parseFloat(val).toFixed(2)} mM`);
     });
   }
 
@@ -1398,7 +1398,7 @@ function setupUIListeners() {
   if (copyGlobalGlcBtn) {
     copyGlobalGlcBtn.addEventListener('click', () => {
       const val = document.getElementById('global-glc-slider').value;
-      handleCopyClick(copyGlobalGlcBtn, `glc__D_e Concentration = ${parseFloat(val).toFixed(1)} mM`);
+      handleCopyClick(copyGlobalGlcBtn, `glc__D_e Concentration = ${parseFloat(val).toFixed(2)} mM`);
     });
   }
 
@@ -2783,7 +2783,7 @@ function updateUIPanelValues() {
     const currentO2 = simulation.metabolites['o2_e'].concentration;
     if (document.activeElement !== globalO2Slider) {
       globalO2Slider.value = currentO2;
-      globalO2Val.textContent = currentO2.toFixed(1);
+      globalO2Val.textContent = currentO2.toFixed(2);
     }
   }
 
@@ -2794,7 +2794,7 @@ function updateUIPanelValues() {
     const currentGlc = simulation.metabolites['glc__D_e'].concentration;
     if (document.activeElement !== globalGlcSlider) {
       globalGlcSlider.value = currentGlc;
-      globalGlcVal.textContent = currentGlc.toFixed(1);
+      globalGlcVal.textContent = currentGlc.toFixed(2);
     }
   }
 
@@ -3569,13 +3569,13 @@ function drawGrowthSparkline() {
 
   const dpr = window.devicePixelRatio || 1;
   const rect = growthCanvas.getBoundingClientRect();
-  growthCanvas.width = rect.width * dpr;
+  const w = rect.width || (growthCanvas.parentElement ? growthCanvas.parentElement.clientWidth : 320);
+  growthCanvas.width = w * dpr;
   growthCanvas.height = 40 * dpr;
 
   growthCtx = growthCanvas.getContext('2d');
   growthCtx.scale(dpr, dpr);
 
-  const w = rect.width;
   const h = 40;
 
   growthCtx.clearRect(0, 0, w, h);
@@ -6291,6 +6291,7 @@ function setupScenariosAndChat() {
   const chatInput = document.getElementById('ai-chat-input');
   const chatSendBtn = document.getElementById('ai-chat-send-btn');
   const contextBtn = document.getElementById('ai-chat-context-btn');
+  const navChat = document.getElementById('mobile-nav-chat');
   const contextPanel = document.getElementById('ai-chat-context-panel');
 
   if (chatTrigger && chatDrawer) {
