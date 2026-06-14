@@ -2965,10 +2965,10 @@ function updateSolverStatusUI() {
   const text = badge.querySelector('.status-text');
 
   if (isSolverWorking) {
-    badge.className = 'solver-badge work' + (userProfile ? '' : ' hidden');
+    badge.className = 'solver-badge work';
     text.textContent = 'SOLVING';
   } else {
-    badge.className = 'solver-badge relax' + (userProfile ? '' : ' hidden');
+    badge.className = 'solver-badge relax';
     text.textContent = 'STABLE';
   }
 
@@ -6152,14 +6152,10 @@ function updateUserStatusUI() {
     if (inputContainer) inputContainer.classList.remove('hidden');
   }
 
-  // Hide solver status badge for guests
+  // Solver status badge is always visible
   const solverStatusBadge = document.getElementById('solver-status-badge');
   if (solverStatusBadge) {
-    if (userProfile) {
-      solverStatusBadge.classList.remove('hidden');
-    } else {
-      solverStatusBadge.classList.add('hidden');
-    }
+    solverStatusBadge.classList.remove('hidden');
   }
 
   // AI Chat trigger is always visible

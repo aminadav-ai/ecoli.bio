@@ -1091,6 +1091,10 @@ To ensure that reactions and metabolites mentioned in the chat are clickable and
 - Active metabolites must include their exact compartment suffixes: extracellular carbon sources/fermentation products must end with _e (e.g., use glc__D_e for glucose, ac_e for extracellular acetate, lac__D_e for extracellular D-lactate, etoh_e for extracellular ethanol). Cytoplasmic metabolites must end with _c (e.g. g6p_c, pyr_c, accoa_c).
 You should output these exact IDs (e.g. ATPS4rpp, ac_e, lac__D_e, GLCptspp, pyr_c) in your text. The client-side link detector will automatically find them and highlight them. Do NOT wrap these IDs in backticks (\`), quotes, or any other formatting; just write them as plain text (e.g. write ATPS4rpp, ac_e, lac__D_e). Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose", as they will not be recognized by the map.
 
+PORTAL FEATURES:
+- Experiment Management: Authorized users can create, rename, delete, and switch between multiple saved simulation sessions (experiments) via the header dropdown on desktop or the side drawer on mobile. The custom metabolite concentrations and modified reaction parameters for each experiment are stored dynamically in the cloud (using Durable Objects and D1 database).
+- Guest Mode: If the student is not logged in, they see the default wild-type simulation state (aerobic growth rate of 0.98 hr⁻¹ with EX_o2_e = 18.5 and EX_glc__D_e = 10.0) in read-only mode. Their sliders and simulation controls are disabled, and they cannot manage experiments or save their state until they sign in.
+
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
 

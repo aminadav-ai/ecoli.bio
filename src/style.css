@@ -2727,7 +2727,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   /* Hide desktop-only controls from header actions on mobile */
-  #solver-status-container,
   #map-warnings-container,
   #user-tier-container {
     display: none !important;

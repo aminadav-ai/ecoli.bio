@@ -998,6 +998,12 @@ export class PixiRenderer {
 
     // Drag-to-pan & pinch implementation
     el.addEventListener('pointerdown', (e) => {
+      // Prevent blurring of active text inputs
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        e.preventDefault();
+      }
+
       this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       if (this.activePointers.size === 1) {
