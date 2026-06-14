@@ -37,6 +37,7 @@ export class PixiRenderer {
     this.isDragging = false;
     this.dragStart = { x: 0, y: 0 };
     this.viewportStart = { x: 0, y: 0 };
+    this.draggedDistance = 0;
     
     // Pinch to zoom state
     this.activePointers = new Map();
@@ -1019,12 +1020,14 @@ export class PixiRenderer {
         this.dragStart.y = canvasY;
         this.viewportStart.x = this.viewport.x;
         this.viewportStart.y = this.viewport.y;
+        this.draggedDistance = 0; // Reset distance tracking on drag start
         el.style.cursor = 'grabbing';
       } else if (this.activePointers.size === 2) {
         // Transition from panning to pinching
         this.isDragging = false;
         this.isPinching = true;
         this.isCameraAnimating = false;
+        this.draggedDistance = 999; // Set large value to prevent click actions after pinch
 
         const pointers = Array.from(this.activePointers.values());
         this.pinchStartDist = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
@@ -1098,6 +1101,7 @@ export class PixiRenderer {
       if (this.isDragging) {
         const dx = canvasX - this.dragStart.x;
         const dy = canvasY - this.dragStart.y;
+        this.draggedDistance = Math.max(this.draggedDistance || 0, Math.hypot(dx, dy));
         this.viewport.x = this.viewportStart.x + dx;
         this.viewport.y = this.viewportStart.y + dy;
         
@@ -1208,6 +1212,13 @@ export class PixiRenderer {
 
     // Click on canvas background to deselect
     el.addEventListener('click', (e) => {
+      if (this.draggedDistance > 5) {
+        this.draggedDistance = 0;
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+      }
+      this.draggedDistance = 0;
       if (this.justSelectedSomething) {
         this.justSelectedSomething = false;
         return;
