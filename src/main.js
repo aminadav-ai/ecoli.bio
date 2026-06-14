@@ -1948,11 +1948,6 @@ function setupUIListeners() {
 let isCurrentlyMobile = false;
 
 function checkViewportChange() {
-  const isMobile = window.innerWidth <= 768;
-  if (isMobile === isCurrentlyMobile) return;
-  
-  isCurrentlyMobile = isMobile;
-  
   const experimentsContainer = document.getElementById('experiments-container');
   const userProfileContainer = document.getElementById('user-profile-header-container');
   const settingsBody = document.querySelector('#settings-header-container .settings-body');
@@ -1961,35 +1956,14 @@ function checkViewportChange() {
   const mobileProfile = document.getElementById('mobile-profile-container');
   const mobileSettings = document.getElementById('mobile-settings-container');
   
-  const desktopExperiments = document.getElementById('experiments-desktop-parent');
-  const desktopProfile = document.getElementById('profile-desktop-parent');
-  const desktopSettings = document.getElementById('settings-desktop-parent');
-  
-  if (isMobile) {
-    // Relocate elements to mobile drawer containers
-    if (experimentsContainer && mobileExperiments) {
-      mobileExperiments.appendChild(experimentsContainer);
-    }
-    if (userProfileContainer && mobileProfile) {
-      mobileProfile.appendChild(userProfileContainer);
-    }
-    if (settingsBody && mobileSettings) {
-      mobileSettings.appendChild(settingsBody);
-    }
-  } else {
-    // Relocate elements back to desktop parents
-    if (experimentsContainer && desktopExperiments) {
-      desktopExperiments.appendChild(experimentsContainer);
-    }
-    if (userProfileContainer && desktopProfile) {
-      desktopProfile.appendChild(userProfileContainer);
-    }
-    if (settingsBody && desktopSettings) {
-      desktopSettings.appendChild(settingsBody);
-    }
-    
-    // Close mobile panels when resizing back to desktop
-    closeAllOtherPanels(null);
+  if (experimentsContainer && mobileExperiments && !mobileExperiments.contains(experimentsContainer)) {
+    mobileExperiments.appendChild(experimentsContainer);
+  }
+  if (userProfileContainer && mobileProfile && !mobileProfile.contains(userProfileContainer)) {
+    mobileProfile.appendChild(userProfileContainer);
+  }
+  if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
+    mobileSettings.appendChild(settingsBody);
   }
 }
 
