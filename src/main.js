@@ -1938,6 +1938,7 @@ function setupUIListeners() {
   const btnCloseReport = document.getElementById('btn-close-report');
   const btnCloseReportOk = document.getElementById('btn-close-report-ok');
   const btnCopyReport = document.getElementById('btn-copy-report');
+  const btnExplainReportAI = document.getElementById('btn-explain-report-ai');
   const reportContentContainer = document.getElementById('report-content-container');
 
   if (btnExperimentReport && reportModal && reportContentContainer) {
@@ -2067,6 +2068,17 @@ function setupUIListeners() {
           console.error('Failed to copy report: ', err);
           showToast('Could not copy report to clipboard.', 'error');
         }
+      });
+    }
+
+    if (btnExplainReportAI) {
+      btnExplainReportAI.addEventListener('click', () => {
+        const reportText = reportContentContainer.textContent;
+        if (!reportText) return;
+
+        closeReport();
+        openChatDrawer();
+        sendChatMessage("Please explain the biological meaning and impact of this metabolic experiment based on the following report:\n\n" + reportText);
       });
     }
   }
