@@ -658,7 +658,8 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     const headers = {
       'Content-Type': 'application/json',
       'x-guest-id': guestId,
-      'x-session-id': sessionId
+      'x-session-id': sessionId,
+      'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
     };
     const token = localStorage.getItem('userToken');
     if (token) {
