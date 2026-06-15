@@ -1249,6 +1249,8 @@ You should output these exact IDs (e.g. ATPS4rpp, ac_e, lac__D_e, GLCptspp, pyr_
 
 PORTAL FEATURES:
 - Experiment Management: Authorized users can create, rename, delete, and switch between multiple saved simulation sessions (experiments) via the header dropdown on desktop or the side drawer on mobile. The custom metabolite concentrations and modified reaction parameters for each experiment are stored dynamically in the cloud (using Durable Objects and D1 database).
+- Experiment Report: The "Report" button is located in the center of the bottom dock panel (floating dock on desktop, full-width on mobile), between the Scenarios tab and the AI Chat button. It opens the Experiment Report modal showing a timeline of user actions and biological impacts.
+- Chat Context: The chat header features an "👁️ Context" button to view raw JSON simulation context sent to the AI. This button is hidden in production (ecoli.bio / www.ecoli.bio) and only visible in development and staging environments.
 - Guest Mode: If the student is not logged in, they see the default wild-type simulation state (aerobic growth rate of 0.98 hr⁻¹ with EX_o2_e = 18.5 and EX_glc__D_e = 10.0) in read-only mode. Their sliders and simulation controls are disabled, and they cannot manage experiments or save their state until they sign in.
 
 Here is the current state of the metabolic simulation on the student's screen:
