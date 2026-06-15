@@ -2578,6 +2578,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-sizing: border-box !important;
 }
 
+.mobile-drawer-content .btn-experiment-report {
+  width: 100% !important;
+  text-align: center !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  box-sizing: border-box !important;
+}
+
 .mobile-drawer-content .custom-select-options {
   width: 100%;
   position: relative;
@@ -4721,6 +4729,24 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .btn-new-experiment:hover {
   background: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+}
+
+.btn-experiment-report {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-experiment-report:hover {
+  background: rgba(16, 185, 129, 0.45);
   color: #ffffff;
 }
 

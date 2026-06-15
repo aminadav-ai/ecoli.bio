@@ -458,6 +458,7 @@ export async function renameSimulationSession(db, id, name) {
 export async function deleteSimulationSession(db, id) {
   try {
     await db.prepare('DELETE FROM simulation_sessions WHERE id = ?').bind(id).run();
+    await db.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(id).run();
   } catch (err) {
     console.error('[D1 DB] deleteSimulationSession error:', err);
   }
@@ -483,5 +484,31 @@ export async function getExperimentCount(db, email, baseName, dateStr) {
   } catch (err) {
     console.error('[D1 DB] getExperimentCount error:', err);
     return 0;
+  }
+}
+
+// 20. Log user action inside an experiment with resulting simulation metrics
+export async function logExperimentAction(db, sessionId, actionType, target, value, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead) {
+  try {
+    await db.prepare(
+      'INSERT INTO experiment_logs (session_id, action_type, target, value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"))'
+    ).bind(sessionId, actionType, target, value, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead).run();
+  } catch (err) {
+    console.error('[D1 DB] logExperimentAction error:', err);
+  }
+}
+
+// 21. Get all logs for an experiment session
+export async function getExperimentLogs(db, sessionId) {
+  try {
+    const res = await db.prepare(
+      'SELECT action_type, target, value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at ' +
+      'FROM experiment_logs WHERE session_id = ? ORDER BY id ASC'
+    ).bind(sessionId).all();
+    return res.results || [];
+  } catch (err) {
+    console.error('[D1 DB] getExperimentLogs error:', err);
+    return [];
   }
 }

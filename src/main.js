@@ -601,9 +601,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
   // Send via WebSocket if connected
   if (sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN) {
     if (forceOptions.reset) {
-      sessionWebSocket.send(JSON.stringify({ type: "RESET_SIMULATION" }));
+      sessionWebSocket.send(JSON.stringify({ type: "RESET_SIMULATION", logAction: forceOptions.logAction }));
     } else if (forceOptions.scenario) {
-      sessionWebSocket.send(JSON.stringify({ type: "APPLY_SCENARIO", scenarioId: forceOptions.scenario }));
+      sessionWebSocket.send(JSON.stringify({ type: "APPLY_SCENARIO", scenarioId: forceOptions.scenario, logAction: forceOptions.logAction }));
     } else {
       const concentrations = {};
       if (simulation.metabolites['o2_e']) {
@@ -625,7 +625,8 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       sessionWebSocket.send(JSON.stringify({
         type: "UPDATE_PARAMETER",
         concentrations,
-        parameters
+        parameters,
+        logAction: forceOptions.logAction
       }));
     }
     return;
@@ -675,6 +676,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     }
     if (forceOptions.scenario) {
       requestBody.scenario = forceOptions.scenario;
+    }
+    if (forceOptions.logAction) {
+      requestBody.logAction = forceOptions.logAction;
     }
 
     const res = await fetch('/api/solve-fba', {
@@ -903,7 +907,14 @@ function setupUIListeners() {
 
     // Recalculate fluxes immediately on reset
     wakeUpSolver();
-    updateFbaBounds(performance.now(), { reset: true });
+    updateFbaBounds(performance.now(), { 
+      reset: true,
+      logAction: {
+        type: 'reset',
+        target: 'Simulation',
+        value: 0
+      }
+    });
 
     // Refresh UI parameters and inputs to default values
     renderPinnedReactions();
@@ -965,7 +976,14 @@ function setupUIListeners() {
       if (!userProfile) return;
       if (simulation && simulation.metabolites['o2_e']) {
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        const val = parseFloat(e.target.value);
+        updateFbaBounds(performance.now(), {
+          logAction: {
+            type: 'slider',
+            target: 'Oxygen Supply (o2_e)',
+            value: val
+          }
+        });
       }
     });
   }
@@ -997,7 +1015,14 @@ function setupUIListeners() {
       if (!userProfile) return;
       if (simulation && simulation.metabolites['glc__D_e']) {
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        const val = parseFloat(e.target.value);
+        updateFbaBounds(performance.now(), {
+          logAction: {
+            type: 'slider',
+            target: 'Glucose Supply (glc__D_e)',
+            value: val
+          }
+        });
       }
     });
   }
@@ -1126,7 +1151,13 @@ function setupUIListeners() {
         simulation.inject(selectedMetaboliteId, amount);
         console.log(`[App] Spiked ${selectedMetaboliteId} by +${amount} mM`);
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        updateFbaBounds(performance.now(), {
+          logAction: {
+            type: 'injection',
+            target: selectedMetaboliteId,
+            value: amount
+          }
+        });
       }
     });
   });
@@ -1141,7 +1172,13 @@ function setupUIListeners() {
       simulation.deplete(selectedMetaboliteId);
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
       wakeUpSolver();
-      updateFbaBounds(performance.now());
+      updateFbaBounds(performance.now(), {
+        logAction: {
+          type: 'depletion',
+          target: selectedMetaboliteId,
+          value: 0.1
+        }
+      });
     }
   });
 
@@ -1556,7 +1593,14 @@ function setupUIListeners() {
       if (!userProfile) return;
       if (selectedReactionId) {
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        const val = parseFloat(e.target.value);
+        updateFbaBounds(performance.now(), {
+          logAction: {
+            type: 'slider',
+            target: `Reaction ${selectedReactionId} Vmax`,
+            value: val
+          }
+        });
       }
     });
   }
@@ -1586,7 +1630,14 @@ function setupUIListeners() {
       if (!userProfile) return;
       if (selectedReactionId) {
         wakeUpSolver();
-        updateFbaBounds(performance.now());
+        const val = parseFloat(e.target.value);
+        updateFbaBounds(performance.now(), {
+          logAction: {
+            type: 'slider',
+            target: `Reaction ${selectedReactionId} Km`,
+            value: val
+          }
+        });
       }
     });
   }
@@ -1846,6 +1897,131 @@ function setupUIListeners() {
     btnNewExperiment.addEventListener('click', async () => {
       await createNewExperiment();
     });
+  }
+
+  // Experiment Report Modal Trigger and Setup
+  const btnExperimentReport = document.getElementById('btn-experiment-report');
+  const reportModal = document.getElementById('experiment-report-modal');
+  const btnCloseReport = document.getElementById('btn-close-report');
+  const btnCloseReportOk = document.getElementById('btn-close-report-ok');
+  const btnCopyReport = document.getElementById('btn-copy-report');
+  const reportContentContainer = document.getElementById('report-content-container');
+
+  if (btnExperimentReport && reportModal && reportContentContainer) {
+    btnExperimentReport.addEventListener('click', async () => {
+      if (!userProfile || !sessionId) {
+        showToast('Please sign in and select an experiment to view the report.', 'error');
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('userToken');
+        const res = await fetch(`/api/experiments/logs?sessionId=${sessionId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!res.ok) throw new Error('Failed to fetch logs');
+        const logs = await res.json();
+        
+        // Generate English report content
+        const activeExp = experimentsList.find(e => e.id === sessionId);
+        const expName = activeExp ? activeExp.name : 'Unknown Experiment';
+        
+        // Current system metrics
+        const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
+        const currentGrowth = Math.max(0.0, biomassFlux);
+        const glcFlux = simulation.latestFluxes ? (simulation.latestFluxes['EX_glc__D_e'] || 0) : 0;
+        const currentGlcUptake = Math.max(0.0, -glcFlux);
+        const o2Flux = simulation.latestFluxes ? (simulation.latestFluxes['EX_o2_e'] || 0) : 0;
+        const currentO2Uptake = Math.max(0.0, -o2Flux);
+        const atpFlux = Math.max(0.0, Math.abs(simulation.reactions['ATPS4r']?.flux || 0));
+        
+        let reportText = `Experiment: ${expName}\n`;
+        reportText += `Current Status: ${isDead ? 'Dead 💀' : 'Alive (Optimal) 🟢'}\n`;
+        reportText += `Current Growth Rate: ${currentGrowth.toFixed(2)} hr⁻¹\n`;
+        reportText += `Current Glucose Uptake: ${currentGlcUptake.toFixed(1)} mM/s\n`;
+        reportText += `Current Oxygen Uptake: ${currentO2Uptake.toFixed(1)} mM/s\n`;
+        reportText += `Current ATP Yield: ${atpFlux.toFixed(1)} mM/s\n\n`;
+        
+        reportText += `Timeline of Actions & Biological Impact:\n`;
+        if (logs.length === 0) {
+          reportText += `  - No actions recorded in this experiment yet.\n`;
+        } else {
+          logs.forEach((log) => {
+            let timeStr = '';
+            if (log.created_at) {
+              try {
+                const dateUtc = new Date(log.created_at + 'Z');
+                timeStr = dateUtc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              } catch(e) {
+                timeStr = log.created_at;
+              }
+            }
+            
+            let actionDesc = '';
+            if (log.action_type === 'slider') {
+              actionDesc = `Changed ${log.target} to ${log.value.toFixed(1)}`;
+            } else if (log.action_type === 'injection') {
+              actionDesc = `Spiked (Injected) ${log.target} by +${log.value.toFixed(1)} mM`;
+            } else if (log.action_type === 'depletion') {
+              actionDesc = `Depleted ${log.target}`;
+            } else if (log.action_type === 'reset') {
+              actionDesc = `Reset simulation`;
+            } else if (log.action_type === 'scenario') {
+              actionDesc = log.value > 0 ? `Applied scenario: "${log.target}"` : `Exited scenario`;
+            }
+            
+            const stateDesc = `[Result: Growth = ${log.growth_rate.toFixed(2)} hr⁻¹, Glucose Uptake = ${log.glucose_uptake.toFixed(1)} mM/s, Oxygen Uptake = ${log.oxygen_uptake.toFixed(1)} mM/s, ATP Yield = ${log.atp_yield.toFixed(1)} mM/s, Status = ${log.is_dead ? 'Dead' : 'Alive'}]`;
+            
+            reportText += `  - ${timeStr}: ${actionDesc}\n    ${stateDesc}\n`;
+          });
+        }
+        
+        reportContentContainer.textContent = reportText;
+        reportModal.classList.remove('hidden');
+      } catch (err) {
+        console.error('Failed to generate report:', err);
+        showToast('Failed to generate report: ' + err.message, 'error');
+      }
+    });
+
+    const closeReport = () => {
+      reportModal.classList.add('hidden');
+    };
+    if (btnCloseReport) btnCloseReport.addEventListener('click', closeReport);
+    if (btnCloseReportOk) btnCloseReportOk.addEventListener('click', closeReport);
+
+    if (btnCopyReport) {
+      const originalHTML = btnCopyReport.innerHTML;
+      btnCopyReport.addEventListener('click', async () => {
+        const textToCopy = reportContentContainer.textContent;
+        if (!textToCopy) return;
+        
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(textToCopy);
+            btnCopyReport.innerHTML = `
+              <svg class="copy-icon success-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Copied!
+            `;
+            btnCopyReport.style.background = 'rgba(16, 185, 129, 0.4)';
+            setTimeout(() => {
+              btnCopyReport.innerHTML = originalHTML;
+              btnCopyReport.style.background = '';
+            }, 2000);
+            showToast('Report copied to clipboard!', 'success');
+          } else {
+            throw new Error('navigator.clipboard is not available');
+          }
+        } catch (err) {
+          console.error('Failed to copy report: ', err);
+          showToast('Could not copy report to clipboard.', 'error');
+        }
+      });
+    }
   }
 
   // Custom select dropdown toggle & click outside listeners
@@ -2803,7 +2979,14 @@ function renderPinnedReactions() {
     slider.addEventListener('change', (e) => {
       if (!userProfile) return;
       wakeUpSolver();
-      updateFbaBounds(performance.now());
+      const val = parseFloat(e.target.value);
+      updateFbaBounds(performance.now(), {
+        logAction: {
+          type: 'slider',
+          target: `Reaction ${rxnId} Vmax`,
+          value: val
+        }
+      });
     });
     
     container.appendChild(row);
@@ -6716,7 +6899,14 @@ function startScenario(scenarioId) {
         if (!userProfile) return;
         if (simulation.metabolites[ctrl.id]) {
           wakeUpSolver();
-          updateFbaBounds(performance.now());
+          const val = parseFloat(e.target.value);
+          updateFbaBounds(performance.now(), {
+            logAction: {
+              type: 'slider',
+              target: `${ctrl.name} (${ctrl.id})`,
+              value: val
+            }
+          });
         }
       });
       
@@ -6784,7 +6974,14 @@ function startScenario(scenarioId) {
   }
 
   // Trigger initial solver run
-  updateFbaBounds(performance.now(), { scenario: scenarioId });
+  updateFbaBounds(performance.now(), { 
+    scenario: scenarioId,
+    logAction: {
+      type: 'scenario',
+      target: scenario.title,
+      value: 1
+    }
+  });
 }
 
 function exitActiveScenario() {
@@ -6805,7 +7002,14 @@ function exitActiveScenario() {
       localStorage.setItem('global_o2_e', val);
       saveO2PreferenceToDb(val);
     }
-    updateFbaBounds(performance.now(), { reset: true });
+    updateFbaBounds(performance.now(), { 
+      reset: true,
+      logAction: {
+        type: 'scenario',
+        target: 'Exit Scenario',
+        value: 0
+      }
+    });
   }
 }
 

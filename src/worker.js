@@ -32,7 +32,9 @@ import {
   deleteSimulationSession,
   deleteChatHistoryForSession,
   getExperimentCount,
-  getOrResetUserDailyTicks
+  getOrResetUserDailyTicks,
+  logExperimentAction,
+  getExperimentLogs
 } from './d1_db.js';
 
 // ==========================================
@@ -56,6 +58,7 @@ export class SolverDO {
 
     // In-memory buffering state
     this.bufferedTicks = 0;
+    this.pendingLogAction = null;
     this.lastFlushTime = 0;
     this.userEmail = null;
     this.totalSolverTicks = 0;
@@ -175,6 +178,32 @@ export class SolverDO {
         // Solve FBA
         const result = solveFba(this.highs, staticLpHeader, currentConcs, currentParams, this.simulation);
         ticksRun++;
+
+        if (this.pendingLogAction) {
+          const log = this.pendingLogAction;
+          this.pendingLogAction = null;
+
+          const biomass = result.biomass_flux || 0.0;
+          const glcFlux = result.fluxes ? (result.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
+          const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
+          const glcUptake = Math.max(0.0, -glcFlux);
+          const o2Uptake = Math.max(0.0, -o2Flux);
+          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+          const isDead = result.is_dead ? 1 : 0;
+
+          this.state.waitUntil(logExperimentAction(
+            this.env.DB,
+            this.sessionId,
+            log.type,
+            log.target,
+            log.value,
+            biomass,
+            glcUptake,
+            o2Uptake,
+            atpYield,
+            isDead
+          ));
+        }
         
         // Save state to DO storage
         const stateToSave = serializeSimulation(this.simulation);
@@ -416,7 +445,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       
       if (data.type === 'UPDATE_PARAMETER') {
-        const { id, param, value, concentrations, parameters } = data;
+        const { id, param, value, concentrations, parameters, logAction } = data;
+        if (logAction) {
+          this.pendingLogAction = logAction;
+        }
         if (concentrations) {
           for (const [mId, val] of Object.entries(concentrations)) {
             if (this.simulation.metabolites[mId]) {
@@ -457,6 +489,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       
       if (data.type === 'RESET_SIMULATION') {
+        if (data.logAction) {
+          this.pendingLogAction = data.logAction;
+        }
         this.simulation.reset();
         this.state.waitUntil(this.startSolveLoop());
         this.triggerAiRename();
@@ -464,7 +499,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       
       if (data.type === 'APPLY_SCENARIO') {
-        const { scenarioId } = data;
+        const { scenarioId, logAction } = data;
+        if (logAction) {
+          this.pendingLogAction = logAction;
+        }
         this.simulation.applyScenario(scenarioId);
         this.state.waitUntil(this.startSolveLoop());
         this.triggerAiRename();
@@ -883,6 +921,29 @@ export default {
         result.dailySolverTicks = result.dailySolverTicks !== undefined ? result.dailySolverTicks : dailyTicks;
         result.lastTimestamp = Date.now();
 
+        if (body.logAction) {
+          const biomass = result.biomass_flux || 0.0;
+          const glcFlux = result.fluxes ? (result.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
+          const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
+          const glcUptake = Math.max(0.0, -glcFlux);
+          const o2Uptake = Math.max(0.0, -o2Flux);
+          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+          const isDead = result.is_dead ? 1 : 0;
+
+          ctx.waitUntil(logExperimentAction(
+            env.DB,
+            sessionId,
+            body.logAction.type,
+            body.logAction.target,
+            body.logAction.value,
+            biomass,
+            glcUptake,
+            o2Uptake,
+            atpYield,
+            isDead
+          ));
+        }
+
         return new Response(JSON.stringify(result), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -1031,6 +1092,34 @@ export default {
         await doStub.fetch(doRenameReq);
 
         return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // 1f. Get experiment logs
+      if (url.pathname === '/api/experiments/logs' && request.method === 'GET') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+
+        if (!user) {
+          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const sessionId = url.searchParams.get('sessionId');
+        if (!sessionId) {
+          return new Response(JSON.stringify({ error: 'Session ID is required.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const logs = await getExperimentLogs(env.DB, sessionId);
+
+        return new Response(JSON.stringify(logs), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }

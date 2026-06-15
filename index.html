@@ -82,6 +82,7 @@
                 </div>
               </div>
               <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
+              <button id="btn-experiment-report" class="btn btn-experiment-report" title="Generate experiment report">Report</button>
             </div>
           </div>
 
@@ -639,6 +640,34 @@
             <li>Switch between experiments to compare metabolic fluxes and behavior.</li>
           </ul>
           <button id="btn-close-experiments-help-ok" class="btn btn-primary" style="margin: 0 auto; height: 38px; width: auto; padding: 0 24px;">Got it</button>
+        </div>
+      </div>
+
+      <!-- Experiment Report Modal -->
+      <div id="experiment-report-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass" style="max-width: 550px; width: 100%; text-align: left; padding: 24px;">
+          <button id="btn-close-report" class="btn-close-auth">✕</button>
+          <div class="auth-icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
+            <span class="auth-icon" style="margin: 0; line-height: 1;">📋</span>
+          </div>
+          <h3 style="text-align: center; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Experiment Report</h3>
+          
+          <div id="report-content-container" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px; color: #e2e8f0; font-family: monospace; font-size: 12.5px; max-height: 320px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6; margin-bottom: 20px; box-sizing: border-box;">
+            <!-- Report text loaded dynamically -->
+          </div>
+          
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="btn-copy-report" class="btn btn-primary" style="height: 38px; width: auto; padding: 0 24px; display: flex; align-items: center; gap: 8px;">
+              <svg class="copy-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy Report
+            </button>
+            <button id="btn-close-report-ok" class="btn" style="background: rgba(255, 255, 255, 0.1); color: #f1f5f9; height: 38px; width: auto; padding: 0 24px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; transition: background 0.2s;">
+              Close
+            </button>
+          </div>
         </div>
       </div>
 
