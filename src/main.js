@@ -650,7 +650,8 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
     return;
   }
 
-  if (isFetchingBounds || !simulation) return;
+  const isForceAction = forceOptions.reset || forceOptions.scenario || forceOptions.logAction;
+  if ((isFetchingBounds && !isForceAction) || !simulation) return;
   isFetchingBounds = true;
 
   try {
@@ -2076,7 +2077,9 @@ function setupUIListeners() {
         const reportText = reportContentContainer.textContent;
         if (!reportText) return;
 
-        closeReport();
+        if (reportModal) {
+          reportModal.classList.add('hidden');
+        }
         openChatDrawer();
         sendChatMessage("Please explain the biological meaning and impact of this metabolic experiment based on the following report:\n\n" + reportText);
       });
