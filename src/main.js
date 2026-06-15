@@ -6055,6 +6055,20 @@ function closeFeedbackModal() {
   }
 }
 
+function openExperimentsHelpModal() {
+  const modal = document.getElementById('experiments-help-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+function closeExperimentsHelpModal() {
+  const modal = document.getElementById('experiments-help-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
 async function handleFeedbackSubmit() {
   const textarea = document.getElementById('feedback-text');
   const btn = document.getElementById('btn-submit-feedback');
@@ -6513,6 +6527,38 @@ function setupScenariosAndChat() {
     feedbackModal.addEventListener('click', (e) => {
       if (e.target === feedbackModal) {
         closeFeedbackModal();
+      }
+    });
+  }
+
+  // Experiments Help Modal event listeners
+  const btnExperimentsHelp = document.getElementById('btn-experiments-help');
+  if (btnExperimentsHelp) {
+    btnExperimentsHelp.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openExperimentsHelpModal();
+    });
+  }
+
+  const btnCloseExperimentsHelp = document.getElementById('btn-close-experiments-help');
+  if (btnCloseExperimentsHelp) {
+    btnCloseExperimentsHelp.addEventListener('click', () => {
+      closeExperimentsHelpModal();
+    });
+  }
+
+  const btnCloseExperimentsHelpOk = document.getElementById('btn-close-experiments-help-ok');
+  if (btnCloseExperimentsHelpOk) {
+    btnCloseExperimentsHelpOk.addEventListener('click', () => {
+      closeExperimentsHelpModal();
+    });
+  }
+
+  const experimentsHelpModal = document.getElementById('experiments-help-modal');
+  if (experimentsHelpModal) {
+    experimentsHelpModal.addEventListener('click', (e) => {
+      if (e.target === experimentsHelpModal) {
+        closeExperimentsHelpModal();
       }
     });
   }

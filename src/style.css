@@ -5028,3 +5028,44 @@ input[type="range"]::-webkit-slider-thumb:hover {
   line-height: 1.5;
   margin: 0;
 }
+
+.experiments-title-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.experiments-title-container h4 {
+  margin-bottom: 0 !important;
+}
+
+.help-icon-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #818cf8;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  outline: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.help-icon-btn:hover {
+  background: rgba(129, 140, 248, 0.15);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #a5b4fc;
+  transform: translateY(-0.5px);
+}
+
+.help-icon-btn:active {
+  transform: translateY(0);
+}
