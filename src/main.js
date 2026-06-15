@@ -501,13 +501,15 @@ async function bootstrap() {
 
   // Listen to font loading completion to redraw labels with correct dimensions (especially useful on slow mobile networks)
   if (document.fonts) {
-    document.fonts.addEventListener('loadingdone', () => {
+    const handleFontsLoaded = () => {
       console.log('[App] Font face set updated. Redrawing text labels.');
       if (renderer) {
         renderer.createStaticTexts();
         renderer.createReactionBadges();
       }
-    });
+      document.fonts.removeEventListener('loadingdone', handleFontsLoaded);
+    };
+    document.fonts.addEventListener('loadingdone', handleFontsLoaded);
   }
 
   await renderer.init(mapData);

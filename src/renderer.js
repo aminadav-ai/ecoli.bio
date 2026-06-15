@@ -543,7 +543,8 @@ export class PixiRenderer {
   createStaticTexts() {
     // Destroy existing text children to prevent memory leaks in PixiJS
     if (this.textContainer) {
-      this.textContainer.children.forEach(child => {
+      const children = [...this.textContainer.children];
+      children.forEach(child => {
         if (child.destroy) {
           child.destroy();
         }
