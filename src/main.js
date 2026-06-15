@@ -6300,6 +6300,20 @@ function closeExperimentsHelpModal() {
   }
 }
 
+function openAboutModal() {
+  const modal = document.getElementById('about-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+function closeAboutModal() {
+  const modal = document.getElementById('about-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
 async function handleFeedbackSubmit() {
   const textarea = document.getElementById('feedback-text');
   const btn = document.getElementById('btn-submit-feedback');
@@ -6807,6 +6821,38 @@ function setupScenariosAndChat() {
     experimentsHelpModal.addEventListener('click', (e) => {
       if (e.target === experimentsHelpModal) {
         closeExperimentsHelpModal();
+      }
+    });
+  }
+
+  // About Modal event listeners
+  const btnAbout = document.getElementById('btn-about');
+  if (btnAbout) {
+    btnAbout.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAboutModal();
+    });
+  }
+
+  const btnCloseAbout = document.getElementById('btn-close-about');
+  if (btnCloseAbout) {
+    btnCloseAbout.addEventListener('click', () => {
+      closeAboutModal();
+    });
+  }
+
+  const btnCloseAboutOk = document.getElementById('btn-close-about-ok');
+  if (btnCloseAboutOk) {
+    btnCloseAboutOk.addEventListener('click', () => {
+      closeAboutModal();
+    });
+  }
+
+  const aboutModal = document.getElementById('about-modal');
+  if (aboutModal) {
+    aboutModal.addEventListener('click', (e) => {
+      if (e.target === aboutModal) {
+        closeAboutModal();
       }
     });
   }

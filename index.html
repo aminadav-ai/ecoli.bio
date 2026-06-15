@@ -670,6 +670,43 @@
         </div>
       </div>
 
+      <!-- About Modal -->
+      <div id="about-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass" style="max-width: 550px; width: 100%; text-align: left; padding: 24px; max-height: 85vh; overflow-y: auto;">
+          <button id="btn-close-about" class="btn-close-auth">✕</button>
+          <div class="auth-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
+            <span class="auth-icon" style="margin: 0; line-height: 1;">ℹ️</span>
+          </div>
+          <h3 style="text-align: center; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">About ecoli.bio</h3>
+          
+          <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Mission & Vision</h4>
+              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is a high-performance, browser-based simulator dedicated to the metabolic modeling of Escherichia coli. The project aims to provide researchers and developers with a precise, accessible, and fast tool for simulating complex biological pathways using kinetic modeling and ODE solvers.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Development & Technology</h4>
+              <p style="margin: 0; color: #cbd5e1;">This project is built from the ground up, focusing on efficiency and high-fidelity biological representation. The system utilizes a custom-built server-side architecture to handle complex metabolic computations, ensuring high precision for E. coli pathway modeling alongside the client-side simulation engine. Leveraging JavaScript and PixiJS for visualization, the architecture is designed to handle intricate Michaelis-Menten kinetics, ensuring both speed and scientific accuracy. Every line of code, from the core engine to the UI, is developed with an offline-first philosophy to ensure data privacy and software autonomy.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Author & Intellectual Property</h4>
+              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is the original work of Yehuda Aminadav. As the sole architect of both the server-side computational engine and the client-side simulation, I hold full ownership of all proprietary code, algorithms, and design elements.</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 8px 0;" />
+            
+            <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+              <p style="margin: 0 0 4px 0; font-weight: 600; color: #cbd5e1;">Copyright Notice</p>
+              <p style="margin: 0;">&copy; 2026 Yehuda Aminadav. All rights reserved. The software, including all underlying source code for metabolic computations and visual simulations, is protected by international copyright laws. Any unauthorized reproduction, distribution, or use of the project's intellectual property without explicit permission is strictly prohibited.</p>
+            </div>
+          </div>
+          
+          <button id="btn-close-about-ok" class="btn btn-primary" style="margin: 20px auto 0 auto; height: 38px; width: auto; padding: 0 24px; display: block;">Close</button>
+        </div>
+      </div>
+
       <!-- Floating AI Chatbot Widget -->
       <div id="ai-chat-widget" class="ai-chat-widget">
         <!-- Floating chat bubble button -->
@@ -762,6 +799,12 @@
           <!-- Feedback Section (Visible to authorized users only) -->
           <div id="feedback-section" class="feedback-section hidden" style="margin-top: 12px; padding: 0 4px;">
             <button id="btn-feedback" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; transition: all 0.2s ease; border-radius: 8px;">Send your feedback</button>
+            <hr class="drawer-divider" style="margin-top: 12px; margin-left: -4px; margin-right: -4px;" />
+          </div>
+
+          <!-- About Section (Always visible) -->
+          <div id="about-section" style="margin-top: 12px; padding: 0 4px;">
+            <button id="btn-about" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; transition: all 0.2s ease; border-radius: 8px; font-family: inherit;">About ecoli.bio</button>
             <hr class="drawer-divider" style="margin-top: 12px; margin-left: -4px; margin-right: -4px;" />
           </div>
 
