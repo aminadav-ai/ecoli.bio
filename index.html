@@ -82,7 +82,6 @@
                 </div>
               </div>
               <button id="btn-new-experiment" class="btn btn-new-experiment" title="Create new experiment">+ New</button>
-              <button id="btn-experiment-report" class="btn btn-experiment-report" title="Generate experiment report">Report</button>
             </div>
           </div>
 
@@ -683,7 +682,7 @@
         <div id="ai-chat-drawer" class="ai-chat-drawer glass hidden">
           <!-- Floating Chat Actions (replaced header to save space) -->
           <div class="chat-floating-actions">
-            <button id="ai-chat-context-btn" class="chat-header-btn" title="Show simulation context">👁️ Context</button>
+            <button id="ai-chat-context-btn" class="chat-header-btn hidden" title="Show simulation context">👁️ Context</button>
             <button id="ai-chat-close" class="chat-header-btn close-btn">✕</button>
           </div>
 
@@ -786,6 +785,10 @@
         <button id="mobile-nav-scenarios" class="mobile-nav-item">
           <span class="nav-icon">🎓</span>
           <span class="nav-label">Scenarios</span>
+        </button>
+        <button id="btn-experiment-report" class="mobile-nav-item" title="Generate experiment report">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Report</span>
         </button>
         <button id="mobile-nav-chat" class="mobile-nav-item">
           <span class="nav-icon">💬</span>

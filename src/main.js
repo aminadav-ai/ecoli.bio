@@ -6412,10 +6412,15 @@ function updateUserStatusUI() {
     userTierContainer.innerHTML = '';
   }
 
-  // Update AI Chat Context Button Visibility (Visible to everyone)
+  // Update AI Chat Context Button Visibility (Hidden in production)
   const contextBtn = document.getElementById('ai-chat-context-btn');
   if (contextBtn) {
-    contextBtn.classList.remove('hidden');
+    const isProduction = window.location.hostname === 'ecoli.bio' || window.location.hostname === 'www.ecoli.bio';
+    if (isProduction) {
+      contextBtn.classList.add('hidden');
+    } else {
+      contextBtn.classList.remove('hidden');
+    }
   }
   
   // 2. Update Top Header User Profile Badge / Dropdown

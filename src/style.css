@@ -2632,7 +2632,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 520px;
+  width: 580px;
   height: 60px;
   background: rgba(15, 23, 42, var(--panel-opacity));
   backdrop-filter: blur(16px);
