@@ -32,3 +32,5 @@ env/
 __pycache__/
 *.pyc
 
+# Wrangler local state
+.wrangler/
