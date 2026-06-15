@@ -354,7 +354,7 @@ export async function bulkIncrementUserStats(db, updates) {
   if (!updates || updates.length === 0) return;
   try {
     const statements = updates.map(item => 
-      db.prepare('UPDATE users SET solver_ticks = solver_ticks + ?, daily_solver_ticks = daily_solver_ticks + ? WHERE email = ?')
+      db.prepare('UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + ?, daily_solver_ticks = COALESCE(daily_solver_ticks, 0) + ? WHERE email = ?')
         .bind(item.ticks, item.ticks, item.email)
     );
     await db.batch(statements);

@@ -6191,59 +6191,71 @@ function updateUserStatusUI() {
   const headerProfileContainer = document.getElementById('user-profile-header-container');
   if (headerProfileContainer) {
     if (userProfile) {
-      const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
       const existingDropdown = document.getElementById('user-profile-dropdown');
-      const isDropdownHidden = existingDropdown ? existingDropdown.classList.contains('hidden') : true;
-      const chevronTransform = isDropdownHidden ? '' : 'style="transform: rotate(180deg);"';
-      
-      headerProfileContainer.innerHTML = `
-        <div class="user-badge" id="user-profile-badge">
-          <div class="user-avatar">${initial}</div>
-          <span class="user-name">${userProfile.name}</span>
-          <span class="chevron-icon" ${chevronTransform}>▼</span>
-        </div>
-        <div id="user-profile-dropdown" class="user-dropdown glass ${isDropdownHidden ? 'hidden' : ''}">
-          <div class="user-dropdown-info">
-            <div class="user-dropdown-name">${userProfile.name}</div>
-            <div class="user-dropdown-email">${userProfile.email || ''}</div>
-            <div class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
-            <div class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
+      if (existingDropdown) {
+        // Just update values in place to avoid destroying events & causing flickers
+        const chatLimitEl = document.getElementById('user-dropdown-chat-limits');
+        const solverLimitEl = document.getElementById('user-dropdown-solver-limits');
+        if (chatLimitEl) {
+          chatLimitEl.textContent = `AI chat: ${currentLimit.count} / ${currentLimit.max}`;
+        }
+        if (solverLimitEl) {
+          solverLimitEl.textContent = `Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200`;
+        }
+      } else {
+        const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
+        const isDropdownHidden = true;
+        const chevronTransform = '';
+        
+        headerProfileContainer.innerHTML = `
+          <div class="user-badge" id="user-profile-badge">
+            <div class="user-avatar">${initial}</div>
+            <span class="user-name">${userProfile.name}</span>
+            <span class="chevron-icon" ${chevronTransform}>▼</span>
           </div>
-          <hr class="dropdown-divider" />
-          <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
-            <svg class="logout-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width: 14px; height: 14px; stroke: currentColor;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span>Log out</span>
-          </button>
-        </div>
-      `;
-      
-      const badge = document.getElementById('user-profile-badge');
-      const dropdown = document.getElementById('user-profile-dropdown');
-      const logoutBtn = document.getElementById('header-logout-btn');
-      
-      if (badge && dropdown) {
-        badge.addEventListener('click', (e) => {
-          e.stopPropagation();
-          dropdown.classList.toggle('hidden');
-          const isOpening = !dropdown.classList.contains('hidden');
-          if (isOpening) {
-            closeAllOtherPanels('profile');
-          }
-          const chevron = badge.querySelector('.chevron-icon');
-          if (chevron) {
-            const isHidden = dropdown.classList.contains('hidden');
-            chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
-          }
-        });
-      }
-      
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          handleLogout();
-        });
+          <div id="user-profile-dropdown" class="user-dropdown glass ${isDropdownHidden ? 'hidden' : ''}">
+            <div class="user-dropdown-info">
+              <div class="user-dropdown-name">${userProfile.name}</div>
+              <div class="user-dropdown-email">${userProfile.email || ''}</div>
+              <div id="user-dropdown-chat-limits" class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
+              <div id="user-dropdown-solver-limits" class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
+            </div>
+            <hr class="dropdown-divider" />
+            <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
+              <svg class="logout-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" style="width: 14px; height: 14px; stroke: currentColor;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Log out</span>
+            </button>
+          </div>
+        `;
+        
+        const badge = document.getElementById('user-profile-badge');
+        const dropdown = document.getElementById('user-profile-dropdown');
+        const logoutBtn = document.getElementById('header-logout-btn');
+        
+        if (badge && dropdown) {
+          badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden');
+            const isOpening = !dropdown.classList.contains('hidden');
+            if (isOpening) {
+              closeAllOtherPanels('profile');
+            }
+            const chevron = badge.querySelector('.chevron-icon');
+            if (chevron) {
+              const isHidden = dropdown.classList.contains('hidden');
+              chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+          });
+        }
+        
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleLogout();
+          });
+        }
       }
     } else {
       headerProfileContainer.innerHTML = `
