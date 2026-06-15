@@ -300,6 +300,22 @@ function closeAllOverlays() {
   if (geoModal) {
     geoModal.classList.add('hidden');
   }
+  const feedbackModal = document.getElementById('feedback-modal');
+  if (feedbackModal) {
+    feedbackModal.classList.add('hidden');
+  }
+  const helpModal = document.getElementById('experiments-help-modal');
+  if (helpModal) {
+    helpModal.classList.add('hidden');
+  }
+  const reportModal = document.getElementById('experiment-report-modal');
+  if (reportModal) {
+    reportModal.classList.add('hidden');
+  }
+  const aboutModal = document.getElementById('about-modal');
+  if (aboutModal) {
+    aboutModal.classList.add('hidden');
+  }
 }
 
 // Pinned Reactions state
@@ -2001,6 +2017,7 @@ function setupUIListeners() {
         
         reportContentContainer.textContent = reportText;
         reportModal.classList.remove('hidden');
+        pushHistoryStateIfNeeded();
       } catch (err) {
         console.error('Failed to generate report:', err);
         showToast('Failed to generate report: ' + err.message, 'error');
@@ -2008,7 +2025,14 @@ function setupUIListeners() {
     });
 
     const closeReport = () => {
-      reportModal.classList.add('hidden');
+      let wasModalOpen = false;
+      if (reportModal) {
+        wasModalOpen = !reportModal.classList.contains('hidden');
+        reportModal.classList.add('hidden');
+      }
+      if (wasModalOpen) {
+        popHistoryStateIfNeeded();
+      }
     };
     if (btnCloseReport) btnCloseReport.addEventListener('click', closeReport);
     if (btnCloseReportOk) btnCloseReportOk.addEventListener('click', closeReport);
@@ -6276,13 +6300,19 @@ function openFeedbackModal() {
       textarea.value = '';
       textarea.focus();
     }
+    pushHistoryStateIfNeeded();
   }
 }
 
 function closeFeedbackModal() {
   const modal = document.getElementById('feedback-modal');
+  let wasModalOpen = false;
   if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
     modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
   }
 }
 
@@ -6290,13 +6320,19 @@ function openExperimentsHelpModal() {
   const modal = document.getElementById('experiments-help-modal');
   if (modal) {
     modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
   }
 }
 
 function closeExperimentsHelpModal() {
   const modal = document.getElementById('experiments-help-modal');
+  let wasModalOpen = false;
   if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
     modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
   }
 }
 
@@ -6304,13 +6340,19 @@ function openAboutModal() {
   const modal = document.getElementById('about-modal');
   if (modal) {
     modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
   }
 }
 
 function closeAboutModal() {
   const modal = document.getElementById('about-modal');
+  let wasModalOpen = false;
   if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
     modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
   }
 }
 
