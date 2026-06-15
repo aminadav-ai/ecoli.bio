@@ -1412,6 +1412,24 @@ function setupUIListeners() {
     });
   }
 
+  // Copy Glucose Uptake button listener
+  const copyGlucBtn = document.getElementById('copy-gluc-btn');
+  if (copyGlucBtn) {
+    copyGlucBtn.addEventListener('click', () => {
+      const val = document.getElementById('metric-gluc').textContent;
+      handleCopyClick(copyGlucBtn, `Glucose Uptake = ${val}`);
+    });
+  }
+
+  // Copy Oxygen Uptake button listener
+  const copyO2Btn = document.getElementById('copy-o2-btn');
+  if (copyO2Btn) {
+    copyO2Btn.addEventListener('click', () => {
+      const val = document.getElementById('metric-o2').textContent;
+      handleCopyClick(copyO2Btn, `Oxygen Uptake = ${val}`);
+    });
+  }
+
   // Copy Reaction Stoichiometry equation button listener
   const copyEquationBtn = document.getElementById('copy-equation-btn');
   if (copyEquationBtn) {
