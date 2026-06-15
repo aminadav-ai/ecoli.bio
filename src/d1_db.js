@@ -488,12 +488,12 @@ export async function getExperimentCount(db, email, baseName, dateStr) {
 }
 
 // 20. Log user action inside an experiment with resulting simulation metrics
-export async function logExperimentAction(db, sessionId, actionType, target, value, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead) {
+export async function logExperimentAction(db, sessionId, actionType, target, value, prevValue, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead) {
   try {
     await db.prepare(
-      'INSERT INTO experiment_logs (session_id, action_type, target, value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at) ' +
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"))'
-    ).bind(sessionId, actionType, target, value, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead).run();
+      'INSERT INTO experiment_logs (session_id, action_type, target, value, prev_value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"))'
+    ).bind(sessionId, actionType, target, value, prevValue, growthRate, glucoseUptake, oxygenUptake, atpYield, isDead).run();
   } catch (err) {
     console.error('[D1 DB] logExperimentAction error:', err);
   }
@@ -503,7 +503,7 @@ export async function logExperimentAction(db, sessionId, actionType, target, val
 export async function getExperimentLogs(db, sessionId) {
   try {
     const res = await db.prepare(
-      'SELECT action_type, target, value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at ' +
+      'SELECT action_type, target, value, prev_value, growth_rate, glucose_uptake, oxygen_uptake, atp_yield, is_dead, created_at ' +
       'FROM experiment_logs WHERE session_id = ? ORDER BY id ASC'
     ).bind(sessionId).all();
     return res.results || [];

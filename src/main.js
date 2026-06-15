@@ -896,6 +896,7 @@ function setupUIListeners() {
       return;
     }
     simulation.reset();
+    syncLastLoggedValues();
     chartHistory = [];
     solverHistory = []; // Clear solver history
     accumulatedChangingReactions = {};
@@ -977,11 +978,14 @@ function setupUIListeners() {
       if (simulation && simulation.metabolites['o2_e']) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
+        const prevVal = lastLoggedValues['Oxygen Supply (o2_e)'] !== undefined ? lastLoggedValues['Oxygen Supply (o2_e)'] : 18.5;
+        lastLoggedValues['Oxygen Supply (o2_e)'] = val;
         updateFbaBounds(performance.now(), {
           logAction: {
             type: 'slider',
             target: 'Oxygen Supply (o2_e)',
-            value: val
+            value: val,
+            prevValue: prevVal
           }
         });
       }
@@ -1016,11 +1020,14 @@ function setupUIListeners() {
       if (simulation && simulation.metabolites['glc__D_e']) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
+        const prevVal = lastLoggedValues['Glucose Supply (glc__D_e)'] !== undefined ? lastLoggedValues['Glucose Supply (glc__D_e)'] : 10.0;
+        lastLoggedValues['Glucose Supply (glc__D_e)'] = val;
         updateFbaBounds(performance.now(), {
           logAction: {
             type: 'slider',
             target: 'Glucose Supply (glc__D_e)',
-            value: val
+            value: val,
+            prevValue: prevVal
           }
         });
       }
@@ -1594,11 +1601,15 @@ function setupUIListeners() {
       if (selectedReactionId) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
+        const targetKey = `Reaction ${selectedReactionId} Vmax`;
+        const prevVal = lastLoggedValues[targetKey] !== undefined ? lastLoggedValues[targetKey] : (simulation.reactions[selectedReactionId]?.vMax ?? 10.0);
+        lastLoggedValues[targetKey] = val;
         updateFbaBounds(performance.now(), {
           logAction: {
             type: 'slider',
-            target: `Reaction ${selectedReactionId} Vmax`,
-            value: val
+            target: targetKey,
+            value: val,
+            prevValue: prevVal
           }
         });
       }
@@ -1631,11 +1642,15 @@ function setupUIListeners() {
       if (selectedReactionId) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
+        const targetKey = `Reaction ${selectedReactionId} Km`;
+        const prevVal = lastLoggedValues[targetKey] !== undefined ? lastLoggedValues[targetKey] : (simulation.reactions[selectedReactionId]?.km ?? 0.8);
+        lastLoggedValues[targetKey] = val;
         updateFbaBounds(performance.now(), {
           logAction: {
             type: 'slider',
-            target: `Reaction ${selectedReactionId} Km`,
-            value: val
+            target: targetKey,
+            value: val,
+            prevValue: prevVal
           }
         });
       }
@@ -1960,8 +1975,14 @@ function setupUIListeners() {
             }
             
             let actionDesc = '';
-            if (log.action_type === 'slider') {
-              actionDesc = `Changed ${log.target} to ${log.value.toFixed(1)}`;
+            if (log.action_type === 'initial') {
+              actionDesc = `Initial State`;
+            } else if (log.action_type === 'slider') {
+              if (log.prev_value !== null && log.prev_value !== undefined) {
+                actionDesc = `Changed ${log.target} from ${log.prev_value.toFixed(1)} to ${log.value.toFixed(1)}`;
+              } else {
+                actionDesc = `Changed ${log.target} to ${log.value.toFixed(1)}`;
+              }
             } else if (log.action_type === 'injection') {
               actionDesc = `Spiked (Injected) ${log.target} by +${log.value.toFixed(1)} mM`;
             } else if (log.action_type === 'depletion') {
@@ -2980,11 +3001,15 @@ function renderPinnedReactions() {
       if (!userProfile) return;
       wakeUpSolver();
       const val = parseFloat(e.target.value);
+      const targetKey = `Reaction ${rxnId} Vmax`;
+      const prevVal = lastLoggedValues[targetKey] !== undefined ? lastLoggedValues[targetKey] : (simulation.reactions[rxnId]?.vMax ?? 10.0);
+      lastLoggedValues[targetKey] = val;
       updateFbaBounds(performance.now(), {
         logAction: {
           type: 'slider',
-          target: `Reaction ${rxnId} Vmax`,
-          value: val
+          target: targetKey,
+          value: val,
+          prevValue: prevVal
         }
       });
     });
@@ -5081,6 +5106,22 @@ let currentLimit = { max: 5, count: 0, remaining: 5 };
 let userProfile = null;
 let googleAuthInitialized = false;
 
+let lastLoggedValues = {};
+
+function syncLastLoggedValues() {
+  if (!simulation) return;
+  if (simulation.metabolites['o2_e']) {
+    lastLoggedValues['Oxygen Supply (o2_e)'] = simulation.metabolites['o2_e'].concentration;
+  }
+  if (simulation.metabolites['glc__D_e']) {
+    lastLoggedValues['Glucose Supply (glc__D_e)'] = simulation.metabolites['glc__D_e'].concentration;
+  }
+  for (const [rxnId, rxn] of Object.entries(simulation.reactions)) {
+    lastLoggedValues[`Reaction ${rxnId} Vmax`] = rxn.vMax;
+    lastLoggedValues[`Reaction ${rxnId} Km`] = rxn.km;
+  }
+}
+
 function resetChatToGreeting() {
   const chatMessages = document.getElementById('ai-chat-messages');
   if (chatMessages) {
@@ -5488,6 +5529,7 @@ function connectSessionWebSocket() {
         console.log('[WS] Received initial simulation state:', data);
         if (data.state && simulation) {
           deserializeSimulation(simulation, data.state);
+          syncLastLoggedValues();
           if (typeof requestRedraw === 'function') requestRedraw();
         }
         if (data.name) {
@@ -6819,6 +6861,7 @@ function startScenario(scenarioId) {
 
   // 1. Reset and apply scenario constraints on simulation
   simulation.applyScenario(scenarioId);
+  syncLastLoggedValues();
 
   // 2. Set up dynamic slider controls
   const controlsContainer = document.getElementById('scenario-controls-container');
@@ -6900,11 +6943,15 @@ function startScenario(scenarioId) {
         if (simulation.metabolites[ctrl.id]) {
           wakeUpSolver();
           const val = parseFloat(e.target.value);
+          const targetKey = `${ctrl.name} (${ctrl.id})`;
+          const prevVal = lastLoggedValues[targetKey] !== undefined ? lastLoggedValues[targetKey] : (simulation.metabolites[ctrl.id].concentration ?? ctrl.value);
+          lastLoggedValues[targetKey] = val;
           updateFbaBounds(performance.now(), {
             logAction: {
               type: 'slider',
-              target: `${ctrl.name} (${ctrl.id})`,
-              value: val
+              target: targetKey,
+              value: val,
+              prevValue: prevVal
             }
           });
         }
@@ -6921,6 +6968,7 @@ function startScenario(scenarioId) {
       if (simulation.metabolites[ctrl.id]) {
         simulation.metabolites[ctrl.id].concentration = ctrl.value;
         simulation.metabolites[ctrl.id].targetConcentration = ctrl.value;
+        lastLoggedValues[`${ctrl.name} (${ctrl.id})`] = ctrl.value;
       }
     });
   } else {

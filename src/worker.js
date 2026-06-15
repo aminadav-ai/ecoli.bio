@@ -55,6 +55,7 @@ export class SolverDO {
     this.lastRenameRequestTime = 0;
     this.isSolving = false;
     this.isFreshSession = true;
+    this.hasCheckedInitialLog = false;
 
     // In-memory buffering state
     this.bufferedTicks = 0;
@@ -115,6 +116,41 @@ export class SolverDO {
         console.error('[DO] Failed DO initialization:', err);
       }
     });
+  }
+
+  async ensureInitialLog(result) {
+    if (this.hasCheckedInitialLog) return;
+    this.hasCheckedInitialLog = true;
+    try {
+      const logs = await getExperimentLogs(this.env.DB, this.sessionId);
+      if (logs.length === 0) {
+        const biomass = result.biomass_flux || 0.0;
+        const glcFlux = result.fluxes ? (result.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
+        const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
+        const glcUptake = Math.max(0.0, -glcFlux);
+        const o2Uptake = Math.max(0.0, -o2Flux);
+        const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+        const isDead = result.is_dead ? 1 : 0;
+
+        await logExperimentAction(
+          this.env.DB,
+          this.sessionId,
+          'initial',
+          'Initial State',
+          null, // value
+          null, // prev_value
+          biomass,
+          glcUptake,
+          o2Uptake,
+          atpYield,
+          isDead
+        );
+        console.log('[DO] Logged Initial State to D1 successfully.');
+      }
+    } catch (err) {
+      this.hasCheckedInitialLog = false; // reset to try again next time if there was a DB error
+      console.error('[DO] ensureInitialLog error:', err);
+    }
   }
 
   async flushTicks() {
@@ -179,6 +215,10 @@ export class SolverDO {
         const result = solveFba(this.highs, staticLpHeader, currentConcs, currentParams, this.simulation);
         ticksRun++;
 
+        if (!this.hasCheckedInitialLog) {
+          this.state.waitUntil(this.ensureInitialLog(result));
+        }
+
         if (this.pendingLogAction) {
           const log = this.pendingLogAction;
           this.pendingLogAction = null;
@@ -197,6 +237,7 @@ export class SolverDO {
             log.type,
             log.target,
             log.value,
+            log.prevValue,
             biomass,
             glcUptake,
             o2Uptake,
@@ -623,6 +664,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
       const result = solveFba(this.highs, staticLpHeader, concentrations, parameters, this.simulation, options);
       
+      if (!this.hasCheckedInitialLog) {
+        this.state.waitUntil(this.ensureInitialLog(result));
+      }
+
       const stateToSave = serializeSimulation(this.simulation);
       this.state.storage.put('sim_state', stateToSave);
 
@@ -936,6 +981,7 @@ export default {
             body.logAction.type,
             body.logAction.target,
             body.logAction.value,
+            body.logAction.prevValue,
             biomass,
             glcUptake,
             o2Uptake,
