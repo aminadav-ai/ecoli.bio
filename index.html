@@ -681,25 +681,30 @@
           
           <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
             <div>
-              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Mission & Vision</h4>
-              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is a high-performance, browser-based simulator dedicated to the metabolic modeling of Escherichia coli. The project aims to provide researchers and developers with a precise, accessible, and fast tool for simulating complex biological pathways using kinetic modeling and ODE solvers.</p>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Overview</h4>
+              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is an interactive, high-performance web-based simulation platform dedicated to the metabolic modeling and analysis of Escherichia coli. Designed for both educational and research applications, the portal serves as a visual, intuitive laboratory for undergraduate and graduate systems biology courses, while offering research biologists and bioinformaticians a rapid, zero-installation prototyping environment for testing metabolic hypotheses in silico.</p>
             </div>
             
             <div>
-              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Development & Technology</h4>
-              <p style="margin: 0; color: #cbd5e1;">This project is built from the ground up, focusing on efficiency and high-fidelity biological representation. The system utilizes a custom-built server-side architecture to handle complex metabolic computations, ensuring high precision for E. coli pathway modeling alongside the client-side simulation engine. Leveraging JavaScript and PixiJS for visualization, the architecture is designed to handle intricate Michaelis-Menten kinetics, ensuring both speed and scientific accuracy. Every line of code, from the core engine to the UI, is developed with an offline-first philosophy to ensure data privacy and software autonomy.</p>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Scientific Foundation</h4>
+              <p style="margin: 0; color: #cbd5e1;">The simulation engine is grounded in the genome-scale metabolic reconstruction iJO1366 (focused on E. coli K-12 central carbon metabolism). The platform implements Flux Balance Analysis (FBA) to calculate optimal steady-state metabolic fluxes, growth rates, and ATP yields under various conditions.</p>
+              <p style="margin: 8px 0 0 0; color: #cbd5e1;">To bridge steady-state optimization and dynamic biology, the portal incorporates kinetic constraints. Reaction boundaries are dynamically regulated using substrate concentrations and enzymatic parameters (such as Vmax and Km) via Michaelis-Menten formulations, allowing users to observe metabolic adaptation, feed-back loops, and accumulation bottlenecks in real time.</p>
             </div>
             
             <div>
-              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Author & Intellectual Property</h4>
-              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is the original work of Yehuda Aminadav. As the sole architect of both the server-side computational engine and the client-side simulation, I hold full ownership of all proprietary code, algorithms, and design elements.</p>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">Key Capabilities</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; list-style-type: disc; display: flex; flex-direction: column; gap: 6px;">
+                <li><strong>Interactive Visualization:</strong> Explorable GPU-accelerated metabolic map rendering powered by PixiJS, displaying real-time flux magnitudes and direction.</li>
+                <li><strong>Environmental & Genetic Perturbations:</strong> Modify substrate availability (e.g., glucose and oxygen supply) or tune enzyme parameters to simulate knockdowns, upregulation, or inhibition.</li>
+                <li><strong>Guided Scenarios:</strong> Pre-configured interactive learning modules designed to demonstrate core metabolic principles, such as the anaerobic shift or pathway saturation.</li>
+                <li><strong>Experiment Management:</strong> Secure cloud synchronization to save, load, and compare metabolic simulation profiles and history logs.</li>
+              </ul>
             </div>
             
             <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 8px 0;" />
             
-            <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
-              <p style="margin: 0 0 4px 0; font-weight: 600; color: #cbd5e1;">Copyright Notice</p>
-              <p style="margin: 0;">&copy; 2026 Yehuda Aminadav. All rights reserved. The software, including all underlying source code for metabolic computations and visual simulations, is protected by international copyright laws. Any unauthorized reproduction, distribution, or use of the project's intellectual property without explicit permission is strictly prohibited.</p>
+            <div style="font-size: 11px; color: #64748b; text-align: center;">
+              &copy; 2026 ecoli.bio. All rights reserved.
             </div>
           </div>
           
