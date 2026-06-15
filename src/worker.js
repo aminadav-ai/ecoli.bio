@@ -333,6 +333,7 @@ export class SolverDO {
 
   async performAiRename() {
     this.isRenamePending = false;
+    this.lastRenameRequestTime = null;
     try {
       if (this.isCustomName) {
         console.log(`[DO] Skipping AI rename because session ${this.sessionId} has a custom name.`);
@@ -1183,11 +1184,17 @@ export default {
         try {
           const doId = env.SOLVER_DO.idFromName(sessionId);
           const doStub = env.SOLVER_DO.get(doId);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          
           await doStub.fetch(new Request(new URL('/flush-rename', url.origin), {
-            method: 'POST'
+            method: 'POST',
+            signal: controller.signal
           }));
+          clearTimeout(timeoutId);
         } catch (err) {
-          console.error('[Worker] Failed to flush rename on DO:', err);
+          console.error('[Worker] Failed or timed out to flush rename on DO:', err);
         }
 
         const logs = await getExperimentLogs(env.DB, sessionId);
