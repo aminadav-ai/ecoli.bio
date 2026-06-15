@@ -131,7 +131,7 @@ export class SolverDO {
         const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
         const glcUptake = Math.max(0.0, -glcFlux);
         const o2Uptake = Math.max(0.0, -o2Flux);
-        const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+        const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4rpp'] || result.fluxes['ATPS4r'] || 0.0) : 0.0));
         const isDead = result.is_dead ? 1 : 0;
 
         await logExperimentAction(
@@ -233,7 +233,7 @@ export class SolverDO {
           const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
           const glcUptake = Math.max(0.0, -glcFlux);
           const o2Uptake = Math.max(0.0, -o2Flux);
-          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4rpp'] || result.fluxes['ATPS4r'] || 0.0) : 0.0));
           const isDead = result.is_dead ? 1 : 0;
 
           this.state.waitUntil(logExperimentAction(
@@ -977,7 +977,7 @@ export default {
           const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
           const glcUptake = Math.max(0.0, -glcFlux);
           const o2Uptake = Math.max(0.0, -o2Flux);
-          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4r'] || 0.0) : 0.0));
+          const atpYield = Math.max(0.0, Math.abs(result.fluxes ? (result.fluxes['ATPS4rpp'] || result.fluxes['ATPS4r'] || 0.0) : 0.0));
           const isDead = result.is_dead ? 1 : 0;
 
           ctx.waitUntil(logExperimentAction(
