@@ -633,18 +633,6 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       });
     }
 
-    if (url.pathname === '/flush-rename') {
-      while (this.isRenamePending || this.activeRenamePromise) {
-        if (this.isRenamePending && !this.activeRenamePromise) {
-          await this.performAiRename();
-        } else if (this.activeRenamePromise) {
-          await this.activeRenamePromise;
-        }
-      }
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
     if (url.pathname === '/rename') {
       const { name } = await request.json();
@@ -1194,21 +1182,7 @@ export default {
           });
         }
 
-        try {
-          const doId = env.SOLVER_DO.idFromName(sessionId);
-          const doStub = env.SOLVER_DO.get(doId);
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 1500);
-          
-          await doStub.fetch(new Request(new URL('/flush-rename', url.origin), {
-            method: 'POST',
-            signal: controller.signal
-          }));
-          clearTimeout(timeoutId);
-        } catch (err) {
-          console.error('[Worker] Failed or timed out to flush rename on DO:', err);
-        }
+
 
         const logs = await getExperimentLogs(env.DB, sessionId);
 
