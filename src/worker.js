@@ -58,6 +58,7 @@ export class SolverDO {
     this.hasCheckedInitialLog = false;
     this.stabilized = false;
     this.ticksRun = 0;
+    this.isRenamePending = false;
 
     // In-memory buffering state
     this.bufferedTicks = 0;
@@ -320,6 +321,7 @@ export class SolverDO {
     
     const now = Date.now();
     this.lastRenameRequestTime = now;
+    this.isRenamePending = true;
     
     this.state.waitUntil((async () => {
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -330,6 +332,7 @@ export class SolverDO {
   }
 
   async performAiRename() {
+    this.isRenamePending = false;
     try {
       if (this.isCustomName) {
         console.log(`[DO] Skipping AI rename because session ${this.sessionId} has a custom name.`);
@@ -614,6 +617,15 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           status: 409,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (url.pathname === '/flush-rename') {
+      if (this.isRenamePending) {
+        await this.performAiRename();
       }
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' }
@@ -1166,6 +1178,16 @@ export default {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
+        }
+
+        try {
+          const doId = env.SOLVER_DO.idFromName(sessionId);
+          const doStub = env.SOLVER_DO.get(doId);
+          await doStub.fetch(new Request(new URL('/flush-rename', url.origin), {
+            method: 'POST'
+          }));
+        } catch (err) {
+          console.error('[Worker] Failed to flush rename on DO:', err);
         }
 
         const logs = await getExperimentLogs(env.DB, sessionId);

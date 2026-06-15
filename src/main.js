@@ -5613,6 +5613,11 @@ function connectSessionWebSocket() {
       
       if (data.type === 'RENAME_SESSION') {
         updateActiveExperimentNameUI(data.name);
+        const exp = experimentsList.find(e => e.id === sessionId);
+        if (exp) {
+          exp.name = data.name;
+          exp.base_name = data.base_name;
+        }
         loadExperimentsList(sessionId);
         return;
       }
