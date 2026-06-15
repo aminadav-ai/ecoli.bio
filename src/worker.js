@@ -56,6 +56,8 @@ export class SolverDO {
     this.isSolving = false;
     this.isFreshSession = true;
     this.hasCheckedInitialLog = false;
+    this.stabilized = false;
+    this.ticksRun = 0;
 
     // In-memory buffering state
     this.bufferedTicks = 0;
@@ -189,17 +191,20 @@ export class SolverDO {
   }
 
   async startSolveLoop() {
-    if (this.isSolving) return;
+    if (this.isSolving) {
+      this.stabilized = false;
+      this.ticksRun = 0;
+      return;
+    }
     this.isSolving = true;
+    this.stabilized = false;
+    this.ticksRun = 0;
     
     // Broadcast WORK state to all clients
     this.broadcast({ type: "STATUS", status: "WORK" });
     
     try {
-      let stabilized = false;
-      let ticksRun = 0;
-      
-      while (!stabilized && ticksRun < 100 && this.isSolving) {
+      while (!this.stabilized && this.ticksRun < 100 && this.isSolving) {
         const currentParams = {};
         for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
           if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
@@ -213,7 +218,7 @@ export class SolverDO {
         
         // Solve FBA
         const result = solveFba(this.highs, staticLpHeader, currentConcs, currentParams, this.simulation);
-        ticksRun++;
+        this.ticksRun++;
 
         if (!this.hasCheckedInitialLog) {
           this.state.waitUntil(this.ensureInitialLog(result));
@@ -282,7 +287,7 @@ export class SolverDO {
           dailySolverTicks: this.dailySolverTicks || 0
         });
         
-        stabilized = result.stabilized;
+        this.stabilized = result.stabilized;
         
         // Delay slightly between ticks to simulate steps smoothly
         await new Promise(resolve => setTimeout(resolve, 80));
