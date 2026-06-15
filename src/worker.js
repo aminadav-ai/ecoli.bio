@@ -52,7 +52,7 @@ export class SolverDO {
     this.sessionId = this.state.id.toString();
     this.baseName = "Experiment";
     this.name = "Experiment";
-    this.lastRenameRequestTime = 0;
+    this.activeRenamePromise = null;
     this.isSolving = false;
     this.isFreshSession = true;
     this.hasCheckedInitialLog = false;
@@ -319,39 +319,95 @@ export class SolverDO {
   triggerAiRename() {
     if (!this.env.GOOGLE_API_KEY || !this.userEmail) return;
     
-    const now = Date.now();
-    this.lastRenameRequestTime = now;
-    this.isRenamePending = true;
+    if (this.activeRenamePromise) {
+      this.isRenamePending = true;
+      return;
+    }
     
     this.state.waitUntil((async () => {
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      if (this.lastRenameRequestTime === now) {
-        await this.performAiRename();
-      }
+      await this.performAiRename();
     })());
   }
 
   async performAiRename() {
     this.isRenamePending = false;
-    this.lastRenameRequestTime = null;
-    try {
-      if (this.isCustomName) {
-        console.log(`[DO] Skipping AI rename because session ${this.sessionId} has a custom name.`);
-        return;
-      }
-      const modifiedList = [];
-      for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
-        if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
-          modifiedList.push(`Reaction ${rxn.name || rId}: vMax=${rxn.vMax}, km=${rxn.km}`);
+    
+    this.activeRenamePromise = (async () => {
+      try {
+        if (this.isCustomName) {
+          console.log(`[DO] Skipping AI rename because session ${this.sessionId} has a custom name.`);
+          return;
         }
-      }
-      const o2 = this.simulation.metabolites['o2_e'].concentration;
-      const glc = this.simulation.metabolites['glc__D_e'].concentration;
-      if (o2 !== 2.0) modifiedList.push(`Oxygen Concentration o2_e: ${o2}`);
-      if (glc !== 2.0) modifiedList.push(`Glucose Concentration glc__D_e: ${glc}`);
-      
-      if (modifiedList.length === 0) {
-        const baseName = "Experiment";
+        const modifiedList = [];
+        for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
+          if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
+            modifiedList.push(`Reaction ${rxn.name || rId}: vMax=${rxn.vMax}, km=${rxn.km}`);
+          }
+        }
+        const o2 = this.simulation.metabolites['o2_e'].concentration;
+        const glc = this.simulation.metabolites['glc__D_e'].concentration;
+        if (o2 !== 18.5) modifiedList.push(`Oxygen Concentration o2_e: ${o2}`);
+        if (glc !== 10.0) modifiedList.push(`Glucose Concentration glc__D_e: ${glc}`);
+        
+        if (modifiedList.length === 0) {
+          const baseName = "Experiment";
+          if (this.baseName === baseName) return;
+          
+          const dateStr = new Date().toISOString().split('T')[0];
+          const count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
+          const fullName = `${baseName} (${dateStr} #${count + 1})`;
+          
+          this.baseName = baseName;
+          this.name = fullName;
+          
+          await upsertSimulationSession(
+            this.env.DB,
+            this.sessionId,
+            this.userEmail,
+            this.baseName,
+            this.name,
+            JSON.stringify(serializeSimulation(this.simulation))
+          );
+          
+          this.broadcast({
+            type: "RENAME_SESSION",
+            base_name: this.baseName,
+            name: this.name
+          });
+          return;
+        }
+        
+        const prompt = `Based on these modifications in E. coli metabolic atlas simulation parameters, generate a short, creative, and precise scientific experiment title in English (maximum 4 words, no punctuation, e.g. 'Anaerobic Glucose Fermentation', 'Lactate Production Shift', 'Succinate Optimization').
+Parameters modified:
+${modifiedList.join('\n')}
+
+Return ONLY the raw title string, with no other text, comments, markdown, or quotation marks.`;
+
+        const apiKey = this.env.GOOGLE_API_KEY;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [{ text: prompt }]
+            }]
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Gemini API rename fetch failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        let baseName = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Experiment";
+        baseName = baseName.replace(/["'`.#]/g, '').trim();
+        
+        if (baseName.length > 50) {
+          baseName = baseName.substring(0, 50);
+        }
+        if (!baseName) baseName = "Experiment";
+        
         if (this.baseName === baseName) return;
         
         const dateStr = new Date().toISOString().split('T')[0];
@@ -375,66 +431,17 @@ export class SolverDO {
           base_name: this.baseName,
           name: this.name
         });
-        return;
+      } catch (err) {
+        console.error("[DO] Error in performAiRename:", err);
+      } finally {
+        this.activeRenamePromise = null;
+        if (this.isRenamePending) {
+          this.state.waitUntil(this.performAiRename());
+        }
       }
-      
-      const prompt = `Based on these modifications in E. coli metabolic atlas simulation parameters, generate a short, creative, and precise scientific experiment title in English (maximum 4 words, no punctuation, e.g. 'Anaerobic Glucose Fermentation', 'Lactate Production Shift', 'Succinate Optimization').
-Parameters modified:
-${modifiedList.join('\n')}
-
-Return ONLY the raw title string, with no other text, comments, markdown, or quotation marks.`;
-
-      const apiKey = this.env.GOOGLE_API_KEY;
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [{ text: prompt }]
-          }]
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Gemini API rename fetch failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      let baseName = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Experiment";
-      baseName = baseName.replace(/["'`.#]/g, '').trim();
-      
-      if (baseName.length > 50) {
-        baseName = baseName.substring(0, 50);
-      }
-      if (!baseName) baseName = "Experiment";
-      
-      if (this.baseName === baseName) return;
-      
-      const dateStr = new Date().toISOString().split('T')[0];
-      const count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
-      const fullName = `${baseName} (${dateStr} #${count + 1})`;
-      
-      this.baseName = baseName;
-      this.name = fullName;
-      
-      await upsertSimulationSession(
-        this.env.DB,
-        this.sessionId,
-        this.userEmail,
-        this.baseName,
-        this.name,
-        JSON.stringify(serializeSimulation(this.simulation))
-      );
-      
-      this.broadcast({
-        type: "RENAME_SESSION",
-        base_name: this.baseName,
-        name: this.name
-      });
-    } catch (err) {
-      console.error("[DO] Error in performAiRename:", err);
-    }
+    })();
+    
+    await this.activeRenamePromise;
   }
 
   async webSocketMessage(ws, message) {
@@ -534,7 +541,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         }
         
         this.state.waitUntil(this.startSolveLoop());
-        this.triggerAiRename();
+        if (logAction) {
+          this.triggerAiRename();
+        }
         return;
       }
       
@@ -625,8 +634,12 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
     }
 
     if (url.pathname === '/flush-rename') {
-      if (this.isRenamePending) {
-        await this.performAiRename();
+      while (this.isRenamePending || this.activeRenamePromise) {
+        if (this.isRenamePending && !this.activeRenamePromise) {
+          await this.performAiRename();
+        } else if (this.activeRenamePromise) {
+          await this.activeRenamePromise;
+        }
       }
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' }
