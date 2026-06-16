@@ -11,6 +11,7 @@ routes = [
 
 [vars]
 MODE = "production"
+ADMIN_SECRET = "admin_secret_dev"
 
 # Bindings to D1 database
 [[d1_databases]]
@@ -47,6 +48,7 @@ routes = [
 
 [env.staging.vars]
 MODE = "development"
+ADMIN_SECRET = "admin_secret_dev"
 
 [[env.staging.d1_databases]]
 binding = "DB"

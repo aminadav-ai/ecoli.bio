@@ -200,6 +200,18 @@ export class SolverDO {
     
     // Broadcast WORK state to all clients
     this.broadcast({ type: "STATUS", status: "WORK" });
+
+    // Reload the latest credits from the DB to stay in sync with refills and AI chat deductions
+    if (this.userEmail) {
+      try {
+        const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
+        if (user && user.credits !== undefined && user.credits !== null) {
+          this.credits = parseFloat(user.credits) - this.bufferedTicks;
+        }
+      } catch (err) {
+        console.error('[DO LOOP] Failed to reload user credits:', err);
+      }
+    }
     
     try {
       while (!this.stabilized && this.ticksRun < 100 && this.isSolving) {
@@ -460,16 +472,16 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         console.log(`[DO INIT] Received userEmail=${userEmail}, credits=${credits}`);
         this.userEmail = userEmail || null;
         if (credits !== undefined && credits !== null) {
-          this.credits = parseFloat(credits);
+          this.credits = parseFloat(credits) - this.bufferedTicks;
         }
         
         if (this.userEmail) {
           try {
             const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
             if (user && user.credits !== undefined && user.credits !== null) {
-              this.credits = parseFloat(user.credits);
+              this.credits = parseFloat(user.credits) - this.bufferedTicks;
             } else {
-              this.credits = 250.0;
+              this.credits = 250.0 - this.bufferedTicks;
             }
           } catch (err) {
             console.error('[DO INIT] Failed to load user credits:', err);
@@ -685,6 +697,168 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       });
     }
 
+    if (url.pathname === '/update-credits') {
+      const { credits } = await request.json();
+      this.credits = parseFloat(credits) - this.bufferedTicks;
+
+      // Broadcast update to all connected clients
+      this.broadcast({
+        type: "TICK_UPDATE",
+        status: this.isSolving ? "WORK" : "RELAX",
+        solverTicks: 0,
+        dailySolverTicks: 0,
+        credits: this.credits
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (url.pathname === '/chat') {
+      const body = await request.json();
+      const { message, history, context } = body;
+      const apiKey = this.env.GOOGLE_API_KEY;
+      if (!apiKey) {
+        return new Response(JSON.stringify({ error: 'GOOGLE_API_KEY is not configured.' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (!this.userEmail) {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(this.env.DB, token) : null;
+        if (user) {
+          this.userEmail = user.email;
+          if (this.credits === undefined || this.credits === null) {
+            this.credits = parseFloat(user.credits) - this.bufferedTicks;
+          }
+        }
+      }
+
+      if (this.credits !== undefined && this.credits !== null && this.credits <= 0) {
+        return new Response(JSON.stringify({ 
+          error: 'insufficient_credits', 
+          message: 'Insufficient credits. Please refill your account.' 
+        }), {
+          status: 402,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const identifier = this.sessionId 
+        ? `user:${this.userEmail}:${this.sessionId}` 
+        : `user:${this.userEmail}`;
+      
+      this.state.waitUntil(saveChatMessage(this.env.DB, identifier, 'user', message, context));
+
+      const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the ecoli.bio portal (E. coli Central Metabolism Lab).
+Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
+
+IMPORTANT: Respond in the same language as the user's query (usually Russian or English). Keep your answer concise, scientifically accurate, and encouraging.
+
+CRITICAL WARNING: The user interacts with a live simulation, meaning that fluxes, growth rates, and concentrations change in real time with every user action. Always look up all values, rates, and statuses from the CURRENT simulation state context below. DO NOT reuse numbers, fluxes (e.g. CYTBO3_4pp, growth rate, etc.) or parameter values from previous messages in the chat history, as they are now stale and incorrect.
+
+NOTE: The active model and map shown on the student's screen are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map). 
+To ensure that reactions and metabolites mentioned in the chat are clickable and highlightable on the map, you MUST refer to them using the EXACT BiGG IDs present on our central metabolism map iJO1366.
+- The primary growth rate / biomass reaction on the map is represented as BIOMASS_Ecoli_core_w_GAM.
+- The ATP production/synthase reaction on the map is represented as ATPS4rpp (NOT ATPS4r).
+- Respiration / Cytochrome oxidases are CYTBO3_4pp and CYTBDpp.
+- Active metabolites must include their exact compartment suffixes: extracellular carbon sources/fermentation products must end with _e (e.g., use glc__D_e for glucose, ac_e for extracellular acetate, lac__D_e for extracellular D-lactate, etoh_e for extracellular ethanol). Cytoplasmic metabolites must end with _c (e.g. g6p_c, pyr_c, accoa_c).
+You should output these exact IDs (e.g. ATPS4rpp, ac_e, lac__D_e, GLCptspp, pyr_c) in your text. The client-side link detector will automatically find them and highlight them. Do NOT wrap these IDs in backticks (\`), quotes, or any other formatting; just write them as plain text (e.g. write ATPS4rpp, ac_e, lac__D_e). Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose", as they will not be recognized by the map.
+
+PORTAL FEATURES:
+- Experiment Management: Authorized users can create, rename, delete, and switch between multiple saved simulation sessions (experiments) via the header dropdown on desktop or the side drawer on mobile. The custom metabolite concentrations and modified reaction parameters for each experiment are stored dynamically in the cloud (using Durable Objects and D1 database).
+- Experiment Report: The "Report" button is located in the center of the bottom dock panel (floating dock on desktop, full-width on mobile), between the Scenarios tab and the AI Chat button. It opens the Experiment Report modal showing a timeline of user actions and biological impacts.
+- Chat Context: The chat header features an "👁️ Context" button to view raw JSON simulation context sent to the AI. This button is hidden in production (ecoli.bio / www.ecoli.bio) and only visible in development and staging environments.
+- Guest Mode: If the student is not logged in, they see the default wild-type simulation state (aerobic growth rate of 0.98 hr⁻¹ with EX_o2_e = 18.5 and EX_glc__D_e = 10.0) in read-only mode. Their sliders and simulation controls are disabled, and they cannot manage experiments or save their state until they sign in.
+
+Here is the current state of the metabolic simulation on the student's screen:
+\${JSON.stringify(context, null, 2)}
+
+Instructions:
+1. Explain metabolism in simple, clear terms (undergraduate biology level).
+2. Use the exact iJO1366 map BiGG IDs (e.g., ATPS4rpp, GLCptspp, ac_e, lac__D_e, PFK, PGI, PDH, PFL, pyr_c) as plain text (without backticks or quotes) in your text when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
+3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
+4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
+`;
+
+      const contents = [];
+      if (history && history.length > 0) {
+        for (const msg of history) {
+          contents.push({
+            role: msg.role === 'model' ? 'model' : 'user',
+            parts: [{ text: msg.text }]
+          });
+        }
+      }
+      contents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
+
+      // Request Gemini API
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          }
+        })
+      });
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        throw new Error(`Gemini API returned \${geminiRes.status}: \${errText}`);
+      }
+
+      const data = await geminiRes.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
+      
+      this.state.waitUntil(saveChatMessage(this.env.DB, identifier, 'model', reply));
+
+      const usageMetadata = data.usageMetadata;
+      let creditsCost = 0.0;
+      if (usageMetadata) {
+        const promptTokens = usageMetadata.promptTokenCount || 0;
+        const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+        const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
+        
+        const regularTokens = (promptTokens - cachedTokens) + candidatesTokens;
+        creditsCost = (regularTokens * (3 / 11000)) + (cachedTokens * (3 / 44000));
+      }
+
+      await deductUserCredits(this.env.DB, this.userEmail, creditsCost);
+      const updatedUser = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
+      const updatedCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
+
+      // Update in-memory credits
+      this.credits = updatedCredits - this.bufferedTicks;
+
+      // Broadcast update to all clients
+      this.broadcast({
+        type: "TICK_UPDATE",
+        status: this.isSolving ? "WORK" : "RELAX",
+        solverTicks: 0,
+        dailySolverTicks: 0,
+        credits: this.credits
+      });
+
+      this.state.waitUntil(trackWorkerChatQuery(this.env, request, this.userEmail, message, usageMetadata));
+
+      return new Response(JSON.stringify({ 
+        reply, 
+        count: 0,
+        credits: this.credits
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (url.pathname !== '/solve') {
       return new Response('Not found', { status: 404 });
     }
@@ -732,8 +906,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       if (data.userEmail) {
         this.userEmail = data.userEmail;
-        if (data.credits !== undefined && data.credits !== null && (this.credits === undefined || this.credits === null)) {
-          this.credits = parseFloat(data.credits);
+        if (data.credits !== undefined && data.credits !== null) {
+          this.credits = parseFloat(data.credits) - this.bufferedTicks;
         }
       }
 
@@ -973,6 +1147,72 @@ export default {
         const doId = env.SOLVER_DO.idFromName(sessionId);
         const doStub = env.SOLVER_DO.get(doId);
         return doStub.fetch(request);
+      }
+
+      // Admin credits refill endpoint
+      if (url.pathname === '/api/admin/add-credits' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const secret = env.ADMIN_SECRET || 'admin_secret_dev';
+        if (!token || token !== secret) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const { email, amount } = await request.json();
+        if (!email || isNaN(amount)) {
+          return new Response(JSON.stringify({ error: 'Invalid email or amount' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const userEmail = email.trim().toLowerCase();
+
+        // Update DB
+        await env.DB.prepare('UPDATE users SET credits = MAX(0.0, COALESCE(credits, 250.0) + ?) WHERE email = ?').bind(amount, userEmail).run();
+        const user = await env.DB.prepare('SELECT name, credits FROM users WHERE email = ?').bind(userEmail).first();
+        if (!user) {
+          return new Response(JSON.stringify({ error: 'User not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const newCredits = parseFloat(user.credits);
+
+        // Get all active sessions for this user from D1 database
+        let sessionIds = [];
+        try {
+          const sessions = await env.DB.prepare('SELECT id FROM simulation_sessions WHERE email = ?').bind(userEmail).all();
+          if (sessions.results) {
+            sessionIds = sessions.results.map(s => s.id);
+          }
+        } catch (err) {
+          console.error('[Admin Add Credits] Failed to fetch user sessions:', err);
+        }
+
+        // Notify DO for each session
+        for (const sessionId of sessionIds) {
+          const doId = env.SOLVER_DO.idFromName(sessionId);
+          const doStub = env.SOLVER_DO.get(doId);
+          ctx.waitUntil(doStub.fetch(new Request(new URL('/update-credits', url.origin), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credits: newCredits })
+          })).catch(err => console.error(`Failed to notify DO for session ${sessionId}:`, err)));
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          email: userEmail,
+          name: user.name,
+          credits: newCredits
+        }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
       }
 
       // 1. solve-fba endpoint
@@ -1245,136 +1485,29 @@ export default {
 
       // 2. Chat AI endpoint
       if (url.pathname === '/api/chat' && request.method === 'POST') {
-        const body = await request.json();
-        const { message, history, context } = body;
-        const apiKey = env.GOOGLE_API_KEY;
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: 'GOOGLE_API_KEY is not configured.' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-        const guestId = request.headers.get('x-guest-id');
-        const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown';
-        const timeZone = request.headers.get('x-timezone');
-        const sessionId = request.headers.get('x-session-id');
-
-        const user = await getUserByToken(env.DB, token);
+        const user = token ? await getUserByToken(env.DB, token) : null;
         if (!user) {
           return new Response(JSON.stringify({ error: 'Authentication required. Please sign in.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
-        const userCredits = (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0;
-        if (userCredits <= 0) {
-          return new Response(JSON.stringify({ 
-            error: 'insufficient_credits', 
-            message: 'Insufficient credits. Please refill your account.' 
-          }), {
-            status: 402,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
 
-        const identifier = sessionId 
-          ? `user:${user.email}:${sessionId}` 
-          : `user:${user.email}`;
-        ctx.waitUntil(saveChatMessage(env.DB, identifier, 'user', message, context));
+        const sessionId = request.headers.get('x-session-id') || 'default_user';
+        const doId = env.SOLVER_DO.idFromName(sessionId);
+        const doStub = env.SOLVER_DO.get(doId);
 
-        const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the ecoli.bio portal (E. coli Central Metabolism Lab).
-Your goal is to guide the student, explain how pathways work, answer their questions about E. coli metabolism, and help them with the interactive learning scenarios.
-
-IMPORTANT: Respond in the same language as the user's query (usually Russian or English). Keep your answer concise, scientifically accurate, and encouraging.
-
-CRITICAL WARNING: The user interacts with a live simulation, meaning that fluxes, growth rates, and concentrations change in real time with every user action. Always look up all values, rates, and statuses from the CURRENT simulation state context below. DO NOT reuse numbers, fluxes (e.g. CYTBO3_4pp, growth rate, etc.) or parameter values from previous messages in the chat history, as they are now stale and incorrect.
-
-NOTE: The active model and map shown on the student's screen are based on the genome-scale E. coli iJO1366 reconstruction (specifically its central carbon metabolism map). 
-To ensure that reactions and metabolites mentioned in the chat are clickable and highlightable on the map, you MUST refer to them using the EXACT BiGG IDs present on our central metabolism map iJO1366.
-- The primary growth rate / biomass reaction on the map is represented as BIOMASS_Ecoli_core_w_GAM.
-- The ATP production/synthase reaction on the map is represented as ATPS4rpp (NOT ATPS4r).
-- Respiration / Cytochrome oxidases are CYTBO3_4pp and CYTBDpp.
-- Active metabolites must include their exact compartment suffixes: extracellular carbon sources/fermentation products must end with _e (e.g., use glc__D_e for glucose, ac_e for extracellular acetate, lac__D_e for extracellular D-lactate, etoh_e for extracellular ethanol). Cytoplasmic metabolites must end with _c (e.g. g6p_c, pyr_c, accoa_c).
-You should output these exact IDs (e.g. ATPS4rpp, ac_e, lac__D_e, GLCptspp, pyr_c) in your text. The client-side link detector will automatically find them and highlight them. Do NOT wrap these IDs in backticks (\`), quotes, or any other formatting; just write them as plain text (e.g. write ATPS4rpp, ac_e, lac__D_e). Do NOT use simplified names like "ace", "lacDe", "ATPS4r", or "glucose", as they will not be recognized by the map.
-
-PORTAL FEATURES:
-- Experiment Management: Authorized users can create, rename, delete, and switch between multiple saved simulation sessions (experiments) via the header dropdown on desktop or the side drawer on mobile. The custom metabolite concentrations and modified reaction parameters for each experiment are stored dynamically in the cloud (using Durable Objects and D1 database).
-- Experiment Report: The "Report" button is located in the center of the bottom dock panel (floating dock on desktop, full-width on mobile), between the Scenarios tab and the AI Chat button. It opens the Experiment Report modal showing a timeline of user actions and biological impacts.
-- Chat Context: The chat header features an "👁️ Context" button to view raw JSON simulation context sent to the AI. This button is hidden in production (ecoli.bio / www.ecoli.bio) and only visible in development and staging environments.
-- Guest Mode: If the student is not logged in, they see the default wild-type simulation state (aerobic growth rate of 0.98 hr⁻¹ with EX_o2_e = 18.5 and EX_glc__D_e = 10.0) in read-only mode. Their sliders and simulation controls are disabled, and they cannot manage experiments or save their state until they sign in.
-
-Here is the current state of the metabolic simulation on the student's screen:
-${JSON.stringify(context, null, 2)}
-
-Instructions:
-1. Explain metabolism in simple, clear terms (undergraduate biology level).
-2. Use the exact iJO1366 map BiGG IDs (e.g., ATPS4rpp, GLCptspp, ac_e, lac__D_e, PFK, PGI, PDH, PFL, pyr_c) as plain text (without backticks or quotes) in your text when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
-3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
-4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
-`;
-
-        const contents = [];
-        if (history && history.length > 0) {
-          for (const msg of history) {
-            contents.push({
-              role: msg.role === 'model' ? 'model' : 'user',
-              parts: [{ text: msg.text }]
-            });
-          }
-        }
-        contents.push({
-          role: 'user',
-          parts: [{ text: message }]
-        });
-
-        // Request Gemini API
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        // Forward chat request to Durable Object
+        const doRes = await doStub.fetch(new Request(new URL('/chat', url.origin), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: systemPrompt }]
-            }
-          })
-        });
+          headers: request.headers,
+          body: await request.text()
+        }));
 
-        if (!geminiRes.ok) {
-          const errText = await geminiRes.text();
-          throw new Error(`Gemini API returned ${geminiRes.status}: ${errText}`);
-        }
-
-        const data = await geminiRes.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, failed to get a response from the AI.';
-        
-        ctx.waitUntil(saveChatMessage(env.DB, identifier, 'model', reply));
-
-        // Track Chat Query in Telegram
-        const usageMetadata = data.usageMetadata;
-        let creditsCost = 0.0;
-        if (usageMetadata) {
-          const promptTokens = usageMetadata.promptTokenCount || 0;
-          const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
-          const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
-          
-          const regularTokens = (promptTokens - cachedTokens) + candidatesTokens;
-          creditsCost = (regularTokens * (3 / 11000)) + (cachedTokens * (3 / 44000));
-        }
-
-        await deductUserCredits(env.DB, user.email, creditsCost);
-        const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(user.email).first();
-        const updatedCredits = updatedUser ? updatedUser.credits : 0.0;
-
-        ctx.waitUntil(trackWorkerChatQuery(env, request, user.email, message, usageMetadata));
-
-        return new Response(JSON.stringify({ 
-          reply, 
-          count: 0,
-          credits: updatedCredits
-        }), {
+        return new Response(doRes.body, {
+          status: doRes.status,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }

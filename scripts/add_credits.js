@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { argv } from 'process';
-import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
 
 const args = argv.slice(2);
 const isLocal = args.includes('--local');
@@ -40,57 +40,75 @@ if (isNaN(amount)) {
   process.exit(1);
 }
 
-const dbTarget = isLocal ? '' : '--remote';
-const dbName = isStaging ? 'ecoli_db_staging' : 'ecoli_db';
-const envFlag = isStaging ? '--env staging' : '';
-const targetDesc = isLocal ? 'Local (SQLite)' : (isStaging ? 'Staging D1 (Remote)' : 'Production D1 (Remote)');
+const targetDesc = isLocal ? 'Local (Development)' : (isStaging ? 'Staging Server' : 'Production Server');
 
 console.log('================================================================================');
 console.log('                            ADD CREDITS TO USER ACCOUNT                         ');
 console.log('================================================================================');
-console.log(` Target Database: ${targetDesc}`);
-console.log(` User Email:     ${email}`);
-console.log(` Amount:          ${amount >= 0 ? '+' : ''}${amount} credits`);
+console.log(` Target Environment: ${targetDesc}`);
+console.log(` User Email:        ${email}`);
+console.log(` Amount:             ${amount >= 0 ? '+' : ''}${amount} credits`);
 console.log('--------------------------------------------------------------------------------');
 
-// SQL queries: update the credits and select user profile to check new balance
-const sql = `
-  UPDATE users SET credits = COALESCE(credits, 0.0) + ${amount} WHERE email = '${email}';
-  SELECT email, name, credits FROM users WHERE email = '${email}';
-`;
-
-try {
-  console.log('Executing database update command...');
-  const cmd = `npx wrangler d1 execute ${dbName} ${dbTarget} ${envFlag} --json --command "${sql.replace(/"/g, '\\"')}"`;
-  
-  const output = execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
-  const parsed = JSON.parse(output);
-  
-  let userRecord = null;
-  if (Array.isArray(parsed)) {
-    // Look for results in the array of responses (from the second statement)
-    const selectResponse = parsed.find(r => r.results && r.results.length > 0);
-    if (selectResponse) {
-      userRecord = selectResponse.results[0];
+// Extract ADMIN_SECRET from wrangler.toml
+let adminSecret = process.env.ADMIN_SECRET;
+if (!adminSecret) {
+  try {
+    const configContent = readFileSync('wrangler.toml', 'utf-8');
+    const match = configContent.match(/ADMIN_SECRET\s*=\s*"([^"]+)"/);
+    if (match) {
+      adminSecret = match[1];
     }
-  } else if (parsed && parsed.results && parsed.results.length > 0) {
-    userRecord = parsed.results[0];
+  } catch (err) {
+    // Ignore error
   }
-  
-  console.log('--------------------------------------------------------------------------------');
-  if (userRecord) {
-    const formattedCredits = parseFloat(userRecord.credits).toFixed(2);
-    console.log(`Success: Successfully adjusted credits for user ${email}.`);
-    console.log(`User Name:   ${userRecord.name || 'N/A'}`);
-    console.log(`New Balance: ${formattedCredits} credits`);
-  } else {
-    console.warn(`Warning: User "${email}" was not found in the database. No changes were made.`);
-  }
-  console.log('================================================================================');
-} catch (err) {
-  console.error('--------------------------------------------------------------------------------');
-  console.error('Error: Failed to execute database update command.');
-  console.error(err.message);
-  console.error('================================================================================');
-  process.exit(1);
 }
+if (!adminSecret) {
+  adminSecret = 'admin_secret_dev';
+}
+
+const baseUrl = isLocal 
+  ? 'http://127.0.0.1:8787' 
+  : (isStaging ? 'https://sim3.ecoli.bio' : 'https://ecoli.bio');
+
+async function run() {
+  const url = `${baseUrl}/api/admin/add-credits`;
+  try {
+    console.log(`Sending API request to ${url}...`);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminSecret}`
+      },
+      body: JSON.stringify({ email, amount })
+    });
+
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Invalid JSON response: ${text}`);
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP error ${res.status}`);
+    }
+
+    console.log('--------------------------------------------------------------------------------');
+    const formattedCredits = parseFloat(data.credits).toFixed(2);
+    console.log(`Success: Successfully adjusted credits for user ${data.email}.`);
+    console.log(`User Name:   ${data.name || 'N/A'}`);
+    console.log(`New Balance: ${formattedCredits} credits`);
+    console.log('================================================================================');
+  } catch (err) {
+    console.error('--------------------------------------------------------------------------------');
+    console.error('Error: Failed to adjust credits.');
+    console.error(err.message);
+    console.error('================================================================================');
+    process.exit(1);
+  }
+}
+
+run();
