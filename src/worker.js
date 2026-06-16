@@ -776,7 +776,7 @@ PORTAL FEATURES:
 - Guest Mode: If the student is not logged in, they see the default wild-type simulation state (aerobic growth rate of 0.98 hr⁻¹ with EX_o2_e = 18.5 and EX_glc__D_e = 10.0) in read-only mode. Their sliders and simulation controls are disabled, and they cannot manage experiments or save their state until they sign in.
 
 Here is the current state of the metabolic simulation on the student's screen:
-\${JSON.stringify(context, null, 2)}
+${JSON.stringify(context, null, 2)}
 
 Instructions:
 1. Explain metabolism in simple, clear terms (undergraduate biology level).
@@ -800,7 +800,7 @@ Instructions:
       });
 
       // Request Gemini API
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\${apiKey}`, {
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -813,7 +813,7 @@ Instructions:
 
       if (!geminiRes.ok) {
         const errText = await geminiRes.text();
-        throw new Error(`Gemini API returned \${geminiRes.status}: \${errText}`);
+        throw new Error(`Gemini API returned ${geminiRes.status}: ${errText}`);
       }
 
       const data = await geminiRes.json();
