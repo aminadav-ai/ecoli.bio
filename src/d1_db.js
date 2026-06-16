@@ -49,6 +49,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
   const payload = await verifyRes.json();
   const email = payload.email;
   const name = payload.name || email;
+  const picture = payload.picture || null;
 
   if (!email) {
     throw new Error('Email field is missing in Google credential payload.');
@@ -68,8 +69,8 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
 
   // Create user in DB (upsert)
   await db.prepare(
-    'INSERT INTO users (email, name) VALUES (?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name'
-  ).bind(email, name).run();
+    'INSERT INTO users (email, name, picture) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name, picture = excluded.picture'
+  ).bind(email, name, picture).run();
 
   // Create session UUID in JS
   const token = crypto.randomUUID();
@@ -92,6 +93,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
     user: {
       email: user.email,
       name: user.name,
+      picture: user.picture,
       isPremium: isPremiumActive(user),
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
@@ -112,6 +114,7 @@ export async function getUserStatus(db, token, ip, guestId, timeZone, googleClie
     user: user ? {
       email: user.email,
       name: user.name,
+      picture: user.picture,
       isPremium,
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,

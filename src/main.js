@@ -6721,6 +6721,9 @@ function updateUserStatusUI() {
         const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
         const isDropdownHidden = true;
         const chevronTransform = '';
+        const avatarContent = userProfile.picture
+          ? `<img src="${userProfile.picture}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`
+          : initial;
         
         headerProfileContainer.innerHTML = `
           <div class="user-header-credits-wrapper">
@@ -6729,15 +6732,20 @@ function updateUserStatusUI() {
               <span id="header-credits-balance-val" class="credits-balance">${userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00'}</span>
             </div>
             <div class="user-badge" id="user-profile-badge">
-              <div class="user-avatar">${initial}</div>
+              <div class="user-avatar">${avatarContent}</div>
               <span class="user-name">${userProfile.name}</span>
               <span class="chevron-icon" ${chevronTransform}>▼</span>
             </div>
           </div>
           <div id="user-profile-dropdown" class="user-dropdown glass ${isDropdownHidden ? 'hidden' : ''}">
-            <div class="user-dropdown-info">
-              <div class="user-dropdown-name">${userProfile.name}</div>
-              <div class="user-dropdown-email">${userProfile.email || ''}</div>
+            <div class="user-dropdown-header" style="display: flex; align-items: center; gap: 12px;">
+              <div class="user-avatar" style="width: 40px; height: 40px; font-size: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                ${avatarContent}
+              </div>
+              <div class="user-dropdown-info" style="min-width: 0; flex: 1;">
+                <div class="user-dropdown-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${userProfile.name}</div>
+                <div class="user-dropdown-email" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${userProfile.email || ''}</div>
+              </div>
             </div>
             <hr class="dropdown-divider" />
             <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
