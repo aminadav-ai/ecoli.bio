@@ -1361,7 +1361,7 @@ Instructions:
           const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
           
           const regularTokens = (promptTokens - cachedTokens) + candidatesTokens;
-          creditsCost = (regularTokens * (15 / 11000)) + (cachedTokens * (15 / 44000));
+          creditsCost = (regularTokens * (3 / 11000)) + (cachedTokens * (3 / 44000));
         }
 
         await deductUserCredits(env.DB, user.email, creditsCost);
