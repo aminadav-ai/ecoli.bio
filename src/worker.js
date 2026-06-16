@@ -292,7 +292,7 @@ export class SolverDO {
           stabilized: result.stabilized,
           solverTicks: 0,
           dailySolverTicks: 0,
-          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 0.0
+          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : undefined
         });
         
         this.stabilized = result.stabilized;
@@ -762,9 +762,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.state.storage.setAlarm(Date.now() + 5000);
       }
 
-      result.solverTicks = this.totalSolverTicks || 0;
-      result.dailySolverTicks = this.dailySolverTicks || 0;
-      result.credits = (this.credits !== undefined && this.credits !== null) ? this.credits : 0.0;
+      result.solverTicks = 0;
+      result.dailySolverTicks = 0;
+      result.credits = (this.credits !== undefined && this.credits !== null) ? this.credits : undefined;
 
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }
