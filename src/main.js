@@ -911,7 +911,7 @@ function setupUIListeners() {
   const playPauseBtn = document.getElementById('play-pause-btn');
   playPauseBtn.addEventListener('click', () => {
     if (!userProfile) {
-      openAuthModal();
+      showToast('Please sign in to change parameters.', 'error');
       return;
     }
     isPaused = !isPaused;
@@ -924,7 +924,7 @@ function setupUIListeners() {
   // Reset/Restart handler
   const resetHandler = () => {
     if (!userProfile) {
-      openAuthModal();
+      showToast('Please sign in to change parameters.', 'error');
       return;
     }
     simulation.reset();
@@ -992,7 +992,7 @@ function setupUIListeners() {
         const prevVal = (simulation && simulation.metabolites['o2_e']) ? simulation.metabolites['o2_e'].concentration : 18.5;
         globalO2Slider.value = prevVal;
         globalO2Val.textContent = prevVal.toFixed(2);
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const val = parseFloat(e.target.value);
@@ -1034,7 +1034,7 @@ function setupUIListeners() {
         const prevVal = (simulation && simulation.metabolites['glc__D_e']) ? simulation.metabolites['glc__D_e'].concentration : 10.0;
         globalGlcSlider.value = prevVal;
         globalGlcVal.textContent = prevVal.toFixed(2);
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const val = parseFloat(e.target.value);
@@ -1182,7 +1182,7 @@ function setupUIListeners() {
   document.querySelectorAll('.btn-inject').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!userProfile) {
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       if (selectedMetaboliteId) {
@@ -1204,7 +1204,7 @@ function setupUIListeners() {
   // Deplete metabolite
   document.getElementById('btn-deplete').addEventListener('click', () => {
     if (!userProfile) {
-      openAuthModal();
+      showToast('Please sign in to change parameters.', 'error');
       return;
     }
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
@@ -1608,7 +1608,7 @@ function setupUIListeners() {
         const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].vMax : 10.0;
         vmaxSlider.value = prevVal;
         vmaxVal.textContent = prevVal.toFixed(1);
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const val = parseFloat(e.target.value);
@@ -1657,7 +1657,7 @@ function setupUIListeners() {
         const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].km : 0.8;
         kmSlider.value = prevVal;
         kmVal.textContent = prevVal.toFixed(2);
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const val = parseFloat(e.target.value);
@@ -3056,7 +3056,7 @@ function renderPinnedReactions() {
         const prevVal = (simulation && simulation.reactions[rxnId]) ? simulation.reactions[rxnId].vMax : 10.0;
         slider.value = prevVal;
         label.textContent = prevVal.toFixed(1);
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const val = parseFloat(e.target.value);
@@ -6813,7 +6813,7 @@ function setupScenariosAndChat() {
   cards.forEach(card => {
     card.addEventListener('click', () => {
       if (!userProfile) {
-        openAuthModal();
+        showToast('Please sign in to change parameters.', 'error');
         return;
       }
       const scenarioId = card.getAttribute('data-scenario');
@@ -7208,7 +7208,7 @@ function startScenario(scenarioId) {
           const prevVal = (simulation && simulation.metabolites[ctrl.id]) ? simulation.metabolites[ctrl.id].concentration : ctrl.value;
           input.value = prevVal;
           valSpan.textContent = prevVal;
-          openAuthModal();
+          showToast('Please sign in to change parameters.', 'error');
           return;
         }
         const val = parseFloat(e.target.value);
@@ -7460,12 +7460,7 @@ async function sendChatMessage(customMessage = null) {
 
   // Check if user is logged in
   if (!userProfile) {
-    pendingChatMessage = message;
-    if (chatInput) {
-      pendingChatCursorStart = chatInput.selectionStart;
-      pendingChatCursorEnd = chatInput.selectionEnd;
-    }
-    openAuthModal();
+    showToast('Please sign in to chat with the AI assistant.', 'error');
     return;
   }
 
