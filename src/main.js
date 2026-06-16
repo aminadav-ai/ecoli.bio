@@ -5569,7 +5569,8 @@ function connectSessionWebSocket() {
         type: "INIT",
         userEmail: userProfile ? userProfile.email : null,
         dbTicks: userProfile ? (userProfile.solverTicks || 0) : 0,
-        dailyTicks: userProfile ? (userProfile.dailySolverTicks || 0) : 0
+        dailyTicks: userProfile ? (userProfile.dailySolverTicks || 0) : 0,
+        credits: userProfile ? userProfile.credits : null
       }));
     }
   };

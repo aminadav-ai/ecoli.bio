@@ -208,7 +208,7 @@ export class SolverDO {
     
     try {
       while (!this.stabilized && this.ticksRun < 100 && this.isSolving) {
-        if (this.userEmail && this.credits !== undefined && this.credits <= 0) {
+        if (this.userEmail && this.credits !== undefined && (this.credits === null || this.credits <= 0)) {
           this.broadcast({
             type: "ERROR",
             error: "insufficient_credits",
@@ -299,7 +299,7 @@ export class SolverDO {
           stabilized: result.stabilized,
           solverTicks: this.totalSolverTicks || 0,
           dailySolverTicks: this.dailySolverTicks || 0,
-          credits: this.credits !== undefined ? this.credits : 0.0
+          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 0.0
         });
         
         this.stabilized = result.stabilized;
@@ -463,8 +463,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       const data = JSON.parse(message);
       
       if (data.type === 'INIT') {
-        const { userEmail, dbTicks } = data;
-        console.log(`[DO INIT] Received userEmail=${userEmail}, dbTicks=${dbTicks}. Current totalSolverTicks=${this.totalSolverTicks}`);
+        const { userEmail, dbTicks, credits } = data;
+        console.log(`[DO INIT] Received userEmail=${userEmail}, dbTicks=${dbTicks}, credits=${credits}. Current totalSolverTicks=${this.totalSolverTicks}`);
         this.userEmail = userEmail || null;
         if (dbTicks !== undefined) {
           this.totalSolverTicks = Math.max(this.totalSolverTicks, dbTicks);
@@ -472,14 +472,23 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         if (data.dailyTicks !== undefined) {
           this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
         }
+        if (credits !== undefined && credits !== null) {
+          this.credits = parseFloat(credits);
+        }
         
         if (this.userEmail) {
           try {
             const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
-            this.credits = user ? user.credits : 250.0;
+            if (user && user.credits !== undefined && user.credits !== null) {
+              this.credits = parseFloat(user.credits);
+            } else {
+              this.credits = 250.0;
+            }
           } catch (err) {
             console.error('[DO INIT] Failed to load user credits:', err);
-            this.credits = 0.0;
+            if (this.credits === undefined) {
+              this.credits = 0.0;
+            }
           }
         } else {
           this.credits = 0.0;
@@ -518,7 +527,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           solverTicks: this.totalSolverTicks || 0,
           dailySolverTicks: this.dailySolverTicks || 0,
           isSolving: !!this.isSolving,
-          credits: this.credits !== undefined ? this.credits : 250.0
+          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 250.0
         }));
         
         if (this.isFreshSession) {
@@ -529,7 +538,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       
       if (data.type === 'UPDATE_PARAMETER' || data.type === 'RESET_SIMULATION' || data.type === 'APPLY_SCENARIO') {
-        if (this.userEmail && this.credits !== undefined && this.credits <= 0) {
+        if (this.userEmail && this.credits !== undefined && (this.credits === null || this.credits <= 0)) {
           ws.send(JSON.stringify({
             type: "ERROR",
             error: "insufficient_credits",
@@ -736,8 +745,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       if (data.userEmail) {
         this.userEmail = data.userEmail;
-        if (data.credits !== undefined && (this.credits === undefined || this.credits === null)) {
-          this.credits = data.credits;
+        if (data.credits !== undefined && data.credits !== null && (this.credits === undefined || this.credits === null)) {
+          this.credits = parseFloat(data.credits);
         }
       }
 
@@ -768,7 +777,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
       result.solverTicks = this.totalSolverTicks || 0;
       result.dailySolverTicks = this.dailySolverTicks || 0;
-      result.credits = this.credits !== undefined ? this.credits : 0.0;
+      result.credits = (this.credits !== undefined && this.credits !== null) ? this.credits : 0.0;
 
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }

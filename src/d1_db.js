@@ -155,7 +155,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
       solverTicks: user.solver_ticks || 0,
-      credits: user.credits !== undefined ? user.credits : 250.0
+      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
     }
   };
 }
@@ -272,7 +272,7 @@ export async function getUserStatus(db, token, ip, guestId, timeZone, googleClie
       solverTicks: user.solver_ticks || 0,
       dailySolverTicks: dailyTicks,
       remainingSolverTicks: Math.max(0, 200 - dailyTicks),
-      credits: user.credits !== undefined ? user.credits : 250.0
+      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
     } : null,
     limit: {
       max: limitMax,
