@@ -317,6 +317,14 @@ function closeAllOverlays() {
   if (aboutModal) {
     aboutModal.classList.add('hidden');
   }
+  const termsModal = document.getElementById('terms-modal');
+  if (termsModal) {
+    termsModal.classList.add('hidden');
+  }
+  const privacyModal = document.getElementById('privacy-modal');
+  if (privacyModal) {
+    privacyModal.classList.add('hidden');
+  }
 }
 
 // Pinned Reactions state
@@ -6535,6 +6543,46 @@ function closeAboutModal() {
   }
 }
 
+function openTermsModal() {
+  const modal = document.getElementById('terms-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closeTermsModal() {
+  const modal = document.getElementById('terms-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+}
+
+function openPrivacyModal() {
+  const modal = document.getElementById('privacy-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closePrivacyModal() {
+  const modal = document.getElementById('privacy-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+}
+
 async function handleFeedbackSubmit() {
   const textarea = document.getElementById('feedback-text');
   const btn = document.getElementById('btn-submit-feedback');
@@ -7072,6 +7120,70 @@ function setupScenariosAndChat() {
     aboutModal.addEventListener('click', (e) => {
       if (e.target === aboutModal) {
         closeAboutModal();
+      }
+    });
+  }
+
+  // Terms Modal event listeners
+  const btnTerms = document.getElementById('btn-terms');
+  if (btnTerms) {
+    btnTerms.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTermsModal();
+    });
+  }
+
+  const btnCloseTerms = document.getElementById('btn-close-terms');
+  if (btnCloseTerms) {
+    btnCloseTerms.addEventListener('click', () => {
+      closeTermsModal();
+    });
+  }
+
+  const btnCloseTermsOk = document.getElementById('btn-close-terms-ok');
+  if (btnCloseTermsOk) {
+    btnCloseTermsOk.addEventListener('click', () => {
+      closeTermsModal();
+    });
+  }
+
+  const termsModal = document.getElementById('terms-modal');
+  if (termsModal) {
+    termsModal.addEventListener('click', (e) => {
+      if (e.target === termsModal) {
+        closeTermsModal();
+      }
+    });
+  }
+
+  // Privacy Modal event listeners
+  const btnPrivacy = document.getElementById('btn-privacy');
+  if (btnPrivacy) {
+    btnPrivacy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPrivacyModal();
+    });
+  }
+
+  const btnClosePrivacy = document.getElementById('btn-close-privacy');
+  if (btnClosePrivacy) {
+    btnClosePrivacy.addEventListener('click', () => {
+      closePrivacyModal();
+    });
+  }
+
+  const btnClosePrivacyOk = document.getElementById('btn-close-privacy-ok');
+  if (btnClosePrivacyOk) {
+    btnClosePrivacyOk.addEventListener('click', () => {
+      closePrivacyModal();
+    });
+  }
+
+  const privacyModal = document.getElementById('privacy-modal');
+  if (privacyModal) {
+    privacyModal.addEventListener('click', (e) => {
+      if (e.target === privacyModal) {
+        closePrivacyModal();
       }
     });
   }

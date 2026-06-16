@@ -723,6 +723,98 @@
         </div>
       </div>
 
+      <!-- Terms of Use Modal -->
+      <div id="terms-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass" style="max-width: 550px; width: 100%; text-align: left; padding: 24px; max-height: 85vh; overflow-y: auto;">
+          <button id="btn-close-terms" class="btn-close-auth">✕</button>
+          <div class="auth-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
+            <span class="auth-icon" style="margin: 0; line-height: 1;">📝</span>
+          </div>
+          <h3 style="text-align: center; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Terms of Use</h3>
+          
+          <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">1. Acceptance of Terms</h4>
+              <p style="margin: 0; color: #cbd5e1;">By accessing or using ecoli.bio, you agree to be bound by these Terms of Use and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">2. Purpose of the Platform</h4>
+              <p style="margin: 0; color: #cbd5e1;">ecoli.bio is an interactive educational and research tool simulating the metabolic network of Escherichia coli. All simulation algorithms, visual maps, and AI chatbot assistance are provided strictly for educational and scientific research purposes.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">3. Accounts and Credits System</h4>
+              <p style="margin: 0; color: #cbd5e1;">To access simulation synchronization, history logging, and the AI Metabolic Assistant, you must sign in via Google OAuth. Registered users are allocated a credit balance. Credits are deducted automatically for running simulation solver ticks and conducting AI queries. Any attempt to exploit, bypass, or abuse the credit system (including automated script spamming or multi-accounting) will result in immediate suspension of access.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">4. Intellectual Property</h4>
+              <p style="margin: 0; color: #cbd5e1;">All software, visual designs, map integrations, and compiled simulation resources displayed on ecoli.bio are the intellectual property of the platform developers. You are granted a limited, non-exclusive license to use the resources for study and research. Commercial redistribution or reverse engineering of the platform is strictly prohibited.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">5. Limitation of Liability</h4>
+              <p style="margin: 0; color: #cbd5e1;">The simulation models and AI recommendations are provided on an "as-is" basis. The platform makes no warranties, expressed or implied, regarding the accuracy, completeness, or absolute biological correctness of the FBA predictions or AI explanations. Under no circumstances shall ecoli.bio be liable for any educational, academic, or research setbacks resulting from the use of this software.</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 8px 0;" />
+            
+            <div style="font-size: 11px; color: #64748b; text-align: center;">
+              Last updated: June 2026
+            </div>
+          </div>
+          
+          <button id="btn-close-terms-ok" class="btn btn-primary" style="margin: 20px auto 0 auto; height: 38px; width: auto; padding: 0 24px; display: block;">Close</button>
+        </div>
+      </div>
+
+      <!-- Privacy Policy Modal -->
+      <div id="privacy-modal" class="global-auth-overlay hidden">
+        <div class="auth-card glass" style="max-width: 550px; width: 100%; text-align: left; padding: 24px; max-height: 85vh; overflow-y: auto;">
+          <button id="btn-close-privacy" class="btn-close-auth">✕</button>
+          <div class="auth-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
+            <span class="auth-icon" style="margin: 0; line-height: 1;">🔒</span>
+          </div>
+          <h3 style="text-align: center; margin-bottom: 20px; font-family: 'Outfit', sans-serif;">Privacy Policy</h3>
+          
+          <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">1. Information We Collect</h4>
+              <p style="margin: 0; color: #cbd5e1;">When you authenticate using Google OAuth, we collect basic profile details: your email address, name, and profile picture. Additionally, we store metadata and session data including simulation experiment setups, logs of parameters you adjust, and histories of your chats with the AI Metabolic Assistant.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">2. How We Use Your Data</h4>
+              <p style="margin: 0; color: #cbd5e1;">Your profile information is used to maintain your account and verify credit balances. Saved simulation session states and experiment history logs are stored to allow you to reload your workspaces across devices. Chat history is saved to maintain continuity during your educational sessions with the AI.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">3. Third-Party Services</h4>
+              <p style="margin: 0; color: #cbd5e1;">We use Google Sign-In for secure authentication. The AI chatbot is powered by Google Gemini API. When you converse with the AI, the current state of your simulation and recent chat messages are sent to Gemini to generate context-aware biology tutoring. No personally identifiable credentials are shared with the Gemini API.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">4. Local Storage and Cookies</h4>
+              <p style="margin: 0; color: #cbd5e1;">We utilize browser Local Storage and temporary session tokens to keep you logged in and preserve your current viewport settings. We do not use cookies for tracking or targeted advertising.</p>
+            </div>
+            
+            <div>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">5. Security and Data Retention</h4>
+              <p style="margin: 0; color: #cbd5e1;">Your records are stored securely in Cloudflare D1 databases. We retain your profile and simulation data as long as your account remains active. You can request account termination and full deletion of your simulation/chat history at any time by contacting our support.</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 8px 0;" />
+            
+            <div style="font-size: 11px; color: #64748b; text-align: center;">
+              Last updated: June 2026
+            </div>
+          </div>
+          
+          <button id="btn-close-privacy-ok" class="btn btn-primary" style="margin: 20px auto 0 auto; height: 38px; width: auto; padding: 0 24px; display: block;">Close</button>
+        </div>
+      </div>
+
       <!-- Floating AI Chatbot Widget -->
       <div id="ai-chat-widget" class="ai-chat-widget">
         <!-- Floating chat bubble button -->
@@ -823,9 +915,11 @@
           </div>
 
           <!-- About Section (Always visible) -->
-          <div id="about-section" style="margin-top: 12px; padding: 0 4px;">
+          <div id="about-section" style="margin-top: 12px; padding: 0 4px; display: flex; flex-direction: column; gap: 8px;">
             <button id="btn-about" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; transition: all 0.2s ease; border-radius: 8px; font-family: inherit;">About ecoli.bio</button>
-            <hr class="drawer-divider" style="margin-top: 12px; margin-left: -4px; margin-right: -4px;" />
+            <button id="btn-terms" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; transition: all 0.2s ease; border-radius: 8px; font-family: inherit;">Terms of use</button>
+            <button id="btn-privacy" class="btn btn-secondary" style="display: inline-flex; width: 100%; height: 38px; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; transition: all 0.2s ease; border-radius: 8px; font-family: inherit;">Privacy policy</button>
+            <hr class="drawer-divider" style="margin-top: 4px; margin-left: -4px; margin-right: -4px;" />
           </div>
 
           
