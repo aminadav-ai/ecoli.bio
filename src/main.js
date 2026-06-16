@@ -794,7 +794,7 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
           playPauseBtn.textContent = '▶ Play';
           playPauseBtn.className = 'btn btn-secondary';
         }
-        showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+        showToast('Insufficient credits. Please refill your account.', 'error');
         await checkAuthStatus();
       } else if (res.status === 403 && errData.error && (errData.error.toLowerCase().includes('limit') || errData.error.toLowerCase().includes('tick'))) {
         isPaused = true;
@@ -5651,7 +5651,7 @@ function connectSessionWebSocket() {
             playPauseBtn.textContent = '▶ Play';
             playPauseBtn.className = 'btn btn-secondary';
           }
-          showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+          showToast('Insufficient credits. Please refill your account.', 'error');
           checkAuthStatus();
         } else {
           showToast(data.message || 'An error occurred.', 'error');
@@ -7536,7 +7536,7 @@ async function sendChatMessage(customMessage = null) {
 
       const err = await res.json().catch(() => ({}));
       if (res.status === 402 || err.error === 'insufficient_credits') {
-        showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+        showToast('Insufficient credits. Please refill your account.', 'error');
         await checkAuthStatus();
       } else if (res.status === 403) {
         appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
