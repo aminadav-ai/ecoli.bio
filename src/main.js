@@ -6258,6 +6258,15 @@ function showToast(message, type = 'success', options = {}) {
     return el;
   })();
 
+  // Prevent duplicate toast messages
+  const existingToasts = container.querySelectorAll('.toast');
+  for (const existingToast of existingToasts) {
+    const textSpan = existingToast.querySelector('span:last-child');
+    if (textSpan && textSpan.textContent === message) {
+      return;
+    }
+  }
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.style.background = 'rgba(15, 23, 42, 0.9)';
