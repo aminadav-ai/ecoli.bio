@@ -5831,10 +5831,12 @@ async function loadChatHistory() {
           }
           
           // Scroll to bottom after loading new history
-          chatMessages.scrollTop = chatMessages.scrollHeight;
+          scrollChatToBottom();
         } else {
           // No new messages - just restore or maintain scroll position
-          if (lastChatScrollTop !== null) {
+          if (isAiTyping) {
+            scrollChatToBottom();
+          } else if (lastChatScrollTop !== null) {
             chatMessages.scrollTop = lastChatScrollTop;
           }
           // Ensure loader visibility matches current typing state
@@ -5852,7 +5854,7 @@ async function loadChatHistory() {
                 </div>
               `;
               chatMessages.appendChild(newLoader);
-              chatMessages.scrollTop = chatMessages.scrollHeight;
+              scrollChatToBottom();
             }
           } else {
             if (loaderEl) {
@@ -7463,6 +7465,7 @@ async function sendChatMessage(customMessage = null) {
 
   // Show typing loader
   isAiTyping = true;
+  lastChatScrollTop = null; // Reset scroll position so loadChatHistory doesn't scroll us back up
   const chatMessages = document.getElementById('ai-chat-messages');
   const loaderDiv = document.createElement('div');
   loaderDiv.id = 'ai-chat-typing-loader';
@@ -7475,7 +7478,7 @@ async function sendChatMessage(customMessage = null) {
     </div>
   `;
   chatMessages.appendChild(loaderDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollChatToBottom();
 
   try {
     const context = getSimulationContext();
@@ -7571,6 +7574,7 @@ Please evaluate my answer for biological correctness based on the current metabo
 
   // Show typing loader
   isAiTyping = true;
+  lastChatScrollTop = null; // Reset scroll position so loadChatHistory doesn't scroll us back up
   const chatMessages = document.getElementById('ai-chat-messages');
   const loaderDiv = document.createElement('div');
   loaderDiv.id = 'ai-chat-typing-loader';
@@ -7583,7 +7587,7 @@ Please evaluate my answer for biological correctness based on the current metabo
     </div>
   `;
   chatMessages.appendChild(loaderDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollChatToBottom();
 
   try {
     const context = getSimulationContext();
@@ -7689,6 +7693,16 @@ function addCopyButton(messageElement, textToCopy) {
   messageElement.appendChild(copyBtn);
 }
 
+function scrollChatToBottom() {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (chatMessages) {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 50);
+  }
+}
+
 function appendUserMessage(text) {
   const chatMessages = document.getElementById('ai-chat-messages');
   if (!chatMessages) return;
@@ -7705,7 +7719,7 @@ function appendUserMessage(text) {
   addCopyButton(div, text);
 
   chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollChatToBottom();
 }
 
 function escapeHtml(unsafe) {
@@ -7853,7 +7867,7 @@ function appendModelMessage(text) {
       scrollBottomBtn.classList.add('new-message');
     }
   } else {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    scrollChatToBottom();
   }
 }
 
