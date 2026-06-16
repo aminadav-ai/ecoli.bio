@@ -154,7 +154,8 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      solverTicks: user.solver_ticks || 0
+      solverTicks: user.solver_ticks || 0,
+      credits: user.credits !== undefined ? user.credits : 250.0
     }
   };
 }
@@ -270,7 +271,8 @@ export async function getUserStatus(db, token, ip, guestId, timeZone, googleClie
       autoRenew: !!user.auto_renew,
       solverTicks: user.solver_ticks || 0,
       dailySolverTicks: dailyTicks,
-      remainingSolverTicks: Math.max(0, 200 - dailyTicks)
+      remainingSolverTicks: Math.max(0, 200 - dailyTicks),
+      credits: user.credits !== undefined ? user.credits : 250.0
     } : null,
     limit: {
       max: limitMax,
@@ -354,12 +356,23 @@ export async function bulkIncrementUserStats(db, updates) {
   if (!updates || updates.length === 0) return;
   try {
     const statements = updates.map(item => 
-      db.prepare('UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + ?, daily_solver_ticks = COALESCE(daily_solver_ticks, 0) + ? WHERE email = ?')
-        .bind(item.ticks, item.ticks, item.email)
+      db.prepare('UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + ?, daily_solver_ticks = COALESCE(daily_solver_ticks, 0) + ?, credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?')
+        .bind(item.ticks, item.ticks, item.ticks, item.email)
     );
     await db.batch(statements);
   } catch (err) {
     console.error('[D1 DB] Failed to bulk increment user stats:', err);
+  }
+}
+
+// 13b. Deduct user credits (for AI query or other operations)
+export async function deductUserCredits(db, email, amount) {
+  try {
+    await db.prepare(
+      'UPDATE users SET credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?'
+    ).bind(amount, email).run();
+  } catch (err) {
+    console.error('[D1 DB] Failed to deduct user credits:', err);
   }
 }
 

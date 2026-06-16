@@ -34,7 +34,8 @@ import {
   getExperimentCount,
   getOrResetUserDailyTicks,
   logExperimentAction,
-  getExperimentLogs
+  getExperimentLogs,
+  deductUserCredits
 } from './d1_db.js';
 
 // ==========================================
@@ -68,6 +69,7 @@ export class SolverDO {
     this.totalSolverTicks = 0;
     this.dailySolverTicks = 0;
     this.alarmScheduled = false;
+    this.credits = undefined;
 
     // Block DO concurrency until WASM solver is loaded and state is restored
     this.state.blockConcurrencyWhile(async () => {
@@ -206,6 +208,14 @@ export class SolverDO {
     
     try {
       while (!this.stabilized && this.ticksRun < 100 && this.isSolving) {
+        if (this.userEmail && this.credits !== undefined && this.credits <= 0) {
+          this.broadcast({
+            type: "ERROR",
+            error: "insufficient_credits",
+            message: "Insufficient credits. Please refill your account."
+          });
+          break;
+        }
         const currentParams = {};
         for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
           if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
@@ -264,6 +274,9 @@ export class SolverDO {
           this.bufferedTicks += newTicks;
           this.totalSolverTicks += newTicks;
           this.dailySolverTicks += newTicks;
+          if (this.credits !== undefined) {
+            this.credits = Math.max(0.0, this.credits - newTicks);
+          }
           await this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
           
           if (!this.alarmScheduled) {
@@ -285,7 +298,8 @@ export class SolverDO {
           changingReactions: result.changingReactions,
           stabilized: result.stabilized,
           solverTicks: this.totalSolverTicks || 0,
-          dailySolverTicks: this.dailySolverTicks || 0
+          dailySolverTicks: this.dailySolverTicks || 0,
+          credits: this.credits !== undefined ? this.credits : 0.0
         });
         
         this.stabilized = result.stabilized;
@@ -459,6 +473,18 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
         }
         
+        if (this.userEmail) {
+          try {
+            const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
+            this.credits = user ? user.credits : 250.0;
+          } catch (err) {
+            console.error('[DO INIT] Failed to load user credits:', err);
+            this.credits = 0.0;
+          }
+        } else {
+          this.credits = 0.0;
+        }
+
         const dbSession = await getSimulationSession(this.env.DB, this.sessionId);
         if (dbSession) {
           this.baseName = dbSession.base_name;
@@ -491,7 +517,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           name: this.name,
           solverTicks: this.totalSolverTicks || 0,
           dailySolverTicks: this.dailySolverTicks || 0,
-          isSolving: !!this.isSolving
+          isSolving: !!this.isSolving,
+          credits: this.credits !== undefined ? this.credits : 250.0
         }));
         
         if (this.isFreshSession) {
@@ -499,6 +526,17 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           this.state.waitUntil(this.startSolveLoop());
         }
         return;
+      }
+      
+      if (data.type === 'UPDATE_PARAMETER' || data.type === 'RESET_SIMULATION' || data.type === 'APPLY_SCENARIO') {
+        if (this.userEmail && this.credits !== undefined && this.credits <= 0) {
+          ws.send(JSON.stringify({
+            type: "ERROR",
+            error: "insufficient_credits",
+            message: "Insufficient credits. Please refill your account."
+          }));
+          return;
+        }
       }
       
       if (data.type === 'UPDATE_PARAMETER') {
@@ -696,6 +734,12 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       if (data.dailyTicks !== undefined) {
         this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
       }
+      if (data.userEmail) {
+        this.userEmail = data.userEmail;
+        if (data.credits !== undefined && (this.credits === undefined || this.credits === null)) {
+          this.credits = data.credits;
+        }
+      }
 
       const newTicks = this.simulation.solverTicksBuffer || 0;
       if (newTicks > 0 && data.userEmail) {
@@ -704,6 +748,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.userEmail = data.userEmail;
         this.totalSolverTicks += newTicks;
         this.dailySolverTicks += newTicks;
+        if (this.credits !== undefined) {
+          this.credits = Math.max(0.0, this.credits - newTicks);
+        }
         this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
       }
 
@@ -721,6 +768,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
       result.solverTicks = this.totalSolverTicks || 0;
       result.dailySolverTicks = this.dailySolverTicks || 0;
+      result.credits = this.credits !== undefined ? this.credits : 0.0;
 
       return new Response(JSON.stringify(result), {
         headers: { 'Content-Type': 'application/json' }
@@ -846,10 +894,14 @@ async function trackWorkerChatQuery(env, request, email, message, usageMetadata 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
-    // 1. Force HTTPS (except for localhost/127.0.0.1)
+    // 1. Force HTTPS (except for local dev environment or localhost/127.0.0.1)
     const proto = request.headers.get('x-forwarded-proto') || url.protocol.slice(0, -1);
-    if (proto === 'http' && !url.hostname.includes('localhost') && !url.hostname.includes('127.0.0.1')) {
+    const clientIp = request.headers.get('cf-connecting-ip') || '';
+    if (proto === 'http' && 
+        !url.hostname.includes('localhost') && 
+        !url.hostname.includes('127.0.0.1') && 
+        clientIp !== '127.0.0.1' && 
+        clientIp !== '::1') {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
@@ -940,6 +992,17 @@ export default {
           });
         }
 
+        // Check if user has sufficient credits
+        if (user.credits <= 0) {
+          return new Response(JSON.stringify({ 
+            error: 'insufficient_credits', 
+            message: 'Insufficient credits. Please refill your account.' 
+          }), {
+            status: 402,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
         const timeZone = request.headers.get('x-timezone') || 'UTC';
         const dailyTicks = await getOrResetUserDailyTicks(env.DB, user, timeZone);
         if (dailyTicks >= 200) {
@@ -970,7 +1033,8 @@ export default {
             scenario: body.scenario,
             userEmail: user.email,
             dbTicks: user.solver_ticks || 0,
-            dailyTicks: dailyTicks
+            dailyTicks: dailyTicks,
+            credits: user.credits
           })
         });
 
@@ -983,6 +1047,7 @@ export default {
         
         result.solverTicks = result.solverTicks !== undefined ? result.solverTicks : (user.solver_ticks || 0);
         result.dailySolverTicks = result.dailySolverTicks !== undefined ? result.dailySolverTicks : dailyTicks;
+        result.credits = result.credits !== undefined ? result.credits : user.credits;
         result.lastTimestamp = Date.now();
 
         if (body.logAction) {
@@ -1217,6 +1282,15 @@ export default {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
+        if (limitCheck.user.credits <= 0) {
+          return new Response(JSON.stringify({ 
+            error: 'insufficient_credits', 
+            message: 'Insufficient credits. Please refill your account.' 
+          }), {
+            status: 402,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
         if (!limitCheck.allowed) {
           return new Response(JSON.stringify({ error: 'Limit Reached' }), {
             status: 403,
@@ -1301,9 +1375,27 @@ Instructions:
 
         // Track Chat Query in Telegram
         const usageMetadata = data.usageMetadata;
+        let creditsCost = 0.0;
+        if (usageMetadata) {
+          const promptTokens = usageMetadata.promptTokenCount || 0;
+          const candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+          const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
+          
+          const regularTokens = (promptTokens - cachedTokens) + candidatesTokens;
+          creditsCost = (regularTokens * (15 / 11000)) + (cachedTokens * (15 / 44000));
+        }
+
+        await deductUserCredits(env.DB, limitCheck.user.email, creditsCost);
+        const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(limitCheck.user.email).first();
+        const updatedCredits = updatedUser ? updatedUser.credits : 0.0;
+
         ctx.waitUntil(trackWorkerChatQuery(env, request, limitCheck.user.email, message, usageMetadata));
 
-        return new Response(JSON.stringify({ reply, count: limitCheck.count }), {
+        return new Response(JSON.stringify({ 
+          reply, 
+          count: limitCheck.count,
+          credits: updatedCredits
+        }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }

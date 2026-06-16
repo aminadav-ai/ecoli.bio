@@ -740,6 +740,9 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
         if (data.solverLoad !== undefined) {
           userProfile.solverLoad = data.solverLoad;
         }
+        if (data.credits !== undefined) {
+          userProfile.credits = data.credits;
+        }
       }
 
       updateSolverStatusUI();
@@ -783,7 +786,16 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
       }
     } else {
       const errData = await res.json().catch(() => ({}));
-      if (res.status === 403 && errData.error && (errData.error.toLowerCase().includes('limit') || errData.error.toLowerCase().includes('tick'))) {
+      if (res.status === 402 || (errData.error && errData.error === 'insufficient_credits')) {
+        isPaused = true;
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        if (playPauseBtn) {
+          playPauseBtn.textContent = '▶ Play';
+          playPauseBtn.className = 'btn btn-secondary';
+        }
+        showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+        await checkAuthStatus();
+      } else if (res.status === 403 && errData.error && (errData.error.toLowerCase().includes('limit') || errData.error.toLowerCase().includes('tick'))) {
         isPaused = true;
         const playPauseBtn = document.getElementById('play-pause-btn');
         if (playPauseBtn) {
@@ -5566,6 +5578,22 @@ function connectSessionWebSocket() {
     try {
       const data = JSON.parse(event.data);
       
+      if (data.type === 'ERROR') {
+        if (data.error === 'insufficient_credits') {
+          isPaused = true;
+          const playPauseBtn = document.getElementById('play-pause-btn');
+          if (playPauseBtn) {
+            playPauseBtn.textContent = '▶ Play';
+            playPauseBtn.className = 'btn btn-secondary';
+          }
+          showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+          checkAuthStatus();
+        } else {
+          showToast(data.message || 'An error occurred.', 'error');
+        }
+        return;
+      }
+
       if (data.type === 'INIT_STATE') {
         console.log('[WS] Received initial simulation state:', data);
         if (data.state && simulation) {
@@ -5583,6 +5611,9 @@ function connectSessionWebSocket() {
           }
           if (data.dailySolverTicks !== undefined) {
             userProfile.dailySolverTicks = data.dailySolverTicks;
+          }
+          if (data.credits !== undefined) {
+            userProfile.credits = data.credits;
           }
           updateUserStatusUI();
         }
@@ -5611,6 +5642,9 @@ function connectSessionWebSocket() {
           }
           if (data.dailySolverTicks !== undefined) {
             userProfile.dailySolverTicks = data.dailySolverTicks;
+          }
+          if (data.credits !== undefined) {
+            userProfile.credits = data.credits;
           }
         }
 
@@ -6100,7 +6134,7 @@ function closeAuthModal() {
   }
 }
 
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', options = {}) {
   const container = document.getElementById('toast-container') || (() => {
     const el = document.createElement('div');
     el.id = 'toast-container';
@@ -6155,14 +6189,29 @@ function showToast(message, type = 'success') {
   toast.style.opacity = '1';
   toast.style.transform = 'translateY(0)';
 
-  // Remove toast after 3 seconds
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-20px)';
+  if (options && options.persistentUntilClick) {
+    // Dismiss toast when user clicks anywhere on the page
     setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }, 3000);
+      const dismiss = () => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        document.removeEventListener('click', dismiss);
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      };
+      document.addEventListener('click', dismiss);
+    }, 50);
+  } else {
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px)';
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
+    }, 3000);
+  }
 }
 
 function showConfirm(message) {
@@ -6511,6 +6560,10 @@ function updateUserStatusUI() {
         if (solverLimitEl) {
           solverLimitEl.textContent = `Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200`;
         }
+        const creditsEl = existingDropdown.querySelector('.credits-balance');
+        if (creditsEl) {
+          creditsEl.textContent = userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00';
+        }
       } else {
         const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
         const isDropdownHidden = true;
@@ -6528,6 +6581,13 @@ function updateUserStatusUI() {
               <div class="user-dropdown-email">${userProfile.email || ''}</div>
               <div id="user-dropdown-chat-limits" class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
               <div id="user-dropdown-solver-limits" class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
+              <div class="user-dropdown-credits-card">
+                <span class="credits-icon">🪙</span>
+                <div class="credits-details">
+                  <span class="credits-balance">${userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00'}</span>
+                  <span class="credits-label">Credits</span>
+                </div>
+              </div>
             </div>
             <hr class="dropdown-divider" />
             <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
@@ -7357,17 +7417,26 @@ async function sendChatMessage(customMessage = null) {
       if (typeof data.count !== 'undefined') {
         currentLimit.count = data.count;
         currentLimit.remaining = Math.max(0, currentLimit.max - data.count);
-        updateUserStatusUI();
       }
+      if (data.credits !== undefined) {
+        userProfile.credits = data.credits;
+      }
+      updateUserStatusUI();
     } else {
-      if (res.status === 403) {
+      const loader = document.getElementById('ai-chat-typing-loader');
+      if (loader) loader.remove();
+
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 402 || err.error === 'insufficient_credits') {
+        showToast('Insufficient credits. Please refill your account.', 'error', { persistentUntilClick: true });
+        await checkAuthStatus();
+      } else if (res.status === 403) {
         appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
         await checkAuthStatus();
       } else if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
         await checkAuthStatus();
       } else {
-        const err = await res.json();
         appendModelMessage(`Error: ${err.error || 'Failed to send query to AI.'}`);
       }
     }
