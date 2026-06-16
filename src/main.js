@@ -2427,12 +2427,14 @@ function isMetaboliteTransportable(biggId) {
 /**
  * Event handler triggered when a user clicks on a metabolite circle in Pixi canvas.
  */
-function handleMetaboliteSelect(node) {
+function handleMetaboliteSelect(node, skipOpenPanel = false) {
   if (!node) {
     closeAllOtherPanels(null);
     return;
   }
-  closeAllOtherPanels('inspector');
+  if (!skipOpenPanel) {
+    closeAllOtherPanels('inspector');
+  }
 
   selectedMetaboliteId = node.biggId;
   selectedReactionId = null;
@@ -2451,7 +2453,7 @@ function handleMetaboliteSelect(node) {
   }
 
   // If on mobile viewport, make the inspector panel active and highlight the bottom nav button
-  if (window.innerWidth <= 768) {
+  if (window.innerWidth <= 768 && !skipOpenPanel) {
     closeAllOtherPanels('inspector');
   }
 
@@ -2493,8 +2495,10 @@ function handleMetaboliteSelect(node) {
 /**
  * Event handler triggered when a user clicks on a reaction badge in Pixi canvas.
  */
-function handleReactionSelect(rxn) {
-  closeAllOtherPanels('inspector');
+function handleReactionSelect(rxn, skipOpenPanel = false) {
+  if (!skipOpenPanel) {
+    closeAllOtherPanels('inspector');
+  }
   selectedReactionId = rxn.biggId;
   selectedMetaboliteId = null;
   chartHistory = [];
@@ -4562,18 +4566,27 @@ function performSearch(query) {
         <span class="search-result-badge ${badgeClass}">${match.type}</span>
       `;
 
-      // Select, highlight, center and open inspector for matching element
+      // Select, center, zoom and highlight matching element (preventing full inspector panel on mobile)
       li.addEventListener('click', () => {
+        const isMobile = window.innerWidth <= 768;
+        const targetZoom = isMobile ? 0.45 : 0.85;
+
         if (match.type === 'metabolite') {
           renderer.selectMetabolite(match.node.id);
-          handleMetaboliteSelect(match.node);
-          renderer.focusOnCoordinates(match.node.x, match.node.y, 0.85);
+          handleMetaboliteSelect(match.node, isMobile);
+          renderer.focusOnCoordinates(match.node.x, match.node.y, targetZoom);
         } else {
           renderer.selectReaction(match.reaction.id);
-          handleReactionSelect(match.reaction);
-          renderer.focusOnCoordinates(match.reaction.labelX, match.reaction.labelY, 0.85);
+          handleReactionSelect(match.reaction, isMobile);
+          renderer.focusOnCoordinates(match.reaction.labelX, match.reaction.labelY, targetZoom);
         }
         hideSearchResults();
+
+        // Close search modal overlay on mobile
+        const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+        if (mobileSearchOverlay) {
+          mobileSearchOverlay.classList.add('hidden');
+        }
       });
 
       resultsList.appendChild(li);

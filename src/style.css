@@ -2682,9 +2682,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 
-/* Hide experiments and settings containers globally from header as they are in the burger drawer */
+/* Hide experiments, settings and mobile search toggle containers globally from header */
 #experiments-desktop-parent,
-#settings-header-container {
+#settings-header-container,
+.mobile-search-toggle-btn {
   display: none !important;
 }
 
@@ -5196,7 +5197,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   display: flex;
   flex-direction: column;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7);
-  margin-top: 10vh;
+  margin-top: 12px;
   animation: mobile-search-zoom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
