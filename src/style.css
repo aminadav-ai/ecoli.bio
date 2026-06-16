@@ -5340,5 +5340,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .header-credits-badge .credits-icon {
     font-size: 11px;
   }
+
+  .solver-dropdown,
+  .warnings-dropdown {
+    left: 0;
+    right: auto;
+    width: 290px;
+  }
 }
 
