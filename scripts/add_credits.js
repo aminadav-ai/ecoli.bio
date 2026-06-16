@@ -50,17 +50,21 @@ console.log(` User Email:        ${email}`);
 console.log(` Amount:             ${amount >= 0 ? '+' : ''}${amount} credits`);
 console.log('--------------------------------------------------------------------------------');
 
-// Extract ADMIN_SECRET from wrangler.toml
+// Extract ADMIN_SECRET from env, .dev.vars, .env, or wrangler.toml
 let adminSecret = process.env.ADMIN_SECRET;
 if (!adminSecret) {
-  try {
-    const configContent = readFileSync('wrangler.toml', 'utf-8');
-    const match = configContent.match(/ADMIN_SECRET\s*=\s*"([^"]+)"/);
-    if (match) {
-      adminSecret = match[1];
+  const filesToTry = ['.dev.vars', '.env', 'wrangler.toml'];
+  for (const file of filesToTry) {
+    try {
+      const configContent = readFileSync(file, 'utf-8');
+      const match = configContent.match(/ADMIN_SECRET\s*=\s*["']?([^"'\s]+)["']?/);
+      if (match) {
+        adminSecret = match[1];
+        break;
+      }
+    } catch (err) {
+      // Ignore and try next file
     }
-  } catch (err) {
-    // Ignore error
   }
 }
 if (!adminSecret) {
