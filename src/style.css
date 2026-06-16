@@ -2682,6 +2682,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 
+/* Hide experiments and settings containers globally from header as they are in the burger drawer */
+#experiments-desktop-parent,
+#settings-header-container {
+  display: none !important;
+}
+
 /* Mobile Responsive Styling */
 @media (max-width: 768px) {
   /* Hide desktop header details and simplify logo */

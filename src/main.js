@@ -2297,23 +2297,18 @@ function checkViewportChange() {
   const width = window.innerWidth;
   const isMobile = width <= 768;
 
+  if (experimentsContainer && mobileExperiments && !mobileExperiments.contains(experimentsContainer)) {
+    mobileExperiments.appendChild(experimentsContainer);
+  }
+  if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
+    mobileSettings.appendChild(settingsBody);
+  }
+
   if (isMobile) {
-    if (experimentsContainer && mobileExperiments && !mobileExperiments.contains(experimentsContainer)) {
-      mobileExperiments.appendChild(experimentsContainer);
-    }
-    if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
-      mobileSettings.appendChild(settingsBody);
-    }
     if (mainSearchContainer && mobileSearchPlaceholder && !mobileSearchPlaceholder.contains(mainSearchContainer)) {
       mobileSearchPlaceholder.appendChild(mainSearchContainer);
     }
   } else {
-    if (experimentsContainer && experimentsDesktopParent && !experimentsDesktopParent.contains(experimentsContainer)) {
-      experimentsDesktopParent.appendChild(experimentsContainer);
-    }
-    if (settingsBody && settingsDesktopParent && !settingsDesktopParent.contains(settingsBody)) {
-      settingsDesktopParent.appendChild(settingsBody);
-    }
     if (mainSearchContainer && searchDesktopParent && !searchDesktopParent.contains(mainSearchContainer)) {
       searchDesktopParent.appendChild(mainSearchContainer);
     }
