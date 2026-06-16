@@ -325,6 +325,10 @@ function closeAllOverlays() {
   if (privacyModal) {
     privacyModal.classList.add('hidden');
   }
+  const creditsModal = document.getElementById('credits-modal');
+  if (creditsModal) {
+    creditsModal.classList.add('hidden');
+  }
 }
 
 // Pinned Reactions state
@@ -6583,6 +6587,26 @@ function closePrivacyModal() {
   }
 }
 
+function openCreditsModal() {
+  const modal = document.getElementById('credits-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closeCreditsModal() {
+  const modal = document.getElementById('credits-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+}
+
 async function handleFeedbackSubmit() {
   const textarea = document.getElementById('feedback-text');
   const btn = document.getElementById('btn-submit-feedback');
@@ -7192,6 +7216,41 @@ function setupScenariosAndChat() {
     privacyModal.addEventListener('click', (e) => {
       if (e.target === privacyModal) {
         closePrivacyModal();
+      }
+    });
+  }
+
+  // Credits Modal event listeners
+  const btnCloseCredits = document.getElementById('btn-close-credits');
+  if (btnCloseCredits) {
+    btnCloseCredits.addEventListener('click', () => {
+      closeCreditsModal();
+    });
+  }
+
+  const btnCloseCreditsOk = document.getElementById('btn-close-credits-ok');
+  if (btnCloseCreditsOk) {
+    btnCloseCreditsOk.addEventListener('click', () => {
+      closeCreditsModal();
+    });
+  }
+
+  const creditsModal = document.getElementById('credits-modal');
+  if (creditsModal) {
+    creditsModal.addEventListener('click', (e) => {
+      if (e.target === creditsModal) {
+        closeCreditsModal();
+      }
+    });
+  }
+
+  const headerProfileContainer = document.getElementById('user-profile-header-container');
+  if (headerProfileContainer) {
+    headerProfileContainer.addEventListener('click', (e) => {
+      const badge = e.target.closest('.header-credits-badge');
+      if (badge) {
+        e.stopPropagation();
+        openCreditsModal();
       }
     });
   }

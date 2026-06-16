@@ -5305,6 +5305,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 600;
   transition: all 0.2s ease;
   user-select: none;
+  cursor: pointer;
 }
 
 .header-credits-badge:hover {
