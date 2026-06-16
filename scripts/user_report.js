@@ -46,8 +46,6 @@ const sql = `
     created_at, 
     premium_tier, 
     visits, 
-    questions, 
-    solver_ticks, 
     credits, 
     last_visit 
   FROM users 
@@ -57,15 +55,13 @@ const sql = `
 const users = runQuery(sql);
 
 console.log('--------------------------------------------------------------------------------------------------------');
-console.log('Email                           Name                 Created      Tier    Visits  Questions   Credits     Ticks');
+console.log('Email                           Name                 Created      Tier    Visits  Credits');
 console.log('--------------------------------------------------------------------------------------------------------');
 
 let totalUsers = 0;
 let premiumBasicCount = 0;
 let premiumProCount = 0;
 let totalVisits = 0;
-let totalQuestions = 0;
-let totalTicks = 0;
 let totalCredits = 0.0;
 
 if (users.length === 0) {
@@ -97,17 +93,13 @@ if (users.length === 0) {
     tier = tier.padEnd(7);
 
     const visits = String(user.visits || 0).padEnd(7);
-    const questions = String(user.questions || 0).padEnd(11);
     const userCreditsVal = user.credits !== null && user.credits !== undefined ? parseFloat(user.credits) : 250.0;
     const credits = userCreditsVal.toFixed(2).padEnd(11);
-    const ticks = String(user.solver_ticks || 0);
 
     totalVisits += (user.visits || 0);
-    totalQuestions += (user.questions || 0);
-    totalTicks += (user.solver_ticks || 0);
     totalCredits += userCreditsVal;
 
-    console.log(`${email} ${name} ${created} ${tier} ${visits} ${questions} ${credits} ${ticks}`);
+    console.log(`${email} ${name} ${created} ${tier} ${visits} ${credits}`);
   }
 }
 
@@ -117,8 +109,6 @@ console.log(`- Total Registered Users:  ${totalUsers} (Limit: ${MAX_USERS_LIMIT}
 console.log(`- Premium Basic Users:     ${premiumBasicCount}`);
 console.log(`- Premium Pro Users:       ${premiumProCount}`);
 console.log(`- Total Visits:            ${totalVisits}`);
-console.log(`- Total Questions Asked:   ${totalQuestions}`);
-console.log(`- Total Solver Ticks:      ${totalTicks}`);
 console.log(`- Total User Credits:      ${totalCredits.toFixed(2)} (Avg: ${(totalUsers > 0 ? totalCredits / totalUsers : 0.0).toFixed(2)})`);
 console.log('========================================================================================================');
 

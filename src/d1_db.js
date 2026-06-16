@@ -38,65 +38,7 @@ export async function getUserByToken(db, token) {
   return null;
 }
 
-// 2. Check message limits & increment
-export async function checkLimitAndIncrement(db, ip, guestId, authToken, timeZone) {
-  const user = await getUserByToken(db, authToken);
-  const isPremium = isPremiumActive(user);
-  let limitMax = user ? (isPremium ? (user.premium_tier === 2 ? 500 : 100) : 5) : 2;
 
-  const identifier = user ? `user:${user.email}` : `guest:${guestId || ip || 'unknown'}`;
-
-  try {
-    const record = await db.prepare('SELECT * FROM chat_limits WHERE identifier = ?').bind(identifier).first();
-    const now = new Date();
-
-    if (record) {
-      const lastReset = new Date(record.last_reset);
-      const activeTz = record.timezone || timeZone;
-      
-      let shouldReset = false;
-      if (activeTz) {
-        const resetDateStr = getLocalDateString(lastReset, activeTz);
-        const nowDateStr = getLocalDateString(now, activeTz);
-        if (resetDateStr && nowDateStr) {
-          shouldReset = (resetDateStr !== nowDateStr);
-        } else {
-          const diffHrs = (now - lastReset) / (1000 * 60 * 60);
-          shouldReset = (diffHrs >= 24);
-        }
-      } else {
-        const diffHrs = (now - lastReset) / (1000 * 60 * 60);
-        shouldReset = (diffHrs >= 24);
-      }
-
-      if (shouldReset) {
-        await db.prepare(
-          'UPDATE chat_limits SET count = 1, last_reset = ?, timezone = ? WHERE identifier = ?'
-        ).bind(now.toISOString(), timeZone || 'UTC', identifier).run();
-        return { allowed: true, isPremium, user, count: 1 };
-      } else {
-        if (record.count >= limitMax) {
-          return { allowed: false, isPremium, user, count: record.count };
-        } else {
-          const newCount = record.count + 1;
-          await db.prepare(
-            'UPDATE chat_limits SET count = ? WHERE identifier = ?'
-          ).bind(newCount, identifier).run();
-          return { allowed: true, isPremium, user, count: newCount };
-        }
-      }
-    } else {
-      await db.prepare(
-        'INSERT INTO chat_limits (identifier, count, last_reset, timezone) VALUES (?, ?, ?, ?) ' +
-        'ON CONFLICT (identifier) DO UPDATE SET count = 1, last_reset = excluded.last_reset, timezone = excluded.timezone'
-      ).bind(identifier, 1, now.toISOString(), timeZone || 'UTC').run();
-      return { allowed: true, isPremium, user, count: 1 };
-    }
-  } catch (err) {
-    console.error('[D1 DB] Check limit error:', err);
-    return { allowed: true, isPremium, user, count: 0 };
-  }
-}
 
 // 3. Google OAuth Token Verification & User Signup
 export async function verifyGoogleTokenAndLogin(db, credential) {
@@ -154,110 +96,15 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      solverTicks: user.solver_ticks || 0,
       credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
     }
   };
 }
 
-export async function getOrResetUserDailyTicks(db, user, timeZone) {
-  if (!user) return 0;
-  
-  let activeTz = user.timezone;
-  if (!activeTz && timeZone) {
-    activeTz = timeZone;
-    try {
-      await db.prepare('UPDATE users SET timezone = ? WHERE email = ?').bind(activeTz, user.email).run();
-      user.timezone = activeTz;
-    } catch (err) {
-      console.error('[D1 DB] Failed to save user timezone:', err);
-    }
-  }
-  if (!activeTz) {
-    activeTz = 'UTC';
-  }
-
-  const now = new Date();
-  const lastResetStr = user.last_solver_reset;
-  
-  let shouldReset = false;
-  if (lastResetStr) {
-    const lastReset = new Date(lastResetStr);
-    const resetDateStr = getLocalDateString(lastReset, activeTz);
-    const nowDateStr = getLocalDateString(now, activeTz);
-    if (resetDateStr && nowDateStr) {
-      shouldReset = (resetDateStr !== nowDateStr);
-    } else {
-      const diffHrs = (now - lastReset) / (1000 * 60 * 60);
-      shouldReset = (diffHrs >= 24);
-    }
-  } else {
-    shouldReset = true;
-  }
-  
-  if (shouldReset) {
-    try {
-      await db.prepare(
-        'UPDATE users SET daily_solver_ticks = 0, last_solver_reset = ? WHERE email = ?'
-      ).bind(now.toISOString(), user.email).run();
-      user.daily_solver_ticks = 0;
-      user.last_solver_reset = now.toISOString();
-    } catch (err) {
-      console.error('[D1 DB] Failed to reset daily solver ticks:', err);
-    }
-  }
-  
-  return user.daily_solver_ticks || 0;
-}
-
-// 4. Get session status, user profile & remaining limits
+// 4. Get session status & user profile (without limits)
 export async function getUserStatus(db, token, ip, guestId, timeZone, googleClientId = null) {
   const user = await getUserByToken(db, token);
-  
-  let limitMax = 2; // Default Guest limit
   const isPremium = user && isPremiumActive(user);
-  if (user) {
-    if (isPremium) {
-      const tier = user.premium_tier || 1;
-      limitMax = tier === 2 ? 500 : 100;
-    } else {
-      limitMax = 5; // Authorized Free limit
-    }
-  }
-
-  const identifier = user ? `user:${user.email}` : `guest:${guestId || ip || 'unknown'}`;
-  let count = 0;
-
-  try {
-    const record = await db.prepare('SELECT * FROM chat_limits WHERE identifier = ?').bind(identifier).first();
-    if (record) {
-      const lastReset = new Date(record.last_reset);
-      const activeTz = record.timezone || timeZone;
-      
-      let isExpired = false;
-      if (activeTz) {
-        const resetDateStr = getLocalDateString(lastReset, activeTz);
-        const nowDateStr = getLocalDateString(new Date(), activeTz);
-        if (resetDateStr && nowDateStr) {
-          isExpired = (resetDateStr !== nowDateStr);
-        } else {
-          const diffHrs = (new Date() - lastReset) / (1000 * 60 * 60);
-          isExpired = (diffHrs >= 24);
-        }
-      } else {
-        const diffHrs = (new Date() - lastReset) / (1000 * 60 * 60);
-        isExpired = (diffHrs >= 24);
-      }
-
-      if (!isExpired) {
-        count = record.count;
-      }
-    }
-  } catch (err) {
-    console.error('[D1 DB] Failed to get limit count:', err);
-  }
-
-  const dailyTicks = user ? await getOrResetUserDailyTicks(db, user, timeZone) : 0;
 
   return {
     loggedIn: !!user,
@@ -269,16 +116,8 @@ export async function getUserStatus(db, token, ip, guestId, timeZone, googleClie
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      solverTicks: user.solver_ticks || 0,
-      dailySolverTicks: dailyTicks,
-      remainingSolverTicks: Math.max(0, 200 - dailyTicks),
       credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
-    } : null,
-    limit: {
-      max: limitMax,
-      count,
-      remaining: Math.max(0, limitMax - count)
-    }
+    } : null
   };
 }
 
@@ -307,18 +146,7 @@ export async function incrementUserVisits(db, email) {
   }
 }
 
-// 8. Increment user asked questions count
-export async function incrementUserQuestions(db, email) {
-  try {
-    const user = await db.prepare('SELECT questions FROM users WHERE email = ?').bind(email).first();
-    const questions = ((user ? user.questions : 0) || 0) + 1;
-    await db.prepare(
-      'UPDATE users SET questions = ? WHERE email = ?'
-    ).bind(questions, email).run();
-  } catch (err) {
-    console.error('[D1 DB] Failed to increment user questions:', err);
-  }
-}
+
 
 
 
@@ -351,13 +179,13 @@ export async function getChatHistory(db, identifier, limit = 50) {
   }
 }
 
-// 13. Bulk increment user solver ticks (Batch API)
+// 13. Bulk increment user solver ticks (Batch API) - now only deducts credits
 export async function bulkIncrementUserStats(db, updates) {
   if (!updates || updates.length === 0) return;
   try {
     const statements = updates.map(item => 
-      db.prepare('UPDATE users SET solver_ticks = COALESCE(solver_ticks, 0) + ?, daily_solver_ticks = COALESCE(daily_solver_ticks, 0) + ?, credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?')
-        .bind(item.ticks, item.ticks, item.ticks, item.email)
+      db.prepare('UPDATE users SET credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?')
+        .bind(item.ticks, item.email)
     );
     await db.batch(statements);
   } catch (err) {

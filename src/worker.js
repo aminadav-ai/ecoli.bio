@@ -15,7 +15,6 @@ import {
 
 import { 
   getUserByToken, 
-  checkLimitAndIncrement, 
   verifyGoogleTokenAndLogin, 
   getUserStatus, 
   logoutSession, 
@@ -23,7 +22,6 @@ import {
   getChatHistory, 
   bulkIncrementUserStats,
   incrementUserVisits,
-  incrementUserQuestions,
   recordGuestVisit,
   getSimulationSessions,
   getSimulationSession,
@@ -32,7 +30,6 @@ import {
   deleteSimulationSession,
   deleteChatHistoryForSession,
   getExperimentCount,
-  getOrResetUserDailyTicks,
   logExperimentAction,
   getExperimentLogs,
   deductUserCredits
@@ -66,8 +63,6 @@ export class SolverDO {
     this.pendingLogAction = null;
     this.lastFlushTime = 0;
     this.userEmail = null;
-    this.totalSolverTicks = 0;
-    this.dailySolverTicks = 0;
     this.alarmScheduled = false;
     this.credits = undefined;
 
@@ -268,12 +263,10 @@ export class SolverDO {
         
         // Increment solver ticks
         const newTicks = this.simulation.solverTicksBuffer || 0;
-        console.log(`[DO LOOP] newTicks=${newTicks}, userEmail=${this.userEmail}, totalSolverTicks=${this.totalSolverTicks}`);
+        console.log(`[DO LOOP] newTicks=${newTicks}, userEmail=${this.userEmail}`);
         if (newTicks > 0 && this.userEmail) {
           this.simulation.solverTicksBuffer = 0;
           this.bufferedTicks += newTicks;
-          this.totalSolverTicks += newTicks;
-          this.dailySolverTicks += newTicks;
           if (this.credits !== undefined) {
             this.credits = Math.max(0.0, this.credits - newTicks);
           }
@@ -297,8 +290,8 @@ export class SolverDO {
           changingMetabolites: result.changingMetabolites,
           changingReactions: result.changingReactions,
           stabilized: result.stabilized,
-          solverTicks: this.totalSolverTicks || 0,
-          dailySolverTicks: this.dailySolverTicks || 0,
+          solverTicks: 0,
+          dailySolverTicks: 0,
           credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 0.0
         });
         
@@ -463,15 +456,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       const data = JSON.parse(message);
       
       if (data.type === 'INIT') {
-        const { userEmail, dbTicks, credits } = data;
-        console.log(`[DO INIT] Received userEmail=${userEmail}, dbTicks=${dbTicks}, credits=${credits}. Current totalSolverTicks=${this.totalSolverTicks}`);
+        const { userEmail, credits } = data;
+        console.log(`[DO INIT] Received userEmail=${userEmail}, credits=${credits}`);
         this.userEmail = userEmail || null;
-        if (dbTicks !== undefined) {
-          this.totalSolverTicks = Math.max(this.totalSolverTicks, dbTicks);
-        }
-        if (data.dailyTicks !== undefined) {
-          this.dailySolverTicks = Math.max(this.dailySolverTicks, data.dailyTicks);
-        }
         if (credits !== undefined && credits !== null) {
           this.credits = parseFloat(credits);
         }
@@ -524,8 +511,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           state: serializeSimulation(this.simulation),
           base_name: this.baseName,
           name: this.name,
-          solverTicks: this.totalSolverTicks || 0,
-          dailySolverTicks: this.dailySolverTicks || 0,
+          solverTicks: 0,
+          dailySolverTicks: 0,
           isSolving: !!this.isSolving,
           credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 250.0
         }));
@@ -1012,15 +999,6 @@ export default {
           });
         }
 
-        const timeZone = request.headers.get('x-timezone') || 'UTC';
-        const dailyTicks = await getOrResetUserDailyTicks(env.DB, user, timeZone);
-        if (dailyTicks >= 200) {
-          return new Response(JSON.stringify({ error: 'Daily simulator limit (200 ticks) reached. You can continue the simulation tomorrow.' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
         const sessionId = request.headers.get('x-session-id') || 'default_user';
         const body = await request.json();
 
@@ -1041,8 +1019,8 @@ export default {
             reset: body.reset,
             scenario: body.scenario,
             userEmail: user.email,
-            dbTicks: user.solver_ticks || 0,
-            dailyTicks: dailyTicks,
+            dbTicks: 0,
+            dailyTicks: 0,
             credits: user.credits
           })
         });
@@ -1054,8 +1032,8 @@ export default {
 
         const result = await doRes.json();
         
-        result.solverTicks = result.solverTicks !== undefined ? result.solverTicks : (user.solver_ticks || 0);
-        result.dailySolverTicks = result.dailySolverTicks !== undefined ? result.dailySolverTicks : dailyTicks;
+        result.solverTicks = 0;
+        result.dailySolverTicks = 0;
         result.credits = result.credits !== undefined ? result.credits : user.credits;
         result.lastTimestamp = Date.now();
 
@@ -1284,14 +1262,15 @@ export default {
         const timeZone = request.headers.get('x-timezone');
         const sessionId = request.headers.get('x-session-id');
 
-        const limitCheck = await checkLimitAndIncrement(env.DB, ip, guestId, token, timeZone);
-        if (!limitCheck.user) {
+        const user = await getUserByToken(env.DB, token);
+        if (!user) {
           return new Response(JSON.stringify({ error: 'Authentication required. Please sign in.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
-        if (limitCheck.user.credits <= 0) {
+        const userCredits = (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0;
+        if (userCredits <= 0) {
           return new Response(JSON.stringify({ 
             error: 'insufficient_credits', 
             message: 'Insufficient credits. Please refill your account.' 
@@ -1300,19 +1279,10 @@ export default {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
-        if (!limitCheck.allowed) {
-          return new Response(JSON.stringify({ error: 'Limit Reached' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
-        // Increment questions count asynchronously
-        ctx.waitUntil(incrementUserQuestions(env.DB, limitCheck.user.email));
 
         const identifier = sessionId 
-          ? `user:${limitCheck.user.email}:${sessionId}` 
-          : `user:${limitCheck.user.email}`;
+          ? `user:${user.email}:${sessionId}` 
+          : `user:${user.email}`;
         ctx.waitUntil(saveChatMessage(env.DB, identifier, 'user', message, context));
 
         const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the ecoli.bio portal (E. coli Central Metabolism Lab).
@@ -1394,15 +1364,15 @@ Instructions:
           creditsCost = (regularTokens * (15 / 11000)) + (cachedTokens * (15 / 44000));
         }
 
-        await deductUserCredits(env.DB, limitCheck.user.email, creditsCost);
-        const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(limitCheck.user.email).first();
+        await deductUserCredits(env.DB, user.email, creditsCost);
+        const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(user.email).first();
         const updatedCredits = updatedUser ? updatedUser.credits : 0.0;
 
-        ctx.waitUntil(trackWorkerChatQuery(env, request, limitCheck.user.email, message, usageMetadata));
+        ctx.waitUntil(trackWorkerChatQuery(env, request, user.email, message, usageMetadata));
 
         return new Response(JSON.stringify({ 
           reply, 
-          count: limitCheck.count,
+          count: 0,
           credits: updatedCredits
         }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }

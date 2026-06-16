@@ -5219,7 +5219,7 @@ let lastSimulationTimestamp = 0;
 
 let userToken = localStorage.getItem('userToken');
 let googleClientId = window.GOOGLE_CLIENT_ID || null;
-let currentLimit = { max: 5, count: 0, remaining: 5 };
+let currentLimit = { max: 99999, count: 0, remaining: 99999 };
 let userProfile = null;
 let googleAuthInitialized = false;
 
@@ -5920,9 +5920,7 @@ async function checkAuthStatus(isVisit = false) {
       })
       .then(data => {
         if (data) {
-          if (data.limit) {
-            currentLimit = data.limit;
-          }
+
           if (data.googleClientId) {
             googleClientId = data.googleClientId;
             if (!googleAuthInitialized) {
@@ -5985,7 +5983,6 @@ async function checkAuthStatus(isVisit = false) {
     if (res.ok) {
       const data = await res.json();
       userProfile = data.user;
-      currentLimit = data.limit;
       if (data.googleClientId) {
         googleClientId = data.googleClientId;
       }
@@ -6668,14 +6665,6 @@ function updateUserStatusUI() {
       const existingDropdown = document.getElementById('user-profile-dropdown');
       if (existingDropdown) {
         // Just update values in place to avoid destroying events & causing flickers
-        const chatLimitEl = document.getElementById('user-dropdown-chat-limits');
-        const solverLimitEl = document.getElementById('user-dropdown-solver-limits');
-        if (chatLimitEl) {
-          chatLimitEl.textContent = `AI chat: ${currentLimit.count} / ${currentLimit.max}`;
-        }
-        if (solverLimitEl) {
-          solverLimitEl.textContent = `Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200`;
-        }
         const headerCreditsEl = document.getElementById('header-credits-balance-val');
         if (headerCreditsEl) {
           headerCreditsEl.textContent = userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00';
@@ -6701,8 +6690,6 @@ function updateUserStatusUI() {
             <div class="user-dropdown-info">
               <div class="user-dropdown-name">${userProfile.name}</div>
               <div class="user-dropdown-email">${userProfile.email || ''}</div>
-              <div id="user-dropdown-chat-limits" class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
-              <div id="user-dropdown-solver-limits" class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
             </div>
             <hr class="dropdown-divider" />
             <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">
@@ -6764,13 +6751,8 @@ function updateUserStatusUI() {
     }
   }
   
-  const limitsExceeded = userProfile && currentLimit.remaining <= 0;
-  if (limitsExceeded) {
-    showLockOverlay('limit_user');
-  } else {
-    if (lockOverlay) lockOverlay.classList.add('hidden');
-    if (inputContainer) inputContainer.classList.remove('hidden');
-  }
+  if (lockOverlay) lockOverlay.classList.add('hidden');
+  if (inputContainer) inputContainer.classList.remove('hidden');
 
   // Solver status badge is always visible
   const solverStatusBadge = document.getElementById('solver-status-badge');
@@ -7529,11 +7511,6 @@ async function sendChatMessage(customMessage = null) {
       aiChatHistory.push({ role: 'user', text: message });
       aiChatHistory.push({ role: 'model', text: data.reply });
       
-      // Update count dynamically
-      if (typeof data.count !== 'undefined') {
-        currentLimit.count = data.count;
-        currentLimit.remaining = Math.max(0, currentLimit.max - data.count);
-      }
       if (data.credits !== undefined) {
         userProfile.credits = data.credits;
       }
@@ -7546,9 +7523,6 @@ async function sendChatMessage(customMessage = null) {
       const err = await res.json().catch(() => ({}));
       if (res.status === 402 || err.error === 'insufficient_credits') {
         showToast('Insufficient credits. Please refill your account.', 'error');
-        await checkAuthStatus();
-      } else if (res.status === 403) {
-        appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
         await checkAuthStatus();
       } else if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
@@ -7636,21 +7610,13 @@ Please evaluate my answer for biological correctness based on the current metabo
       aiChatHistory.push({ role: 'user', text: `[Reflection Check]: ${answer}` });
       aiChatHistory.push({ role: 'model', text: data.reply });
       
-      // Update count dynamically
-      if (typeof data.count !== 'undefined') {
-        currentLimit.count = data.count;
-        currentLimit.remaining = Math.max(0, currentLimit.max - data.count);
-        updateUserStatusUI();
-      }
+
     } else {
       isAiTyping = false;
       const loader = document.getElementById('ai-chat-typing-loader');
       if (loader) loader.remove();
 
-      if (res.status === 403) {
-        appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
-        await checkAuthStatus();
-      } else if (res.status === 401) {
+      if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
         await checkAuthStatus();
       } else {
