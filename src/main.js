@@ -2283,26 +2283,48 @@ let isCurrentlyMobile = null;
 
 function checkViewportChange() {
   const experimentsContainer = document.getElementById('experiments-container');
-  const userProfileContainer = document.getElementById('user-profile-header-container');
   const settingsBody = document.querySelector('#settings-header-container .settings-body');
+  const mainSearchContainer = document.getElementById('main-search-container');
   
   const mobileExperiments = document.getElementById('mobile-experiments-container');
-  const mobileProfile = document.getElementById('mobile-profile-container');
   const mobileSettings = document.getElementById('mobile-settings-container');
-  
-  if (experimentsContainer && mobileExperiments && !mobileExperiments.contains(experimentsContainer)) {
-    mobileExperiments.appendChild(experimentsContainer);
-  }
-  if (userProfileContainer && mobileProfile && !mobileProfile.contains(userProfileContainer)) {
-    mobileProfile.appendChild(userProfileContainer);
-  }
-  if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
-    mobileSettings.appendChild(settingsBody);
+  const mobileSearchPlaceholder = document.getElementById('mobile-search-container-placeholder');
+
+  const experimentsDesktopParent = document.getElementById('experiments-desktop-parent');
+  const settingsDesktopParent = document.getElementById('settings-desktop-parent');
+  const searchDesktopParent = document.getElementById('search-desktop-parent');
+
+  const width = window.innerWidth;
+  const isMobile = width <= 768;
+
+  if (isMobile) {
+    if (experimentsContainer && mobileExperiments && !mobileExperiments.contains(experimentsContainer)) {
+      mobileExperiments.appendChild(experimentsContainer);
+    }
+    if (settingsBody && mobileSettings && !mobileSettings.contains(settingsBody)) {
+      mobileSettings.appendChild(settingsBody);
+    }
+    if (mainSearchContainer && mobileSearchPlaceholder && !mobileSearchPlaceholder.contains(mainSearchContainer)) {
+      mobileSearchPlaceholder.appendChild(mainSearchContainer);
+    }
+  } else {
+    if (experimentsContainer && experimentsDesktopParent && !experimentsDesktopParent.contains(experimentsContainer)) {
+      experimentsDesktopParent.appendChild(experimentsContainer);
+    }
+    if (settingsBody && settingsDesktopParent && !settingsDesktopParent.contains(settingsBody)) {
+      settingsDesktopParent.appendChild(settingsBody);
+    }
+    if (mainSearchContainer && searchDesktopParent && !searchDesktopParent.contains(mainSearchContainer)) {
+      searchDesktopParent.appendChild(mainSearchContainer);
+    }
+    // Also hide the mobile search overlay if it was open when switching to desktop
+    const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+    if (mobileSearchOverlay) {
+      mobileSearchOverlay.classList.add('hidden');
+    }
   }
 
   // Handle class synchronization on viewport switch
-  const width = window.innerWidth;
-  const isMobile = width <= 768;
   const leftPanel = document.querySelector('.left-panel:not(#scenarios-panel)');
   const scenariosPanel = document.getElementById('scenarios-panel');
   const rightPanel = document.querySelector('.right-panel');
@@ -4046,6 +4068,36 @@ function setupSearch() {
       hideSearchResults();
     }
   });
+
+  // Mobile search toggle button behavior
+  const mobileSearchToggleBtn = document.getElementById('mobile-search-toggle-btn');
+  const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+  const mobileSearchCloseBtn = document.getElementById('mobile-search-close-btn');
+
+  if (mobileSearchToggleBtn && mobileSearchOverlay && mobileSearchCloseBtn) {
+    mobileSearchToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileSearchOverlay.classList.remove('hidden');
+      // Focus the input inside the placeholder
+      setTimeout(() => {
+        if (searchInput) searchInput.focus();
+      }, 50);
+    });
+
+    mobileSearchCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileSearchOverlay.classList.add('hidden');
+      hideSearchResults();
+    });
+
+    // Close when clicking outside of the mobile search content card
+    mobileSearchOverlay.addEventListener('click', (e) => {
+      if (e.target === mobileSearchOverlay) {
+        mobileSearchOverlay.classList.add('hidden');
+        hideSearchResults();
+      }
+    });
+  }
 }
 
 // State for GEO Dataset Search
@@ -6605,9 +6657,9 @@ function updateUserStatusUI() {
         if (solverLimitEl) {
           solverLimitEl.textContent = `Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200`;
         }
-        const creditsEl = existingDropdown.querySelector('.credits-balance');
-        if (creditsEl) {
-          creditsEl.textContent = userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00';
+        const headerCreditsEl = document.getElementById('header-credits-balance-val');
+        if (headerCreditsEl) {
+          headerCreditsEl.textContent = userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00';
         }
       } else {
         const initial = userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'U';
@@ -6615,10 +6667,16 @@ function updateUserStatusUI() {
         const chevronTransform = '';
         
         headerProfileContainer.innerHTML = `
-          <div class="user-badge" id="user-profile-badge">
-            <div class="user-avatar">${initial}</div>
-            <span class="user-name">${userProfile.name}</span>
-            <span class="chevron-icon" ${chevronTransform}>▼</span>
+          <div class="user-header-credits-wrapper">
+            <div class="header-credits-badge">
+              <span class="credits-icon">🪙</span>
+              <span id="header-credits-balance-val" class="credits-balance">${userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00'}</span>
+            </div>
+            <div class="user-badge" id="user-profile-badge">
+              <div class="user-avatar">${initial}</div>
+              <span class="user-name">${userProfile.name}</span>
+              <span class="chevron-icon" ${chevronTransform}>▼</span>
+            </div>
           </div>
           <div id="user-profile-dropdown" class="user-dropdown glass ${isDropdownHidden ? 'hidden' : ''}">
             <div class="user-dropdown-info">
@@ -6626,13 +6684,6 @@ function updateUserStatusUI() {
               <div class="user-dropdown-email">${userProfile.email || ''}</div>
               <div id="user-dropdown-chat-limits" class="user-dropdown-limits">AI chat: ${currentLimit.count} / ${currentLimit.max}</div>
               <div id="user-dropdown-solver-limits" class="user-dropdown-limits">Solver: ${userProfile.dailySolverTicks !== undefined ? userProfile.dailySolverTicks : 0} / 200</div>
-              <div class="user-dropdown-credits-card">
-                <span class="credits-icon">🪙</span>
-                <div class="credits-details">
-                  <span class="credits-balance">${userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00'}</span>
-                  <span class="credits-label">Credits</span>
-                </div>
-              </div>
             </div>
             <hr class="dropdown-divider" />
             <button id="header-logout-btn" class="btn btn-secondary logout-dropdown-btn">

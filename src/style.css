@@ -2682,13 +2682,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 
-/* Hide desktop-only controls globally as they are now in the drawer */
-#experiments-desktop-parent,
-#settings-header-container,
-#profile-desktop-parent {
-  display: none !important;
-}
-
 /* Mobile Responsive Styling */
 @media (max-width: 768px) {
   /* Hide desktop header details and simplify logo */
@@ -2702,16 +2695,47 @@ input[type="range"]::-webkit-slider-thumb:hover {
     gap: 8px;
   }
 
-  .brand h1 {
-    font-size: 16px;
+  /* Hide brand site name and logo completely in mobile header */
+  .brand {
+    display: none !important;
   }
 
-  .brand .logo {
-    font-size: 16px;
+  /* Hide experiments, settings, and search containers from the header actions on mobile */
+  #experiments-desktop-parent,
+  #settings-header-container,
+  #search-desktop-parent {
+    display: none !important;
   }
 
-  .brand .divider,
-  .brand .subtitle {
+  /* Show mobile search button */
+  .mobile-search-toggle-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #cbd5e1;
+    font-size: 18px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .mobile-search-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+  }
+
+  /* Make user profile badge compact on mobile header */
+  .user-badge {
+    padding: 4px !important;
+    gap: 0 !important;
+  }
+
+  .user-badge .user-name,
+  .user-badge .chevron-icon {
     display: none !important;
   }
 
@@ -5133,3 +5157,179 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .help-icon-btn:active {
   transform: translateY(0);
 }
+
+/* Mobile Search Overlay styling */
+.mobile-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(3, 3, 5, 0.75);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.25s ease;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.mobile-search-overlay.hidden {
+  display: none !important;
+}
+
+.mobile-search-content {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7);
+  margin-top: 10vh;
+  animation: mobile-search-zoom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mobile-search-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.mobile-search-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-search-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.mobile-search-header .close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mobile-search-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.mobile-search-body {
+  padding: 16px;
+}
+
+/* Ensure search-container within placeholder expands fully and fits nicely */
+#mobile-search-container-placeholder .search-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+#mobile-search-container-placeholder .search-wrapper {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#mobile-search-container-placeholder #map-search-input {
+  font-size: 14px;
+}
+
+#mobile-search-container-placeholder .search-results-dropdown {
+  position: static;
+  width: 100% !important;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 8px;
+  border-radius: 12px;
+  box-shadow: none;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* User Header Credits Badge styling */
+.user-header-credits-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-credits-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  color: #e2e8f0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.header-credits-badge:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateY(-0.5px);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+}
+
+.header-credits-badge .credits-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.header-credits-badge .credits-balance {
+  font-family: 'JetBrains Mono', monospace;
+  color: #cbd5e1;
+}
+
+/* Adjustments for Mobile user profile container */
+@media (max-width: 768px) {
+  .user-header-credits-wrapper {
+    gap: 6px;
+  }
+  
+  .header-credits-badge {
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  
+  .header-credits-badge .credits-icon {
+    font-size: 11px;
+  }
+}
+

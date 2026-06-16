@@ -54,16 +54,20 @@
         </div>
         
         <!-- Map Search Panel -->
-        <div class="search-container">
-          <div class="search-wrapper">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="map-search-input" placeholder="Search metabolites & reactions..." autocomplete="off" />
-            <button id="search-clear-btn" class="search-clear-btn hidden">✕</button>
-          </div>
-          <div id="search-results-dropdown" class="search-results-dropdown glass hidden">
-            <ul id="search-results-list"></ul>
+        <div id="search-desktop-parent">
+          <div class="search-container" id="main-search-container">
+            <div class="search-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="map-search-input" placeholder="Search metabolites & reactions..." autocomplete="off" />
+              <button id="search-clear-btn" class="search-clear-btn hidden">✕</button>
+            </div>
+            <div id="search-results-dropdown" class="search-results-dropdown glass hidden">
+              <ul id="search-results-list"></ul>
+            </div>
           </div>
         </div>
+
+        <button id="mobile-search-toggle-btn" class="mobile-search-toggle-btn" title="Open Search">🔍</button>
 
         <div class="header-actions">
           <!-- Experiments Dropdown/Control -->
@@ -771,18 +775,22 @@
         </div>
       </div>
 
+      <!-- Mobile Search Overlay -->
+      <div id="mobile-search-overlay" class="mobile-search-overlay hidden">
+        <div class="mobile-search-content glass">
+          <div class="mobile-search-header">
+            <h3>Search Map</h3>
+            <button id="mobile-search-close-btn" class="close-btn">✕</button>
+          </div>
+          <div class="mobile-search-body">
+            <div id="mobile-search-container-placeholder"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Mobile Hamburger Drawer -->
       <div id="mobile-drawer" class="mobile-drawer glass hidden">
         <div class="mobile-drawer-content">
-          <!-- Mobile Profile Section -->
-          <div class="mobile-section">
-            <h4>Profile</h4>
-            <div id="mobile-profile-container">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-          <hr class="drawer-divider" />
-          
           <!-- Mobile Experiments Section -->
           <div id="mobile-experiments-section" class="hidden">
             <div class="mobile-section">
