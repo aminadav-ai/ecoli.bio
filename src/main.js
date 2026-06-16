@@ -262,6 +262,7 @@ let renderer = null;
 let isPaused = false;
 let isDead = false;
 let isSolverWorking = false;
+let isAiTyping = false;
 let solverHistory = [];
 let currentChangingMetabolites = [];
 let currentChangingReactions = [];
@@ -2085,13 +2086,16 @@ function setupUIListeners() {
     }
 
     if (btnExplainReportAI) {
-      btnExplainReportAI.addEventListener('click', () => {
+      btnExplainReportAI.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
         const reportText = reportContentContainer.textContent;
         if (!reportText) return;
 
         if (reportModal) {
           reportModal.classList.add('hidden');
         }
+        isChatPeeking = false; // Cancel any active temporary peek auto-close timers
         openChatDrawer();
         sendChatMessage("Please explain the biological meaning and impact of this metabolic experiment based on the following report:\n\n" + reportText);
       });
@@ -5761,12 +5765,52 @@ async function loadChatHistory() {
             }
           }
           
+          // Re-append typing loader if it was active
+          if (isAiTyping) {
+            let loaderEl = document.getElementById('ai-chat-typing-loader');
+            if (!loaderEl) {
+              loaderEl = document.createElement('div');
+              loaderEl.id = 'ai-chat-typing-loader';
+              loaderEl.className = 'message message-model';
+              loaderEl.innerHTML = `
+                <div class="typing-loader">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              `;
+            }
+            chatMessages.appendChild(loaderEl);
+          }
+          
           // Scroll to bottom after loading new history
           chatMessages.scrollTop = chatMessages.scrollHeight;
         } else {
           // No new messages - just restore or maintain scroll position
           if (lastChatScrollTop !== null) {
             chatMessages.scrollTop = lastChatScrollTop;
+          }
+          // Ensure loader visibility matches current typing state
+          const loaderEl = document.getElementById('ai-chat-typing-loader');
+          if (isAiTyping) {
+            if (!loaderEl) {
+              const newLoader = document.createElement('div');
+              newLoader.id = 'ai-chat-typing-loader';
+              newLoader.className = 'message message-model';
+              newLoader.innerHTML = `
+                <div class="typing-loader">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              `;
+              chatMessages.appendChild(newLoader);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+          } else {
+            if (loaderEl) {
+              loaderEl.remove();
+            }
           }
         }
       }
@@ -6837,6 +6881,9 @@ function setupScenariosAndChat() {
 
   // Global click outside closes chat
   document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-explain-report-ai')) {
+      return; // Do not close if user clicked Explain with AI
+    }
     if (window.innerWidth > 768 && (
         e.target.closest('#metrics-panel') || 
         e.target.closest('#scenarios-panel') || 
@@ -7369,6 +7416,7 @@ async function sendChatMessage(customMessage = null) {
   appendUserMessage(message);
 
   // Show typing loader
+  isAiTyping = true;
   const chatMessages = document.getElementById('ai-chat-messages');
   const loaderDiv = document.createElement('div');
   loaderDiv.id = 'ai-chat-typing-loader';
@@ -7403,6 +7451,7 @@ async function sendChatMessage(customMessage = null) {
       body: JSON.stringify({ message, history, context })
     });
 
+    isAiTyping = false;
     // Remove typing loader
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
@@ -7424,6 +7473,7 @@ async function sendChatMessage(customMessage = null) {
       }
       updateUserStatusUI();
     } else {
+      isAiTyping = false;
       const loader = document.getElementById('ai-chat-typing-loader');
       if (loader) loader.remove();
 
@@ -7442,6 +7492,7 @@ async function sendChatMessage(customMessage = null) {
       }
     }
   } catch (err) {
+    isAiTyping = false;
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
     console.error('Failed to chat:', err);
@@ -7473,6 +7524,7 @@ Please evaluate my answer for biological correctness based on the current metabo
   appendUserMessage(`[Reflection Check]: ${answer}`);
 
   // Show typing loader
+  isAiTyping = true;
   const chatMessages = document.getElementById('ai-chat-messages');
   const loaderDiv = document.createElement('div');
   loaderDiv.id = 'ai-chat-typing-loader';
@@ -7507,6 +7559,7 @@ Please evaluate my answer for biological correctness based on the current metabo
       body: JSON.stringify({ message: promptMessage, history, context })
     });
 
+    isAiTyping = false;
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
 
@@ -7523,6 +7576,10 @@ Please evaluate my answer for biological correctness based on the current metabo
         updateUserStatusUI();
       }
     } else {
+      isAiTyping = false;
+      const loader = document.getElementById('ai-chat-typing-loader');
+      if (loader) loader.remove();
+
       if (res.status === 403) {
         appendModelMessage(`System: Daily query limit reached. You can view your remaining limits in your user profile.`);
         await checkAuthStatus();
@@ -7535,6 +7592,7 @@ Please evaluate my answer for biological correctness based on the current metabo
       }
     }
   } catch (err) {
+    isAiTyping = false;
     const loader = document.getElementById('ai-chat-typing-loader');
     if (loader) loader.remove();
     console.error('Failed to submit reflection:', err);
