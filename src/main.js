@@ -1921,7 +1921,6 @@ function setupUIListeners() {
     btnExperimentReport.addEventListener('click', async () => {
       if (!userProfile) {
         showToast('Sign in to create a report', 'error');
-        openAuthModal();
         return;
       }
       if (!sessionId) {
@@ -7506,7 +7505,6 @@ async function sendChatMessage(customMessage = null) {
   // Check if user is logged in
   if (!userProfile) {
     showToast('Sign in to chat', 'error');
-    openAuthModal();
     return;
   }
 
