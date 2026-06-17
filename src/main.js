@@ -1919,8 +1919,13 @@ function setupUIListeners() {
 
   if (btnExperimentReport && reportModal && reportContentContainer) {
     btnExperimentReport.addEventListener('click', async () => {
-      if (!userProfile || !sessionId) {
-        showToast('Please sign in and select an experiment to view the report.', 'error');
+      if (!userProfile) {
+        showToast('Sign in to create a report', 'error');
+        openAuthModal();
+        return;
+      }
+      if (!sessionId) {
+        showToast('Please select an experiment to view the report.', 'error');
         return;
       }
       
