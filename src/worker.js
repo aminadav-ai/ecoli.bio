@@ -1395,8 +1395,8 @@ export default {
         });
       }
 
-      // 1f. Get experiment logs
-      if (url.pathname === '/api/experiments/logs' && request.method === 'GET') {
+      // 1f. Generate experiment report
+      if (url.pathname === '/api/experiments/report' && request.method === 'POST') {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
@@ -1408,9 +1408,9 @@ export default {
           });
         }
 
-        const sessionId = url.searchParams.get('sessionId');
-        if (!sessionId) {
-          return new Response(JSON.stringify({ error: 'Session ID is required.' }), {
+        const { sessionId, metrics } = await request.json();
+        if (!sessionId || !metrics) {
+          return new Response(JSON.stringify({ error: 'Session ID and metrics are required.' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
@@ -1429,9 +1429,60 @@ export default {
 
         await deductUserCredits(env.DB, user.email, 1.0);
 
+        const session = await getSimulationSession(env.DB, sessionId);
+        const expName = session ? session.name : 'Unknown Experiment';
         const logs = await getExperimentLogs(env.DB, sessionId);
 
-        return new Response(JSON.stringify(logs), {
+        const { isDead, currentGrowth, currentGlcUptake, currentO2Uptake, atpFlux } = metrics;
+
+        let reportText = `Experiment: ${expName}\n`;
+        reportText += `Current Status: ${isDead ? 'Dead 💀' : 'Alive (Optimal) 🟢'}\n`;
+        reportText += `Current Growth Rate: ${parseFloat(currentGrowth).toFixed(2)} hr⁻¹\n`;
+        reportText += `Current Glucose Uptake: ${parseFloat(currentGlcUptake).toFixed(1)} mM/s\n`;
+        reportText += `Current Oxygen Uptake: ${parseFloat(currentO2Uptake).toFixed(1)} mM/s\n`;
+        reportText += `Current ATP Yield: ${parseFloat(atpFlux).toFixed(1)} mM/s\n\n`;
+
+        reportText += `Timeline of Actions & Biological Impact:\n`;
+        if (logs.length === 0) {
+          reportText += `  - No actions recorded in this experiment yet.\n`;
+        } else {
+          logs.forEach((log) => {
+            let timeStr = '';
+            if (log.created_at) {
+              try {
+                const dateUtc = new Date(log.created_at + 'Z');
+                timeStr = dateUtc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              } catch(e) {
+                timeStr = log.created_at;
+              }
+            }
+
+            let actionDesc = '';
+            if (log.action_type === 'initial') {
+              actionDesc = `Initial State`;
+            } else if (log.action_type === 'slider') {
+              if (log.prev_value !== null && log.prev_value !== undefined) {
+                actionDesc = `Changed ${log.target} from ${log.prev_value.toFixed(1)} to ${log.value.toFixed(1)}`;
+              } else {
+                actionDesc = `Changed ${log.target} to ${log.value.toFixed(1)}`;
+              }
+            } else if (log.action_type === 'injection') {
+              actionDesc = `Spiked (Injected) ${log.target} by +${log.value.toFixed(1)} mM`;
+            } else if (log.action_type === 'depletion') {
+              actionDesc = `Depleted ${log.target}`;
+            } else if (log.action_type === 'reset') {
+              actionDesc = `Reset simulation`;
+            } else if (log.action_type === 'scenario') {
+              actionDesc = log.value > 0 ? `Applied scenario: "${log.target}"` : `Exited scenario`;
+            }
+
+            const stateDesc = `[Result: Growth = ${log.growth_rate.toFixed(2)} hr⁻¹, Glucose Uptake = ${log.glucose_uptake.toFixed(1)} mM/s, Oxygen Uptake = ${log.oxygen_uptake.toFixed(1)} mM/s, ATP Yield = ${log.atp_yield.toFixed(1)} mM/s, Status = ${log.is_dead ? 'Dead' : 'Alive'}]`;
+
+            reportText += `  - ${timeStr}: ${actionDesc}\n    ${stateDesc}\n`;
+          });
+        }
+
+        return new Response(JSON.stringify({ reportText }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }

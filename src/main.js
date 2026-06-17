@@ -1926,25 +1926,6 @@ function setupUIListeners() {
       
       try {
         const token = localStorage.getItem('userToken');
-        const res = await fetch(`/api/experiments/logs?sessionId=${sessionId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (res.status === 402) {
-          const errData = await res.json().catch(() => ({}));
-          showToast(errData.message || 'Insufficient credits to view report.', 'error');
-          return;
-        }
-        if (!res.ok) throw new Error('Failed to fetch logs');
-        const logs = await res.json();
-        
-        // Update credit UI in background after deduction
-        checkAuthStatus();
-        
-        // Generate English report content
-        const activeExp = experimentsList.find(e => e.id === sessionId);
-        const expName = activeExp ? activeExp.name : 'Unknown Experiment';
         
         // Current system metrics
         const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
@@ -1954,55 +1935,36 @@ function setupUIListeners() {
         const o2Flux = simulation.latestFluxes ? (simulation.latestFluxes['EX_o2_e'] || 0) : 0;
         const currentO2Uptake = Math.max(0.0, -o2Flux);
         const atpFlux = Math.max(0.0, Math.abs(simulation.reactions['ATPS4r']?.flux || 0));
-        
-        let reportText = `Experiment: ${expName}\n`;
-        reportText += `Current Status: ${isDead ? 'Dead 💀' : 'Alive (Optimal) 🟢'}\n`;
-        reportText += `Current Growth Rate: ${currentGrowth.toFixed(2)} hr⁻¹\n`;
-        reportText += `Current Glucose Uptake: ${currentGlcUptake.toFixed(1)} mM/s\n`;
-        reportText += `Current Oxygen Uptake: ${currentO2Uptake.toFixed(1)} mM/s\n`;
-        reportText += `Current ATP Yield: ${atpFlux.toFixed(1)} mM/s\n\n`;
-        
-        reportText += `Timeline of Actions & Biological Impact:\n`;
-        if (logs.length === 0) {
-          reportText += `  - No actions recorded in this experiment yet.\n`;
-        } else {
-          logs.forEach((log) => {
-            let timeStr = '';
-            if (log.created_at) {
-              try {
-                const dateUtc = new Date(log.created_at + 'Z');
-                timeStr = dateUtc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              } catch(e) {
-                timeStr = log.created_at;
-              }
+
+        const res = await fetch(`/api/experiments/report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            sessionId,
+            metrics: {
+              isDead,
+              currentGrowth,
+              currentGlcUptake,
+              currentO2Uptake,
+              atpFlux
             }
-            
-            let actionDesc = '';
-            if (log.action_type === 'initial') {
-              actionDesc = `Initial State`;
-            } else if (log.action_type === 'slider') {
-              if (log.prev_value !== null && log.prev_value !== undefined) {
-                actionDesc = `Changed ${log.target} from ${log.prev_value.toFixed(1)} to ${log.value.toFixed(1)}`;
-              } else {
-                actionDesc = `Changed ${log.target} to ${log.value.toFixed(1)}`;
-              }
-            } else if (log.action_type === 'injection') {
-              actionDesc = `Spiked (Injected) ${log.target} by +${log.value.toFixed(1)} mM`;
-            } else if (log.action_type === 'depletion') {
-              actionDesc = `Depleted ${log.target}`;
-            } else if (log.action_type === 'reset') {
-              actionDesc = `Reset simulation`;
-            } else if (log.action_type === 'scenario') {
-              actionDesc = log.value > 0 ? `Applied scenario: "${log.target}"` : `Exited scenario`;
-            }
-            
-            const stateDesc = `[Result: Growth = ${log.growth_rate.toFixed(2)} hr⁻¹, Glucose Uptake = ${log.glucose_uptake.toFixed(1)} mM/s, Oxygen Uptake = ${log.oxygen_uptake.toFixed(1)} mM/s, ATP Yield = ${log.atp_yield.toFixed(1)} mM/s, Status = ${log.is_dead ? 'Dead' : 'Alive'}]`;
-            
-            reportText += `  - ${timeStr}: ${actionDesc}\n    ${stateDesc}\n`;
-          });
+          })
+        });
+        if (res.status === 402) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.message || 'Insufficient credits to view report.', 'error');
+          return;
         }
+        if (!res.ok) throw new Error('Failed to generate report');
+        const data = await res.json();
         
-        reportContentContainer.textContent = reportText;
+        // Update credit UI in background after deduction
+        checkAuthStatus();
+        
+        reportContentContainer.textContent = data.reportText;
         reportModal.classList.remove('hidden');
         pushHistoryStateIfNeeded();
       } catch (err) {
