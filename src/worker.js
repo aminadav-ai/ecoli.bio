@@ -662,21 +662,6 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         return new Response("Expected Upgrade: websocket", { status: 400 });
       }
       
-      const activeSockets = this.state.getWebSockets();
-      if (activeSockets.length > 0) {
-        const pair = new WebSocketPair();
-        const [client, server] = Object.values(pair);
-        
-        server.accept();
-        server.send(JSON.stringify({
-          type: "ERROR",
-          error: "conflict_open_elsewhere",
-          message: "This experiment is already open in another tab or on another device."
-        }));
-        server.close(1008, "Conflict: session open elsewhere");
-        return new Response(null, { status: 101, webSocket: client });
-      }
-      
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
       
@@ -912,18 +897,6 @@ Instructions:
 
     try {
       const data = await request.json();
-      
-      const activeSockets = this.state.getWebSockets();
-      if (activeSockets.length > 0) {
-        return new Response(JSON.stringify({ 
-          error: 'conflict_open_elsewhere', 
-          message: 'This experiment is already open in another tab or on another device.' 
-        }), {
-          status: 409,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
       const concentrations = data.concentrations || {};
       const parameters = data.parameters || {};
       const options = {
