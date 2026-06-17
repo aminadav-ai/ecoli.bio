@@ -6533,9 +6533,9 @@ function closeExperimentsHelpModal() {
 function openAboutModal() {
   const modal = document.getElementById('about-modal');
   if (modal) {
+    modal.classList.remove('hidden');
     const card = modal.querySelector('.auth-card');
     if (card) card.scrollTop = 0;
-    modal.classList.remove('hidden');
     pushHistoryStateIfNeeded();
   }
 }
@@ -6555,9 +6555,9 @@ function closeAboutModal() {
 function openTermsModal() {
   const modal = document.getElementById('terms-modal');
   if (modal) {
+    modal.classList.remove('hidden');
     const card = modal.querySelector('.auth-card');
     if (card) card.scrollTop = 0;
-    modal.classList.remove('hidden');
     pushHistoryStateIfNeeded();
   }
 }
@@ -6577,9 +6577,9 @@ function closeTermsModal() {
 function openPrivacyModal() {
   const modal = document.getElementById('privacy-modal');
   if (modal) {
+    modal.classList.remove('hidden');
     const card = modal.querySelector('.auth-card');
     if (card) card.scrollTop = 0;
-    modal.classList.remove('hidden');
     pushHistoryStateIfNeeded();
   }
 }
@@ -6599,9 +6599,9 @@ function closePrivacyModal() {
 function openCreditsModal() {
   const modal = document.getElementById('credits-modal');
   if (modal) {
+    modal.classList.remove('hidden');
     const card = modal.querySelector('.auth-card');
     if (card) card.scrollTop = 0;
-    modal.classList.remove('hidden');
     pushHistoryStateIfNeeded();
   }
 }
@@ -7120,6 +7120,9 @@ function setupScenariosAndChat() {
     // Send on button click
     chatSendBtn.addEventListener('click', () => {
       sendChatMessage();
+      if (userProfile && chatInput) {
+        chatInput.focus();
+      }
     });
 
     // Send on enter key
