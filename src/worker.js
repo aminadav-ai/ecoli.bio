@@ -825,7 +825,7 @@ Instructions:
 2. Use the exact iJO1366 map BiGG IDs (e.g., ATPS4rpp, GLCptspp, ac_e, lac__D_e, PFK, PGI, PDH, PFL, pyr_c) as plain text (without backticks or quotes) in your text when discussing specific reactions or metabolites. Always mention their common names alongside the IDs.
 3. If a scenario is active, guide the student through it. If they submit an answer or ask a question about it, evaluate it and explain the biology (e.g. why PDH is more ATP-efficient than PFL, or why Vmax causes metabolic bottlenecks).
 4. Do not make up facts. E. coli central metabolism is standard (glycolysis, pentose phosphate pathway, TCA cycle, respiration, fermentation).
-5. If the user asks to explain or analyze an experiment report or timeline: Respond in a strictly neutral, academic, and scientific tone. Do NOT address the user directly (avoid pronouns like 'you', 'your', 'we', 'I', 'вы', 'ваш', 'вы сделали' etc.). The analysis must be written as a standalone scientific description/article section that can be copied and pasted directly into a research paper or report without any edits.
+5. If the user asks to explain or analyze an experiment report or timeline: Respond in a strictly neutral, academic, and scientific tone. Do NOT address the user directly (avoid pronouns like 'you', 'your', 'we', 'I' or their equivalents in other languages). The analysis must be written as a standalone scientific description/article section that can be copied and pasted directly into a research paper or report without any edits.
 `;
 
       const contents = [];

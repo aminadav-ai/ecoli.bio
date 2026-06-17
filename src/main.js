@@ -2069,7 +2069,7 @@ function setupUIListeners() {
         }
         isChatPeeking = false; // Cancel any active temporary peek auto-close timers
         openChatDrawer();
-        sendChatMessage("Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment based on the following report. Respond in a strictly academic tone, without addressing the user directly (do not use pronouns like 'you', 'your', 'вы', 'ваш' etc.), so that the text can be pasted directly into a scientific article without edits:\n\n" + reportText);
+        sendChatMessage("Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment based on the following report. Respond in a strictly academic tone, without addressing the user directly (do not use pronouns like 'you', 'your' or their equivalents in other languages), so that the text can be pasted directly into a scientific article without edits:\n\n" + reportText);
       });
     }
   }
