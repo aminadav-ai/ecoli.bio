@@ -280,6 +280,7 @@ let selectedReactionId = null;
 
 // Mobile back button state
 let isHistoryPushed = false;
+let ignoreNextPopstate = false;
 
 function pushHistoryStateIfNeeded() {
   if (!isHistoryPushed) {
@@ -291,6 +292,7 @@ function pushHistoryStateIfNeeded() {
 function popHistoryStateIfNeeded() {
   if (isHistoryPushed) {
     isHistoryPushed = false;
+    ignoreNextPopstate = true;
     history.back();
   }
 }
@@ -918,6 +920,10 @@ function setupUIListeners() {
     history.replaceState(null, '');
   }
   window.addEventListener('popstate', () => {
+    if (ignoreNextPopstate) {
+      ignoreNextPopstate = false;
+      return;
+    }
     if (isHistoryPushed) {
       isHistoryPushed = false;
       closeAllOverlays();
@@ -6233,7 +6239,6 @@ function closeAuthModal() {
     wasModalOpen = !authModal.classList.contains('hidden');
     authModal.classList.add('hidden');
   }
-  pendingChatMessage = null;
   
   const chatInput = document.getElementById('ai-chat-input');
   if (chatInput && pendingChatCursorStart !== null) {
@@ -6633,6 +6638,8 @@ function closeWelcomeModal() {
     modal.classList.add('hidden');
   }
   tempGoogleCredential = null;
+  pendingChatMessage = null;
+  authEntryPoint = null;
   if (wasModalOpen) {
     popHistoryStateIfNeeded();
   }
@@ -7209,6 +7216,8 @@ function setupScenariosAndChat() {
   if (btnCloseAuth) {
     btnCloseAuth.addEventListener('click', () => {
       closeAuthModal();
+      pendingChatMessage = null;
+      authEntryPoint = null;
     });
   }
 
