@@ -262,6 +262,7 @@ let renderer = null;
 let isPaused = false;
 let isDead = false;
 let isSolverWorking = false;
+let isWsBlockedElsewhere = false;
 let isAiTyping = false;
 let solverHistory = [];
 let currentChangingMetabolites = [];
@@ -806,6 +807,8 @@ async function updateFbaBounds(currentTime, forceOptions = {}) {
         }
         showToast('Insufficient credits. Please refill your account.', 'error');
         await checkAuthStatus();
+      } else if (res.status === 409 || errData.error === 'conflict_open_elsewhere') {
+        showToast(errData.message || 'This experiment is already open in another tab or on another device.', 'error');
       } else if (res.status === 403 && errData.error && (errData.error.toLowerCase().includes('limit') || errData.error.toLowerCase().includes('tick'))) {
         isPaused = true;
         const playPauseBtn = document.getElementById('play-pause-btn');
@@ -5529,6 +5532,7 @@ async function handleDeleteExperiment(exp) {
 }
 
 function connectSessionWebSocket() {
+  isWsBlockedElsewhere = false;
   if (sessionWebSocket) {
     try {
       sessionWebSocket.close();
@@ -5572,6 +5576,9 @@ function connectSessionWebSocket() {
           }
           showToast('Insufficient credits. Please refill your account.', 'error');
           checkAuthStatus();
+        } else if (data.error === 'conflict_open_elsewhere') {
+          isWsBlockedElsewhere = true;
+          showToast(data.message || 'This experiment is already open in another tab or on another device.', 'error');
         } else {
           showToast(data.message || 'An error occurred.', 'error');
         }
@@ -5691,6 +5698,10 @@ function connectSessionWebSocket() {
 
   sessionWebSocket.onclose = (e) => {
     console.log('[WS] Connection closed:', e.reason);
+    if (isWsBlockedElsewhere) {
+      console.warn('[WS] Reconnection skipped because the session is open in another tab/device.');
+      return;
+    }
     setTimeout(() => {
       if (userProfile && (!sessionWebSocket || sessionWebSocket.readyState === WebSocket.CLOSED)) {
         connectSessionWebSocket();
