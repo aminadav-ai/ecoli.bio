@@ -5613,7 +5613,10 @@ function connectSessionWebSocket() {
       
       if (data.type === 'TICK_UPDATE') {
         activeRepressions = data.repressed || {};
-        isSolverWorking = !data.stabilized;
+        if (data.stabilized !== undefined) {
+          isSolverWorking = !data.stabilized;
+          updateSolverStatusUI();
+        }
         currentChangingMetabolites = data.changingMetabolites || [];
         currentChangingReactions = data.changingReactions || [];
 

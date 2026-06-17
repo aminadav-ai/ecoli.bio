@@ -686,6 +686,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       this.broadcast({
         type: "TICK_UPDATE",
         status: this.isSolving ? "WORK" : "RELAX",
+        stabilized: !this.isSolving,
         solverTicks: 0,
         dailySolverTicks: 0,
         credits: this.credits
@@ -824,6 +825,7 @@ Instructions:
       this.broadcast({
         type: "TICK_UPDATE",
         status: this.isSolving ? "WORK" : "RELAX",
+        stabilized: !this.isSolving,
         solverTicks: 0,
         dailySolverTicks: 0,
         credits: this.credits
