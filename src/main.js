@@ -7183,8 +7183,8 @@ function setupScenariosAndChat() {
 
   // Global click outside closes chat
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#btn-explain-report-ai')) {
-      return; // Do not close if user clicked Explain with AI
+    if (e.target.closest('#btn-explain-report-ai') || e.target.closest('.global-auth-overlay')) {
+      return; // Do not close if user clicked Explain with AI or clicked inside auth/credits/welcome modals
     }
     if (window.innerWidth > 768 && (
         e.target.closest('#metrics-panel') || 
@@ -7481,7 +7481,8 @@ function setupScenariosAndChat() {
   // Maintenance Credits Modal event listeners
   const btnMaintenanceCreditsOk = document.getElementById('btn-maintenance-credits-ok');
   if (btnMaintenanceCreditsOk) {
-    btnMaintenanceCreditsOk.addEventListener('click', () => {
+    btnMaintenanceCreditsOk.addEventListener('click', (e) => {
+      e.stopPropagation();
       closeMaintenanceCreditsModal();
     });
   }
@@ -7490,6 +7491,7 @@ function setupScenariosAndChat() {
   if (maintenanceCreditsModal) {
     maintenanceCreditsModal.addEventListener('click', (e) => {
       if (e.target === maintenanceCreditsModal) {
+        e.stopPropagation();
         closeMaintenanceCreditsModal();
       }
     });
