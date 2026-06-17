@@ -499,6 +499,18 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           await this.state.storage.put('is_custom_name', false);
         }
         
+        let hasLogs = false;
+        if (this.userEmail) {
+          try {
+            const logsCheck = await this.env.DB.prepare(
+              'SELECT 1 FROM experiment_logs WHERE session_id = ? AND action_type != "initial" LIMIT 1'
+            ).bind(this.sessionId).first();
+            hasLogs = !!logsCheck;
+          } catch (err) {
+            console.error('[DO INIT] Failed to check if logs exist:', err);
+          }
+        }
+        
         ws.send(JSON.stringify({
           type: "INIT_STATE",
           state: serializeSimulation(this.simulation),
@@ -507,7 +519,8 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           solverTicks: 0,
           dailySolverTicks: 0,
           isSolving: !!this.isSolving,
-          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 250.0
+          credits: (this.credits !== undefined && this.credits !== null) ? this.credits : 250.0,
+          hasLogs: hasLogs
         }));
         
         if (this.isFreshSession) {

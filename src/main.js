@@ -262,6 +262,7 @@ let renderer = null;
 let isPaused = false;
 let isDead = false;
 let isSolverWorking = false;
+let currentExperimentHasLogs = false;
 let isAiTyping = false;
 let solverHistory = [];
 let currentChangingMetabolites = [];
@@ -328,6 +329,10 @@ function closeAllOverlays() {
   const creditsModal = document.getElementById('credits-modal');
   if (creditsModal) {
     creditsModal.classList.add('hidden');
+  }
+  const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  if (resetConfirmModal) {
+    resetConfirmModal.classList.add('hidden');
   }
 }
 
@@ -627,6 +632,9 @@ const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args),
 
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
+  if (forceOptions.logAction && forceOptions.logAction.type !== 'reset') {
+    currentExperimentHasLogs = true;
+  }
   // Send via WebSocket if connected
   if (sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN) {
     if (forceOptions.reset) {
@@ -927,8 +935,7 @@ function setupUIListeners() {
 
 
 
-  // Reset/Restart handler
-  const resetHandler = () => {
+  const performReset = () => {
     simulation.reset();
     syncLastLoggedValues();
     chartHistory = [];
@@ -953,6 +960,19 @@ function setupUIListeners() {
         biggId: selectedReactionId,
         name: simulation.reactions[selectedReactionId].name
       });
+    }
+  };
+
+  // Reset/Restart handler
+  const resetHandler = () => {
+    if (currentExperimentHasLogs) {
+      const confirmModal = document.getElementById('reset-confirm-modal');
+      if (confirmModal) {
+        confirmModal.classList.remove('hidden');
+        pushHistoryStateIfNeeded();
+      }
+    } else {
+      performReset();
     }
   };
 
@@ -5580,6 +5600,7 @@ function connectSessionWebSocket() {
 
       if (data.type === 'INIT_STATE') {
         console.log('[WS] Received initial simulation state:', data);
+        currentExperimentHasLogs = !!data.hasLogs;
         if (data.state && simulation) {
           deserializeSimulation(simulation, data.state);
           syncLastLoggedValues();
@@ -7433,6 +7454,41 @@ function setupScenariosAndChat() {
     maintenanceCreditsModal.addEventListener('click', (e) => {
       if (e.target === maintenanceCreditsModal) {
         closeMaintenanceCreditsModal();
+      }
+    });
+  }
+
+  // Reset Confirmation Modal event listeners
+  const btnResetConfirmCancel = document.getElementById('btn-reset-confirm-cancel');
+  if (btnResetConfirmCancel) {
+    btnResetConfirmCancel.addEventListener('click', () => {
+      const confirmModal = document.getElementById('reset-confirm-modal');
+      if (confirmModal) {
+        confirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
+      }
+    });
+  }
+
+  const btnResetConfirmOk = document.getElementById('btn-reset-confirm-ok');
+  if (btnResetConfirmOk) {
+    btnResetConfirmOk.addEventListener('click', () => {
+      const confirmModal = document.getElementById('reset-confirm-modal');
+      if (confirmModal) {
+        confirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
+      }
+      performReset();
+      currentExperimentHasLogs = false;
+    });
+  }
+
+  const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  if (resetConfirmModal) {
+    resetConfirmModal.addEventListener('click', (e) => {
+      if (e.target === resetConfirmModal) {
+        resetConfirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
       }
     });
   }
