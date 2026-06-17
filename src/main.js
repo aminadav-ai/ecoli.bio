@@ -6638,8 +6638,6 @@ function closeWelcomeModal() {
     modal.classList.add('hidden');
   }
   tempGoogleCredential = null;
-  pendingChatMessage = null;
-  authEntryPoint = null;
   if (wasModalOpen) {
     popHistoryStateIfNeeded();
   }
@@ -7443,6 +7441,8 @@ function setupScenariosAndChat() {
   if (btnWelcomeCancel) {
     btnWelcomeCancel.addEventListener('click', () => {
       closeWelcomeModal();
+      pendingChatMessage = null;
+      authEntryPoint = null;
     });
   }
 
