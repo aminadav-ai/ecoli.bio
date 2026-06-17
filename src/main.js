@@ -1920,6 +1920,7 @@ function setupUIListeners() {
   if (btnExperimentReport && reportModal && reportContentContainer) {
     btnExperimentReport.addEventListener('click', async () => {
       if (!userProfile) {
+        authEntryPoint = 'report';
         openAuthModal(
           "Unlock AI Chat & Reports",
           "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
@@ -2162,6 +2163,7 @@ function setupUIListeners() {
     navChat.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!userProfile) {
+        authEntryPoint = 'chat';
         openAuthModal(
           "Unlock AI Chat & Reports",
           "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
@@ -5142,6 +5144,7 @@ let googleClientId = window.GOOGLE_CLIENT_ID || null;
 let currentLimit = { max: 99999, count: 0, remaining: 99999 };
 let userProfile = null;
 let tempGoogleCredential = null;
+let authEntryPoint = null;
 let googleAuthInitialized = false;
 
 let lastLoggedValues = {};
@@ -6052,13 +6055,27 @@ async function handleGoogleCredentialResponse(response) {
       // Perform background session checks
       await checkAuthStatus(true);
       
-      if (msg) {
-        const chatInput = document.getElementById('ai-chat-input');
-        if (chatInput) {
-          chatInput.value = '';
+      const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
+      if (userCredits <= 0 && (authEntryPoint === 'chat' || authEntryPoint === 'report')) {
+        showToast('Please top up your account. Credits are required to use AI Chat or generate reports.', 'error');
+      } else {
+        if (authEntryPoint === 'chat') {
+          openChatDrawer();
+          if (msg) {
+            const chatInput = document.getElementById('ai-chat-input');
+            if (chatInput) {
+              chatInput.value = '';
+            }
+            sendChatMessage(msg);
+          }
+        } else if (authEntryPoint === 'report') {
+          const btnReport = document.getElementById('btn-experiment-report');
+          if (btnReport) {
+            btnReport.click();
+          }
         }
-        sendChatMessage(msg);
       }
+      authEntryPoint = null;
     } else {
       const err = await res.json();
       if (err.error === 'registration_limit_reached') {
@@ -6559,6 +6576,47 @@ function closeWelcomeModal() {
   }
 }
 
+function openMaintenanceCreditsModal() {
+  const modal = document.getElementById('maintenance-credits-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closeMaintenanceCreditsModal() {
+  const modal = document.getElementById('maintenance-credits-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+  handlePostWelcomeRedirect();
+}
+
+function handlePostWelcomeRedirect() {
+  const msg = pendingChatMessage;
+  if (authEntryPoint === 'chat') {
+    openChatDrawer();
+    if (msg) {
+      const chatInput = document.getElementById('ai-chat-input');
+      if (chatInput) {
+        chatInput.value = '';
+      }
+      sendChatMessage(msg);
+    }
+  } else if (authEntryPoint === 'report') {
+    const btnReport = document.getElementById('btn-experiment-report');
+    if (btnReport) {
+      btnReport.click();
+    }
+  }
+  authEntryPoint = null;
+}
+
 async function handleWelcomeComplete() {
   const btn = document.getElementById('btn-welcome-complete');
   if (!btn || btn.disabled) return;
@@ -6586,17 +6644,22 @@ async function handleWelcomeComplete() {
       
       closeWelcomeModal();
       showToast('Account successfully setup! Welcome to ecoli.bio.', 'success');
+
+      try {
+        await fetch('/api/credits/grant-complimentary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${data.token}`
+          }
+        });
+      } catch (err) {
+        console.error('[Welcome Complete] Failed to grant complimentary credits automatically:', err);
+      }
       
       await checkAuthStatus(true);
       
-      const msg = pendingChatMessage;
-      if (msg) {
-        const chatInput = document.getElementById('ai-chat-input');
-        if (chatInput) {
-          chatInput.value = '';
-        }
-        sendChatMessage(msg);
-      }
+      openMaintenanceCreditsModal();
     } else {
       const err = await res.json();
       showToast(`Setup failed: ${err.error || 'Unknown error'}`, 'error');
@@ -6972,6 +7035,7 @@ function setupScenariosAndChat() {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!userProfile) {
+        authEntryPoint = 'chat';
         openAuthModal(
           "Unlock AI Chat & Reports",
           "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
@@ -7103,6 +7167,7 @@ function setupScenariosAndChat() {
   const btnLockSignin = document.getElementById('btn-lock-signin');
   if (btnLockSignin) {
     btnLockSignin.addEventListener('click', () => {
+      authEntryPoint = 'chat';
       openAuthModal();
     });
   }
@@ -7345,6 +7410,23 @@ function setupScenariosAndChat() {
     welcomeModal.addEventListener('click', (e) => {
       if (e.target === welcomeModal) {
         closeWelcomeModal();
+      }
+    });
+  }
+
+  // Maintenance Credits Modal event listeners
+  const btnMaintenanceCreditsOk = document.getElementById('btn-maintenance-credits-ok');
+  if (btnMaintenanceCreditsOk) {
+    btnMaintenanceCreditsOk.addEventListener('click', () => {
+      closeMaintenanceCreditsModal();
+    });
+  }
+
+  const maintenanceCreditsModal = document.getElementById('maintenance-credits-modal');
+  if (maintenanceCreditsModal) {
+    maintenanceCreditsModal.addEventListener('click', (e) => {
+      if (e.target === maintenanceCreditsModal) {
+        closeMaintenanceCreditsModal();
       }
     });
   }
@@ -7824,6 +7906,7 @@ async function submitReflectionAnswer() {
 
   if (!userProfile) {
     showToast('Please sign in to submit your answer to the AI tutor.', 'error');
+    authEntryPoint = 'chat';
     openAuthModal();
     return;
   }
