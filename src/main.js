@@ -1927,31 +1927,13 @@ function setupUIListeners() {
       try {
         const token = localStorage.getItem('userToken');
         
-        // Current system metrics
-        const biomassFlux = simulation.reactions['BIOMASS_Ecoli_core_w_GAM']?.flux || 0;
-        const currentGrowth = Math.max(0.0, biomassFlux);
-        const glcFlux = simulation.latestFluxes ? (simulation.latestFluxes['EX_glc__D_e'] || 0) : 0;
-        const currentGlcUptake = Math.max(0.0, -glcFlux);
-        const o2Flux = simulation.latestFluxes ? (simulation.latestFluxes['EX_o2_e'] || 0) : 0;
-        const currentO2Uptake = Math.max(0.0, -o2Flux);
-        const atpFlux = Math.max(0.0, Math.abs(simulation.reactions['ATPS4r']?.flux || 0));
-
         const res = await fetch(`/api/experiments/report`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            sessionId,
-            metrics: {
-              isDead,
-              currentGrowth,
-              currentGlcUptake,
-              currentO2Uptake,
-              atpFlux
-            }
-          })
+          body: JSON.stringify({ sessionId })
         });
         if (res.status === 402) {
           const errData = await res.json().catch(() => ({}));

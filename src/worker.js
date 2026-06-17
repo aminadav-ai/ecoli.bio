@@ -840,6 +840,13 @@ Instructions:
       });
     }
 
+    if (url.pathname === '/state') {
+      const state = serializeSimulation(this.simulation);
+      return new Response(JSON.stringify(state), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (url.pathname !== '/solve') {
       return new Response('Not found', { status: 404 });
     }
@@ -1408,9 +1415,9 @@ export default {
           });
         }
 
-        const { sessionId, metrics } = await request.json();
-        if (!sessionId || !metrics) {
-          return new Response(JSON.stringify({ error: 'Session ID and metrics are required.' }), {
+        const { sessionId } = await request.json();
+        if (!sessionId) {
+          return new Response(JSON.stringify({ error: 'Session ID is required.' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
@@ -1429,11 +1436,30 @@ export default {
 
         await deductUserCredits(env.DB, user.email, 1.0);
 
+        const doId = env.SOLVER_DO.idFromName(sessionId);
+        const doStub = env.SOLVER_DO.get(doId);
+
+        // Fetch current live state from DO
+        const stateRes = await doStub.fetch(new Request(new URL('/state', url.origin)));
+        if (!stateRes.ok) {
+          return new Response(JSON.stringify({ error: 'Failed to retrieve simulation state.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        const simState = await stateRes.json();
+
         const session = await getSimulationSession(env.DB, sessionId);
         const expName = session ? session.name : 'Unknown Experiment';
         const logs = await getExperimentLogs(env.DB, sessionId);
 
-        const { isDead, currentGrowth, currentGlcUptake, currentO2Uptake, atpFlux } = metrics;
+        const isDead = simState.is_dead || simState.isDead || false;
+        const currentGrowth = Math.max(0.0, simState.biomass_flux || 0.0);
+        const glcFlux = simState.fluxes ? (simState.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
+        const currentGlcUptake = Math.max(0.0, -glcFlux);
+        const o2Flux = simState.fluxes ? (simState.fluxes['EX_o2_e'] || 0.0) : 0.0;
+        const currentO2Uptake = Math.max(0.0, -o2Flux);
+        const atpFlux = Math.max(0.0, Math.abs(simState.fluxes ? (simState.fluxes['ATPS4r'] || 0.0) : 0.0));
 
         let reportText = `Experiment: ${expName}\n`;
         reportText += `Current Status: ${isDead ? 'Dead 💀' : 'Alive (Optimal) 🟢'}\n`;
