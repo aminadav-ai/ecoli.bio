@@ -5870,18 +5870,7 @@ async function checkAuthStatus(isVisit = false) {
     // Guest user - immediately configure guest mode locally and load static state
     console.log('[Auth] Guest user detected (no token). Bypassing /api/auth/status query.');
 
-    // Initialize Google One Tap ONLY if user is a guest (no token)
-    if (googleAuthInitialized && typeof google !== 'undefined') {
-      google.accounts.id.prompt((notification) => {
-        console.log('[Google Auth] One Tap notification:', notification);
-        if (notification.isNotDisplayed()) {
-          console.warn('[Google Auth] One Tap not displayed. Reason:', notification.getNotDisplayedReason());
-        }
-        if (notification.isSkippedMoment()) {
-          console.warn('[Google Auth] One Tap skipped. Reason:', notification.getSkippedReason());
-        }
-      });
-    }
+
 
     // Fetch auth status in background to populate googleClientId and limits
     const guestHeaders = { 
@@ -6017,18 +6006,7 @@ function initGoogleAuth(clientId) {
   
   renderGoogleButton();
 
-  // Initialize Google One Tap for frictionless login in the same window (only for guest users)
-  if (!localStorage.getItem('userToken')) {
-    google.accounts.id.prompt((notification) => {
-      console.log('[Google Auth] One Tap notification:', notification);
-      if (notification.isNotDisplayed()) {
-        console.warn('[Google Auth] One Tap not displayed. Reason:', notification.getNotDisplayedReason());
-      }
-      if (notification.isSkippedMoment()) {
-        console.warn('[Google Auth] One Tap skipped. Reason:', notification.getSkippedReason());
-      }
-    });
-  }
+
 }
 
 function renderGoogleButton() {
@@ -6081,7 +6059,7 @@ async function handleGoogleCredentialResponse(response) {
       
       // Restore modal initial state
       if (titleEl) titleEl.textContent = 'Sign In';
-      if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+      if (messageEl) messageEl.textContent = 'Please sign in to use all features of the site, generate reports, and chat with the AI assistant.';
       if (iconEl) {
         iconEl.innerHTML = '👤';
         iconEl.classList.remove('pulse-animation');
@@ -6146,7 +6124,7 @@ async function handleGoogleCredentialResponse(response) {
       
       // Restore modal initial state
       if (titleEl) titleEl.textContent = 'Sign In';
-      if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+      if (messageEl) messageEl.textContent = 'Please sign in to use all features of the site, generate reports, and chat with the AI assistant.';
       if (iconEl) {
         iconEl.innerHTML = '👤';
         iconEl.classList.remove('pulse-animation');
@@ -6159,7 +6137,7 @@ async function handleGoogleCredentialResponse(response) {
     
     // Restore modal initial state
     if (titleEl) titleEl.textContent = 'Sign In';
-    if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+    if (messageEl) messageEl.textContent = 'Please sign in to use all features of the site, generate reports, and chat with the AI assistant.';
     if (iconEl) {
       iconEl.innerHTML = '👤';
       iconEl.classList.remove('pulse-animation');
@@ -6220,7 +6198,7 @@ function openAuthModal(customTitle, customMessage) {
     const iconEl = document.querySelector('.auth-card .auth-icon');
     
     if (titleEl) titleEl.textContent = customTitle || 'Sign In';
-    if (messageEl) messageEl.textContent = customMessage || 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+    if (messageEl) messageEl.textContent = customMessage || 'Please sign in to use all features of the site, generate reports, and chat with the AI assistant.';
     if (iconEl) {
       iconEl.innerHTML = '👤';
       iconEl.classList.remove('pulse-animation');
