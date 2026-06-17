@@ -41,7 +41,7 @@ export async function getUserByToken(db, token) {
 
 
 // 3. Google OAuth Token Verification & User Signup
-export async function verifyGoogleTokenAndLogin(db, credential) {
+export async function verifyGoogleTokenAndLogin(db, credential, consentGiven = false) {
   const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
   if (!verifyRes.ok) {
     throw new Error('Invalid Google credential token.');
@@ -58,6 +58,10 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
   // Check if user already exists before inserting
   const existingUser = await db.prepare('SELECT email FROM users WHERE email = ?').bind(email).first();
   const isNewUser = !existingUser;
+
+  if (isNewUser && !consentGiven) {
+    return { isNewUser: true, email, name, picture };
+  }
 
   if (isNewUser) {
     const countRow = await db.prepare('SELECT COUNT(*) as count FROM users').first();

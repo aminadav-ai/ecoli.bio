@@ -1920,7 +1920,10 @@ function setupUIListeners() {
   if (btnExperimentReport && reportModal && reportContentContainer) {
     btnExperimentReport.addEventListener('click', async () => {
       if (!userProfile) {
-        showToast('Sign in to create a report', 'error');
+        openAuthModal(
+          "Unlock AI Chat & Reports",
+          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
+        );
         return;
       }
       if (!sessionId) {
@@ -2158,6 +2161,13 @@ function setupUIListeners() {
   if (navChat && chatDrawer) {
     navChat.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (!userProfile) {
+        openAuthModal(
+          "Unlock AI Chat & Reports",
+          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
+        );
+        return;
+      }
       const isMobile = window.innerWidth <= 768;
       const isChatOpen = !chatDrawer.classList.contains('hidden');
       if (isChatOpen) {
@@ -5131,6 +5141,7 @@ let userToken = localStorage.getItem('userToken');
 let googleClientId = window.GOOGLE_CLIENT_ID || null;
 let currentLimit = { max: 99999, count: 0, remaining: 99999 };
 let userProfile = null;
+let tempGoogleCredential = null;
 let googleAuthInitialized = false;
 
 let lastLoggedValues = {};
@@ -6012,6 +6023,24 @@ async function handleGoogleCredentialResponse(response) {
     });
     if (res.ok) {
       const data = await res.json();
+      
+      // Restore modal initial state
+      if (titleEl) titleEl.textContent = 'Sign In';
+      if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+      if (iconEl) {
+        iconEl.innerHTML = '👤';
+        iconEl.classList.remove('pulse-animation');
+      }
+      renderGoogleButton();
+
+      if (data.isNewUser && !data.token) {
+        // New user needs to consent to terms and privacy policy
+        tempGoogleCredential = response.credential;
+        closeAuthModal();
+        openWelcomeModal();
+        return;
+      }
+
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
       
@@ -6105,7 +6134,7 @@ async function saveO2PreferenceToDb(val) {
   // Disabled as per user request
 }
 
-function openAuthModal() {
+function openAuthModal(customTitle, customMessage) {
   const authModal = document.getElementById('global-auth-modal');
   if (authModal) {
     // Reset modal content to default initial state
@@ -6113,8 +6142,8 @@ function openAuthModal() {
     const messageEl = document.getElementById('auth-message');
     const iconEl = document.querySelector('.auth-card .auth-icon');
     
-    if (titleEl) titleEl.textContent = 'Sign In';
-    if (messageEl) messageEl.textContent = 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
+    if (titleEl) titleEl.textContent = customTitle || 'Sign In';
+    if (messageEl) messageEl.textContent = customMessage || 'Please sign in to modify E. coli metabolic simulation parameters on the fly, run learning scenarios, and chat with the AI assistant.';
     if (iconEl) {
       iconEl.innerHTML = '👤';
       iconEl.classList.remove('pulse-animation');
@@ -6505,6 +6534,134 @@ function closeCreditsModal() {
   }
 }
 
+function openWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  const checkbox = document.getElementById('welcome-consent-checkbox');
+  const btnComplete = document.getElementById('btn-welcome-complete');
+  if (modal) {
+    if (checkbox) checkbox.checked = false;
+    if (btnComplete) btnComplete.disabled = true;
+    modal.classList.remove('hidden');
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closeWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  tempGoogleCredential = null;
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+}
+
+async function handleWelcomeComplete() {
+  const btn = document.getElementById('btn-welcome-complete');
+  if (!btn || btn.disabled) return;
+  if (!tempGoogleCredential) {
+    showToast('Missing credential. Please try signing in again.', 'error');
+    closeWelcomeModal();
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Completing setup...';
+
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: tempGoogleCredential, consentGiven: true })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('userToken', data.token);
+      userToken = data.token;
+      
+      closeWelcomeModal();
+      showToast('Account successfully setup! Welcome to ecoli.bio.', 'success');
+      
+      await checkAuthStatus(true);
+      
+      const msg = pendingChatMessage;
+      if (msg) {
+        const chatInput = document.getElementById('ai-chat-input');
+        if (chatInput) {
+          chatInput.value = '';
+        }
+        sendChatMessage(msg);
+      }
+    } else {
+      const err = await res.json();
+      showToast(`Setup failed: ${err.error || 'Unknown error'}`, 'error');
+    }
+  } catch (err) {
+    console.error('[Welcome Complete] Failed to setup account:', err);
+    showToast('Failed to connect to verification server.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function handleBuyCredits() {
+  const token = localStorage.getItem('userToken');
+  if (!token) {
+    showToast('Please sign in to purchase credits.', 'error');
+    closeCreditsModal();
+    openAuthModal();
+    return;
+  }
+
+  const btn = document.getElementById('btn-buy-credits');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Processing...';
+
+  try {
+    const res = await fetch('/api/credits/grant-complimentary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (userProfile) {
+        userProfile.credits = data.credits;
+      }
+      
+      // Update balance indicators
+      const headerCreditsEl = document.getElementById('header-credits-balance-val');
+      if (headerCreditsEl) {
+        headerCreditsEl.textContent = parseFloat(data.credits).toFixed(2);
+      }
+
+      alert("Payment systems are currently in maintenance. We have added 50 complimentary credits to your account for testing purposes.");
+      showToast('50 complimentary credits added successfully!', 'success');
+    } else {
+      const err = await res.json();
+      showToast(`Purchase failed: ${err.error || 'Unknown error'}`, 'error');
+    }
+  } catch (err) {
+    console.error('[Buy Credits] Failed:', err);
+    showToast('Failed to connect to payment server.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 async function handleFeedbackSubmit() {
   const textarea = document.getElementById('feedback-text');
   const btn = document.getElementById('btn-submit-feedback');
@@ -6814,6 +6971,13 @@ function setupScenariosAndChat() {
   if (chatTrigger && chatDrawer) {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (!userProfile) {
+        openAuthModal(
+          "Unlock AI Chat & Reports",
+          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
+        );
+        return;
+      }
       isChatPeeking = false; // Cancel auto-close peek if user interacted
       const isOpening = chatDrawer.classList.contains('hidden');
       if (isOpening) {
@@ -7134,6 +7298,62 @@ function setupScenariosAndChat() {
         e.stopPropagation();
         openCreditsModal();
       }
+    });
+  }
+
+  // Welcome Modal event listeners
+  const welcomeConsentCheckbox = document.getElementById('welcome-consent-checkbox');
+  const btnWelcomeComplete = document.getElementById('btn-welcome-complete');
+  if (welcomeConsentCheckbox && btnWelcomeComplete) {
+    welcomeConsentCheckbox.addEventListener('change', () => {
+      btnWelcomeComplete.disabled = !welcomeConsentCheckbox.checked;
+    });
+  }
+
+  const btnWelcomeCancel = document.getElementById('btn-welcome-cancel');
+  if (btnWelcomeCancel) {
+    btnWelcomeCancel.addEventListener('click', () => {
+      closeWelcomeModal();
+    });
+  }
+
+  const btnWelcomeCompleteBtn = document.getElementById('btn-welcome-complete');
+  if (btnWelcomeCompleteBtn) {
+    btnWelcomeCompleteBtn.addEventListener('click', () => {
+      handleWelcomeComplete();
+    });
+  }
+
+  const btnWelcomeTerms = document.getElementById('btn-welcome-terms');
+  if (btnWelcomeTerms) {
+    btnWelcomeTerms.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTermsModal();
+    });
+  }
+
+  const btnWelcomePrivacy = document.getElementById('btn-welcome-privacy');
+  if (btnWelcomePrivacy) {
+    btnWelcomePrivacy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPrivacyModal();
+    });
+  }
+
+  const welcomeModal = document.getElementById('welcome-modal');
+  if (welcomeModal) {
+    welcomeModal.addEventListener('click', (e) => {
+      if (e.target === welcomeModal) {
+        closeWelcomeModal();
+      }
+    });
+  }
+
+  // Buy Credits event listener
+  const btnBuyCredits = document.getElementById('btn-buy-credits');
+  if (btnBuyCredits) {
+    btnBuyCredits.addEventListener('click', () => {
+      handleBuyCredits();
     });
   }
 

@@ -810,7 +810,7 @@ Instructions:
         const cachedTokens = usageMetadata.cachedContentTokenCount || 0;
         
         const regularTokens = (promptTokens - cachedTokens) + candidatesTokens;
-        creditsCost = (regularTokens * (3 / 11000)) + (cachedTokens * (3 / 44000));
+        creditsCost = (regularTokens * (1 / 11000)) + (cachedTokens * (1 / 44000));
       }
 
       await deductUserCredits(this.env.DB, this.userEmail, creditsCost);
@@ -1542,19 +1542,72 @@ export default {
         });
       }
 
+      // 2b. Grant complimentary credits endpoint
+      if (url.pathname === '/api/credits/grant-complimentary' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+
+        if (!user) {
+          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const userEmail = user.email.trim().toLowerCase();
+
+        // Add 50.0 credits to user
+        await env.DB.prepare('UPDATE users SET credits = COALESCE(credits, 0.0) + 50.0 WHERE email = ?').bind(userEmail).run();
+        const updatedUser = await env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(userEmail).first();
+        const newCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
+
+        // Get all active sessions for this user from D1 database to notify DOs
+        let sessionIds = [];
+        try {
+          const sessions = await env.DB.prepare('SELECT id FROM simulation_sessions WHERE email = ?').bind(userEmail).all();
+          if (sessions.results) {
+            sessionIds = sessions.results.map(s => s.id);
+          }
+        } catch (err) {
+          console.error('[Grant Complimentary Credits] Failed to fetch user sessions:', err);
+        }
+
+        // Notify DO for each session
+        for (const sessionId of sessionIds) {
+          const doId = env.SOLVER_DO.idFromName(sessionId);
+          const doStub = env.SOLVER_DO.get(doId);
+          ctx.waitUntil(doStub.fetch(new Request(new URL('/update-credits', url.origin), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credits: newCredits })
+          })).catch(err => console.error(`Failed to notify DO for session ${sessionId}:`, err)));
+        }
+
+        return new Response(JSON.stringify({ success: true, credits: newCredits }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // 3. OAuth login
       if (url.pathname === '/api/auth/google' && request.method === 'POST') {
-        const { credential } = await request.json();
+        const { credential, consentGiven } = await request.json();
         if (!credential) {
           return new Response(JSON.stringify({ error: 'Missing credential.' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
-        const session = await verifyGoogleTokenAndLogin(env.DB, credential);
+        const session = await verifyGoogleTokenAndLogin(env.DB, credential, !!consentGiven);
         if (session.limitReached) {
           return new Response(JSON.stringify({ error: 'registration_limit_reached' }), {
             status: 403,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        if (session.isNewUser && !session.token) {
+          // New user checked, not yet completed onboarding consent
+          return new Response(JSON.stringify({ isNewUser: true }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         }
