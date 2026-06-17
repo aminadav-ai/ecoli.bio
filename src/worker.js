@@ -575,12 +575,37 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       }
       
       if (data.type === 'RESET_SIMULATION') {
-        if (data.logAction) {
-          this.pendingLogAction = data.logAction;
-        }
         this.simulation.reset();
+        this.pendingLogAction = null;
+        this.hasCheckedInitialLog = false;
+        
+        if (this.userEmail) {
+          this.state.waitUntil(
+            this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run()
+              .catch(err => console.error('[DO] Failed to clear experiment logs:', err))
+          );
+        }
+        
+        if (!this.isCustomName) {
+          this.baseName = "Experiment";
+          this.name = "Experiment";
+          this.state.waitUntil(this.state.storage.put('is_custom_name', false));
+          
+          if (this.userEmail) {
+            this.state.waitUntil(
+              renameSimulationSession(this.env.DB, this.sessionId, "Experiment")
+                .catch(err => console.error('[DO] Failed to rename session in D1 on reset:', err))
+            );
+          }
+          
+          this.broadcast({
+            type: "RENAME_SESSION",
+            base_name: this.baseName,
+            name: this.name
+          });
+        }
+        
         this.state.waitUntil(this.startSolveLoop());
-        this.triggerAiRename();
         return;
       }
       
@@ -878,6 +903,38 @@ Instructions:
         reset: data.reset,
         scenario: data.scenario
       };
+
+      if (data.reset) {
+        this.pendingLogAction = null;
+        this.hasCheckedInitialLog = false;
+        
+        const email = data.userEmail || this.userEmail;
+        if (email) {
+          this.state.waitUntil(
+            this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run()
+              .catch(err => console.error('[DO] Failed to clear experiment logs:', err))
+          );
+        }
+        
+        if (!this.isCustomName) {
+          this.baseName = "Experiment";
+          this.name = "Experiment";
+          this.state.waitUntil(this.state.storage.put('is_custom_name', false));
+          
+          if (email) {
+            this.state.waitUntil(
+              renameSimulationSession(this.env.DB, this.sessionId, "Experiment")
+                .catch(err => console.error('[DO] Failed to rename session in D1 on reset:', err))
+            );
+          }
+          
+          this.broadcast({
+            type: "RENAME_SESSION",
+            base_name: this.baseName,
+            name: this.name
+          });
+        }
+      }
 
       const result = solveFba(this.highs, staticLpHeader, concentrations, parameters, this.simulation, options);
       
