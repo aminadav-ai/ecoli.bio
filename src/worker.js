@@ -35,6 +35,12 @@ import {
   deductUserCredits
 } from './d1_db.js';
 
+function isDefaultOrAutoName(name) {
+  if (!name || name === "Experiment") return true;
+  const regex = /^Experiment \(\d{4}-\d{2}-\d{2} #\d+\)$/;
+  return regex.test(name);
+}
+
 // ==========================================
 // 1. Durable Object: SolverDO
 // ==========================================
@@ -593,13 +599,16 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.hasCheckedInitialLog = false;
         
         if (this.userEmail) {
-          this.state.waitUntil(
-            this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run()
-              .catch(err => console.error('[DO] Failed to clear experiment logs:', err))
-          );
+          try {
+            await this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run();
+            console.log('[DO] Cleared experiment logs in D1 successfully on reset.');
+          } catch (err) {
+            console.error('[DO] Failed to clear experiment logs in D1 on reset:', err);
+          }
         }
         
-        if (!this.isCustomName) {
+        const isNotCustom = !this.isCustomName || isDefaultOrAutoName(this.name);
+        if (isNotCustom) {
           const baseName = "Experiment";
           const dateStr = new Date().toISOString().split('T')[0];
           const count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
@@ -607,6 +616,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
           this.baseName = baseName;
           this.name = fullName;
+          this.isCustomName = false;
           this.state.waitUntil(this.state.storage.put('is_custom_name', false));
           
           if (this.userEmail) {
@@ -935,13 +945,16 @@ Instructions:
         
         const email = data.userEmail || this.userEmail;
         if (email) {
-          this.state.waitUntil(
-            this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run()
-              .catch(err => console.error('[DO] Failed to clear experiment logs:', err))
-          );
+          try {
+            await this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run();
+            console.log('[DO] Cleared experiment logs in D1 successfully on HTTP reset.');
+          } catch (err) {
+            console.error('[DO] Failed to clear experiment logs in D1 on HTTP reset:', err);
+          }
         }
         
-        if (!this.isCustomName) {
+        const isNotCustom = !this.isCustomName || isDefaultOrAutoName(this.name);
+        if (isNotCustom) {
           const baseName = "Experiment";
           const dateStr = new Date().toISOString().split('T')[0];
           const count = await getExperimentCount(this.env.DB, email, baseName, dateStr);
@@ -949,6 +962,7 @@ Instructions:
 
           this.baseName = baseName;
           this.name = fullName;
+          this.isCustomName = false;
           this.state.waitUntil(this.state.storage.put('is_custom_name', false));
           
           if (email) {
