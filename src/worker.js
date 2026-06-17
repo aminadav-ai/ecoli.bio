@@ -587,14 +587,26 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         }
         
         if (!this.isCustomName) {
-          this.baseName = "Experiment";
-          this.name = "Experiment";
+          const baseName = "Experiment";
+          const dateStr = new Date().toISOString().split('T')[0];
+          const count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
+          const fullName = `${baseName} (${dateStr} #${count + 1})`;
+
+          this.baseName = baseName;
+          this.name = fullName;
           this.state.waitUntil(this.state.storage.put('is_custom_name', false));
           
           if (this.userEmail) {
             this.state.waitUntil(
-              renameSimulationSession(this.env.DB, this.sessionId, "Experiment")
-                .catch(err => console.error('[DO] Failed to rename session in D1 on reset:', err))
+              upsertSimulationSession(
+                this.env.DB,
+                this.sessionId,
+                this.userEmail,
+                this.baseName,
+                this.name,
+                JSON.stringify(serializeSimulation(this.simulation)),
+                false
+              ).catch(err => console.error('[DO] Failed to update session in D1 on reset:', err))
             );
           }
           
@@ -917,14 +929,26 @@ Instructions:
         }
         
         if (!this.isCustomName) {
-          this.baseName = "Experiment";
-          this.name = "Experiment";
+          const baseName = "Experiment";
+          const dateStr = new Date().toISOString().split('T')[0];
+          const count = await getExperimentCount(this.env.DB, email, baseName, dateStr);
+          const fullName = `${baseName} (${dateStr} #${count + 1})`;
+
+          this.baseName = baseName;
+          this.name = fullName;
           this.state.waitUntil(this.state.storage.put('is_custom_name', false));
           
           if (email) {
             this.state.waitUntil(
-              renameSimulationSession(this.env.DB, this.sessionId, "Experiment")
-                .catch(err => console.error('[DO] Failed to rename session in D1 on reset:', err))
+              upsertSimulationSession(
+                this.env.DB,
+                this.sessionId,
+                email,
+                this.baseName,
+                this.name,
+                JSON.stringify(serializeSimulation(this.simulation)),
+                false
+              ).catch(err => console.error('[DO] Failed to update session in D1 on reset:', err))
             );
           }
           
