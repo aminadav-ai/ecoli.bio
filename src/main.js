@@ -2212,14 +2212,6 @@ function setupUIListeners() {
   if (navChat && chatDrawer) {
     navChat.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!userProfile) {
-        authEntryPoint = 'chat';
-        openAuthModal(
-          "Unlock AI Chat & Reports",
-          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
-        );
-        return;
-      }
       const isMobile = window.innerWidth <= 768;
       const isChatOpen = !chatDrawer.classList.contains('hidden');
       if (isChatOpen) {
@@ -6110,19 +6102,27 @@ async function handleGoogleCredentialResponse(response) {
       await checkAuthStatus(true);
       
       const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
-      if (userCredits <= 0 && (authEntryPoint === 'chat' || authEntryPoint === 'report')) {
-        showToast('Please top up your account. Credits are required to use AI Chat or generate reports.', 'error');
-      } else {
-        if (authEntryPoint === 'chat') {
-          openChatDrawer();
-          if (msg) {
-            const chatInput = document.getElementById('ai-chat-input');
+      if (authEntryPoint === 'chat') {
+        openChatDrawer();
+        if (msg) {
+          const chatInput = document.getElementById('ai-chat-input');
+          if (userCredits > 0) {
             if (chatInput) {
               chatInput.value = '';
             }
             sendChatMessage(msg);
+          } else {
+            if (chatInput) {
+              chatInput.value = msg;
+              setTimeout(() => chatInput.focus(), 100);
+            }
+            showToast('Please top up your account. Credits are required to chat.', 'error');
           }
-        } else if (authEntryPoint === 'report') {
+        }
+      } else if (authEntryPoint === 'report') {
+        if (userCredits <= 0) {
+          showToast('Please top up your account. Credits are required to generate reports.', 'error');
+        } else {
           const btnReport = document.getElementById('btn-experiment-report');
           if (btnReport) {
             btnReport.click();
@@ -6666,9 +6666,9 @@ function handlePostWelcomeRedirect() {
     if (msg) {
       const chatInput = document.getElementById('ai-chat-input');
       if (chatInput) {
-        chatInput.value = '';
+        chatInput.value = msg;
+        setTimeout(() => chatInput.focus(), 100);
       }
-      sendChatMessage(msg);
     }
   } else if (authEntryPoint === 'report') {
     const btnReport = document.getElementById('btn-experiment-report');
@@ -6676,6 +6676,7 @@ function handlePostWelcomeRedirect() {
       btnReport.click();
     }
   }
+  pendingChatMessage = null;
   authEntryPoint = null;
 }
 
@@ -7096,14 +7097,6 @@ function setupScenariosAndChat() {
   if (chatTrigger && chatDrawer) {
     chatTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!userProfile) {
-        authEntryPoint = 'chat';
-        openAuthModal(
-          "Unlock AI Chat & Reports",
-          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
-        );
-        return;
-      }
       isChatPeeking = false; // Cancel auto-close peek if user interacted
       const isOpening = chatDrawer.classList.contains('hidden');
       if (isOpening) {
@@ -7870,7 +7863,23 @@ async function sendChatMessage(customMessage = null) {
 
   // Check if user is logged in
   if (!userProfile) {
-    showToast('Sign in to chat', 'error');
+    pendingChatMessage = message;
+    authEntryPoint = 'chat';
+    openAuthModal(
+      "Unlock AI Chat & Reports",
+      "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
+    );
+    return;
+  }
+
+  // Check if user has credits
+  const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
+  if (userCredits <= 0) {
+    showToast('Insufficient credits. Please top up your account.', 'error');
+    if (chatInput && !customMessage) {
+      chatInput.value = message;
+      setTimeout(() => chatInput.focus(), 100);
+    }
     return;
   }
 
@@ -7942,12 +7951,21 @@ async function sendChatMessage(customMessage = null) {
       const err = await res.json().catch(() => ({}));
       if (res.status === 402 || err.error === 'insufficient_credits') {
         showToast('Insufficient credits. Please refill your account.', 'error');
+        if (chatInput && !customMessage) {
+          chatInput.value = message;
+        }
         await checkAuthStatus();
       } else if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
+        if (chatInput && !customMessage) {
+          chatInput.value = message;
+        }
         await checkAuthStatus();
       } else {
         appendModelMessage(`Error: ${err.error || 'Failed to send query to AI.'}`);
+        if (chatInput && !customMessage) {
+          chatInput.value = message;
+        }
       }
     }
   } catch (err) {
@@ -7956,6 +7974,9 @@ async function sendChatMessage(customMessage = null) {
     if (loader) loader.remove();
     console.error('Failed to chat:', err);
     appendModelMessage('Error: No connection to the chat server.');
+    if (chatInput && !customMessage) {
+      chatInput.value = message;
+    }
   }
 }
 
@@ -7968,17 +7989,30 @@ async function submitReflectionAnswer() {
     return;
   }
 
+  const promptMessage = `I am performing the educational scenario "${SCENARIOS[activeScenarioId].title}".
+My answer to the reflection question: "${SCENARIOS[activeScenarioId].reflection}"
+Answer: "${answer}"
+Please evaluate my answer for biological correctness based on the current metabolic map parameters, correct me if I am wrong, and explain the biology in detail.`;
+
   if (!userProfile) {
     showToast('Please sign in to submit your answer to the AI tutor.', 'error');
+    pendingChatMessage = promptMessage;
     authEntryPoint = 'chat';
     openAuthModal();
     return;
   }
 
-  const promptMessage = `I am performing the educational scenario "${SCENARIOS[activeScenarioId].title}".
-My answer to the reflection question: "${SCENARIOS[activeScenarioId].reflection}"
-Answer: "${answer}"
-Please evaluate my answer for biological correctness based on the current metabolic map parameters, correct me if I am wrong, and explain the biology in detail.`;
+  const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
+  if (userCredits <= 0) {
+    showToast('Insufficient credits. Please top up your account.', 'error');
+    openChatDrawer();
+    const chatInput = document.getElementById('ai-chat-input');
+    if (chatInput) {
+      chatInput.value = promptMessage;
+      setTimeout(() => chatInput.focus(), 100);
+    }
+    return;
+  }
 
   // Focus on AI chat and open drawer
   openChatDrawer();
