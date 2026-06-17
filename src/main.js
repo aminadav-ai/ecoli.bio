@@ -627,8 +627,6 @@ const throttledUpdateFbaBounds = throttle((...args) => updateFbaBounds(...args),
 
 let isFetchingBounds = false;
 async function updateFbaBounds(currentTime, forceOptions = {}) {
-  if (!userProfile) return;
-
   // Send via WebSocket if connected
   if (sessionWebSocket && sessionWebSocket.readyState === WebSocket.OPEN) {
     if (forceOptions.reset) {
@@ -922,10 +920,6 @@ function setupUIListeners() {
   // Play/Pause button
   const playPauseBtn = document.getElementById('play-pause-btn');
   playPauseBtn.addEventListener('click', () => {
-    if (!userProfile) {
-      showToast('Please sign in to change parameters.', 'error');
-      return;
-    }
     isPaused = !isPaused;
     playPauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
     playPauseBtn.className = isPaused ? 'btn btn-secondary' : 'btn btn-primary';
@@ -935,10 +929,6 @@ function setupUIListeners() {
 
   // Reset/Restart handler
   const resetHandler = () => {
-    if (!userProfile) {
-      showToast('Please sign in to change parameters.', 'error');
-      return;
-    }
     simulation.reset();
     syncLastLoggedValues();
     chartHistory = [];
@@ -999,14 +989,6 @@ function setupUIListeners() {
   const globalO2Val = document.getElementById('global-o2-val');
   if (globalO2Slider && globalO2Val) {
     globalO2Slider.addEventListener('input', (e) => {
-      if (!userProfile) {
-        e.preventDefault();
-        const prevVal = (simulation && simulation.metabolites['o2_e']) ? simulation.metabolites['o2_e'].concentration : 18.5;
-        globalO2Slider.value = prevVal;
-        globalO2Val.textContent = prevVal.toFixed(2);
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const val = parseFloat(e.target.value);
       globalO2Val.textContent = val.toFixed(2);
       if (simulation && simulation.metabolites['o2_e']) {
@@ -1041,14 +1023,6 @@ function setupUIListeners() {
   const globalGlcVal = document.getElementById('global-glc-val');
   if (globalGlcSlider && globalGlcVal) {
     globalGlcSlider.addEventListener('input', (e) => {
-      if (!userProfile) {
-        e.preventDefault();
-        const prevVal = (simulation && simulation.metabolites['glc__D_e']) ? simulation.metabolites['glc__D_e'].concentration : 10.0;
-        globalGlcSlider.value = prevVal;
-        globalGlcVal.textContent = prevVal.toFixed(2);
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const val = parseFloat(e.target.value);
       globalGlcVal.textContent = val.toFixed(2);
       if (simulation && simulation.metabolites['glc__D_e']) {
@@ -1193,10 +1167,6 @@ function setupUIListeners() {
   // Injections Spikes
   document.querySelectorAll('.btn-inject').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!userProfile) {
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       if (selectedMetaboliteId) {
         const amount = parseFloat(btn.getAttribute('data-amount'));
         simulation.inject(selectedMetaboliteId, amount);
@@ -1215,10 +1185,6 @@ function setupUIListeners() {
 
   // Deplete metabolite
   document.getElementById('btn-deplete').addEventListener('click', () => {
-    if (!userProfile) {
-      showToast('Please sign in to change parameters.', 'error');
-      return;
-    }
     if (selectedMetaboliteId && simulation.metabolites[selectedMetaboliteId]) {
       simulation.deplete(selectedMetaboliteId);
       console.log(`[App] Depleted ${selectedMetaboliteId} to 0.1 mM`);
@@ -1615,14 +1581,6 @@ function setupUIListeners() {
   const vmaxVal = document.getElementById('vmax-val');
   if (vmaxSlider) {
     vmaxSlider.addEventListener('input', (e) => {
-      if (!userProfile) {
-        e.preventDefault();
-        const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].vMax : 10.0;
-        vmaxSlider.value = prevVal;
-        vmaxVal.textContent = prevVal.toFixed(1);
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const val = parseFloat(e.target.value);
       vmaxVal.textContent = val.toFixed(1);
       if (selectedReactionId) {
@@ -1664,14 +1622,6 @@ function setupUIListeners() {
   const kmVal = document.getElementById('km-val');
   if (kmSlider) {
     kmSlider.addEventListener('input', (e) => {
-      if (!userProfile) {
-        e.preventDefault();
-        const prevVal = (selectedReactionId && simulation && simulation.reactions[selectedReactionId]) ? simulation.reactions[selectedReactionId].km : 0.8;
-        kmSlider.value = prevVal;
-        kmVal.textContent = prevVal.toFixed(2);
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const val = parseFloat(e.target.value);
       kmVal.textContent = val.toFixed(2);
       if (selectedReactionId && simulation) {
@@ -1981,8 +1931,16 @@ function setupUIListeners() {
             'Authorization': `Bearer ${token}`
           }
         });
+        if (res.status === 402) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.message || 'Insufficient credits to view report.', 'error');
+          return;
+        }
         if (!res.ok) throw new Error('Failed to fetch logs');
         const logs = await res.json();
+        
+        // Update credit UI in background after deduction
+        checkAuthStatus();
         
         // Generate English report content
         const activeExp = experimentsList.find(e => e.id === sessionId);
@@ -3063,14 +3021,6 @@ function renderPinnedReactions() {
     const slider = row.querySelector('.pinned-vmax-slider');
     const label = row.querySelector(`#pinned-vmax-val-${rxnId}`);
     slider.addEventListener('input', (e) => {
-      if (!userProfile) {
-        e.preventDefault();
-        const prevVal = (simulation && simulation.reactions[rxnId]) ? simulation.reactions[rxnId].vMax : 10.0;
-        slider.value = prevVal;
-        label.textContent = prevVal.toFixed(1);
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const val = parseFloat(e.target.value);
       label.textContent = val.toFixed(1);
       
@@ -6849,28 +6799,16 @@ function updateUserStatusUI() {
   // Hide play/pause and reset buttons for guests, and hide the entire simulation controls section
   const simControlsSection = document.getElementById('mobile-simulation-controls-section');
   if (simControlsSection) {
-    if (userProfile) {
-      simControlsSection.classList.remove('hidden');
-    } else {
-      simControlsSection.classList.add('hidden');
-    }
+    simControlsSection.classList.remove('hidden');
   }
 
   const playPauseBtn = document.getElementById('play-pause-btn');
   const resetBtn = document.getElementById('reset-btn');
   if (playPauseBtn) {
-    if (userProfile) {
-      playPauseBtn.classList.remove('hidden');
-    } else {
-      playPauseBtn.classList.add('hidden');
-    }
+    playPauseBtn.classList.remove('hidden');
   }
   if (resetBtn) {
-    if (userProfile) {
-      resetBtn.classList.remove('hidden');
-    } else {
-      resetBtn.classList.add('hidden');
-    }
+    resetBtn.classList.remove('hidden');
   }
 }
 
@@ -6883,10 +6821,6 @@ function setupScenariosAndChat() {
   const cards = document.querySelectorAll('.scenario-card');
   cards.forEach(card => {
     card.addEventListener('click', () => {
-      if (!userProfile) {
-        showToast('Please sign in to change parameters.', 'error');
-        return;
-      }
       const scenarioId = card.getAttribute('data-scenario');
       selectScenario(scenarioId);
     });
@@ -7373,14 +7307,6 @@ function startScenario(scenarioId) {
       
       // Update simulation concentration on slider change
       input.addEventListener('input', (e) => {
-        if (!userProfile) {
-          e.preventDefault();
-          const prevVal = (simulation && simulation.metabolites[ctrl.id]) ? simulation.metabolites[ctrl.id].concentration : ctrl.value;
-          input.value = prevVal;
-          valSpan.textContent = prevVal;
-          showToast('Please sign in to change parameters.', 'error');
-          return;
-        }
         const val = parseFloat(e.target.value);
         valSpan.textContent = val;
         
@@ -7725,6 +7651,12 @@ async function submitReflectionAnswer() {
   const answer = answerInput.value.trim();
   if (!answer) {
     showToast('Please write an answer to the question before submitting.', 'error');
+    return;
+  }
+
+  if (!userProfile) {
+    showToast('Please sign in to submit your answer to the AI tutor.', 'error');
+    openAuthModal();
     return;
   }
 

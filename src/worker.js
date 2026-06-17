@@ -206,7 +206,7 @@ export class SolverDO {
       try {
         const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
         if (user && user.credits !== undefined && user.credits !== null) {
-          this.credits = parseFloat(user.credits) - this.bufferedTicks;
+          this.credits = parseFloat(user.credits);
         }
       } catch (err) {
         console.error('[DO LOOP] Failed to reload user credits:', err);
@@ -215,14 +215,7 @@ export class SolverDO {
     
     try {
       while (!this.stabilized && this.ticksRun < 100 && this.isSolving) {
-        if (this.userEmail && this.credits !== undefined && (this.credits === null || this.credits <= 0)) {
-          this.broadcast({
-            type: "ERROR",
-            error: "insufficient_credits",
-            message: "Insufficient credits. Please refill your account."
-          });
-          break;
-        }
+        // Solver is free, do not check or pause for credits
         const currentParams = {};
         for (const [rId, rxn] of Object.entries(this.simulation.reactions)) {
           if (rxn.vMax !== rxn.defaultVmax || rxn.km !== rxn.defaultKm) {
@@ -274,20 +267,8 @@ export class SolverDO {
         await this.state.storage.put('sim_state', stateToSave);
         
         // Increment solver ticks
-        const newTicks = this.simulation.solverTicksBuffer || 0;
-        console.log(`[DO LOOP] newTicks=${newTicks}, userEmail=${this.userEmail}`);
-        if (newTicks > 0 && this.userEmail) {
+        if (this.simulation.solverTicksBuffer) {
           this.simulation.solverTicksBuffer = 0;
-          this.bufferedTicks += newTicks;
-          if (this.credits !== undefined) {
-            this.credits = Math.max(0.0, this.credits - newTicks);
-          }
-          await this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
-          
-          if (!this.alarmScheduled) {
-            this.alarmScheduled = true;
-            this.state.storage.setAlarm(Date.now() + 5000);
-          }
         }
         
         // Broadcast tick update
@@ -472,16 +453,16 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         console.log(`[DO INIT] Received userEmail=${userEmail}, credits=${credits}`);
         this.userEmail = userEmail || null;
         if (credits !== undefined && credits !== null) {
-          this.credits = parseFloat(credits) - this.bufferedTicks;
+          this.credits = parseFloat(credits);
         }
         
         if (this.userEmail) {
           try {
             const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
             if (user && user.credits !== undefined && user.credits !== null) {
-              this.credits = parseFloat(user.credits) - this.bufferedTicks;
+              this.credits = parseFloat(user.credits);
             } else {
-              this.credits = 250.0 - this.bufferedTicks;
+              this.credits = 0.0;
             }
           } catch (err) {
             console.error('[DO INIT] Failed to load user credits:', err);
@@ -699,7 +680,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
     if (url.pathname === '/update-credits') {
       const { credits } = await request.json();
-      this.credits = parseFloat(credits) - this.bufferedTicks;
+      this.credits = parseFloat(credits);
 
       // Broadcast update to all connected clients
       this.broadcast({
@@ -733,7 +714,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         if (user) {
           this.userEmail = user.email;
           if (this.credits === undefined || this.credits === null) {
-            this.credits = parseFloat(user.credits) - this.bufferedTicks;
+            this.credits = parseFloat(user.credits);
           }
         }
       }
@@ -837,7 +818,7 @@ Instructions:
       const updatedCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
 
       // Update in-memory credits
-      this.credits = updatedCredits - this.bufferedTicks;
+      this.credits = updatedCredits;
 
       // Broadcast update to all clients
       this.broadcast({
@@ -907,33 +888,12 @@ Instructions:
       if (data.userEmail) {
         this.userEmail = data.userEmail;
         if (data.credits !== undefined && data.credits !== null) {
-          this.credits = parseFloat(data.credits) - this.bufferedTicks;
+          this.credits = parseFloat(data.credits);
         }
       }
 
-      const newTicks = this.simulation.solverTicksBuffer || 0;
-      if (newTicks > 0 && data.userEmail) {
+      if (this.simulation.solverTicksBuffer) {
         this.simulation.solverTicksBuffer = 0;
-        this.bufferedTicks += newTicks;
-        this.userEmail = data.userEmail;
-        this.totalSolverTicks += newTicks;
-        this.dailySolverTicks += newTicks;
-        if (this.credits !== undefined) {
-          this.credits = Math.max(0.0, this.credits - newTicks);
-        }
-        this.state.storage.put('buffered_state', { ticks: this.bufferedTicks, email: this.userEmail });
-      }
-
-      if (this.lastFlushTime === 0) {
-        this.lastFlushTime = now;
-      }
-      if (now - this.lastFlushTime >= 5000) {
-        this.state.waitUntil(this.flushTicks());
-      }
-
-      if (!this.alarmScheduled && this.bufferedTicks > 0) {
-        this.alarmScheduled = true;
-        this.state.storage.setAlarm(Date.now() + 5000);
       }
 
       result.solverTicks = 0;
@@ -1221,24 +1181,6 @@ export default {
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Please sign in to use the simulator.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
-        // Check if user has sufficient credits
-        if (user.credits <= 0) {
-          return new Response(JSON.stringify({ 
-            error: 'insufficient_credits', 
-            message: 'Insufficient credits. Please refill your account.' 
-          }), {
-            status: 402,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
         const sessionId = request.headers.get('x-session-id') || 'default_user';
         const body = await request.json();
 
@@ -1258,10 +1200,10 @@ export default {
             parameters: body.parameters,
             reset: body.reset,
             scenario: body.scenario,
-            userEmail: user.email,
+            userEmail: user ? user.email : null,
             dbTicks: 0,
             dailyTicks: 0,
-            credits: user.credits
+            credits: user ? user.credits : null
           })
         });
 
@@ -1274,10 +1216,10 @@ export default {
         
         result.solverTicks = 0;
         result.dailySolverTicks = 0;
-        result.credits = result.credits !== undefined ? result.credits : user.credits;
+        result.credits = result.credits !== undefined ? result.credits : (user ? user.credits : null);
         result.lastTimestamp = Date.now();
 
-        if (body.logAction) {
+        if (user && body.logAction) {
           const biomass = result.biomass_flux || 0.0;
           const glcFlux = result.fluxes ? (result.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
           const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
@@ -1474,7 +1416,18 @@ export default {
           });
         }
 
+        // Deduct 1 credit for generating the report
+        if (user.credits < 1.0) {
+          return new Response(JSON.stringify({
+            error: 'insufficient_credits',
+            message: 'Generating this report costs 1.0 credit. Insufficient credits.'
+          }), {
+            status: 402,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
 
+        await deductUserCredits(env.DB, user.email, 1.0);
 
         const logs = await getExperimentLogs(env.DB, sessionId);
 

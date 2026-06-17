@@ -69,7 +69,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
 
   // Create user in DB (upsert)
   await db.prepare(
-    'INSERT INTO users (email, name, picture) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name, picture = excluded.picture'
+    'INSERT INTO users (email, name, picture, credits) VALUES (?, ?, ?, 0.0) ON CONFLICT (email) DO UPDATE SET name = excluded.name, picture = excluded.picture'
   ).bind(email, name, picture).run();
 
   // Create session UUID in JS
@@ -98,7 +98,7 @@ export async function verifyGoogleTokenAndLogin(db, credential) {
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
+      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 0.0
     }
   };
 }
@@ -119,7 +119,7 @@ export async function getUserStatus(db, token, ip, guestId, timeZone, googleClie
       premiumTier: user.premium_tier || 0,
       premiumUntil: user.premium_until,
       autoRenew: !!user.auto_renew,
-      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 250.0
+      credits: (user.credits !== undefined && user.credits !== null) ? user.credits : 0.0
     } : null
   };
 }
@@ -184,23 +184,14 @@ export async function getChatHistory(db, identifier, limit = 50) {
 
 // 13. Bulk increment user solver ticks (Batch API) - now only deducts credits
 export async function bulkIncrementUserStats(db, updates) {
-  if (!updates || updates.length === 0) return;
-  try {
-    const statements = updates.map(item => 
-      db.prepare('UPDATE users SET credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?')
-        .bind(item.ticks, item.email)
-    );
-    await db.batch(statements);
-  } catch (err) {
-    console.error('[D1 DB] Failed to bulk increment user stats:', err);
-  }
+  // Solver is free, do not deduct credits for solver ticks
 }
 
 // 13b. Deduct user credits (for AI query or other operations)
 export async function deductUserCredits(db, email, amount) {
   try {
     await db.prepare(
-      'UPDATE users SET credits = MAX(0.0, COALESCE(credits, 250.0) - ?) WHERE email = ?'
+      'UPDATE users SET credits = MAX(0.0, COALESCE(credits, 0.0) - ?) WHERE email = ?'
     ).bind(amount, email).run();
   } catch (err) {
     console.error('[D1 DB] Failed to deduct user credits:', err);
