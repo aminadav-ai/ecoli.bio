@@ -986,6 +986,41 @@ function setupUIListeners() {
     deathResetBtn.addEventListener('click', resetHandler);
   }
 
+  // Reset Confirmation Modal event listeners
+  const btnResetConfirmCancel = document.getElementById('btn-reset-confirm-cancel');
+  if (btnResetConfirmCancel) {
+    btnResetConfirmCancel.addEventListener('click', () => {
+      const confirmModal = document.getElementById('reset-confirm-modal');
+      if (confirmModal) {
+        confirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
+      }
+    });
+  }
+
+  const btnResetConfirmOk = document.getElementById('btn-reset-confirm-ok');
+  if (btnResetConfirmOk) {
+    btnResetConfirmOk.addEventListener('click', () => {
+      const confirmModal = document.getElementById('reset-confirm-modal');
+      if (confirmModal) {
+        confirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
+      }
+      performReset();
+      currentExperimentHasLogs = false;
+    });
+  }
+
+  const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  if (resetConfirmModal) {
+    resetConfirmModal.addEventListener('click', (e) => {
+      if (e.target === resetConfirmModal) {
+        resetConfirmModal.classList.add('hidden');
+        popHistoryStateIfNeeded();
+      }
+    });
+  }
+
   // Mobile popup close button
   const mobileCloseBtn = document.getElementById('mobile-metab-popup-close');
   if (mobileCloseBtn) {
@@ -7458,40 +7493,7 @@ function setupScenariosAndChat() {
     });
   }
 
-  // Reset Confirmation Modal event listeners
-  const btnResetConfirmCancel = document.getElementById('btn-reset-confirm-cancel');
-  if (btnResetConfirmCancel) {
-    btnResetConfirmCancel.addEventListener('click', () => {
-      const confirmModal = document.getElementById('reset-confirm-modal');
-      if (confirmModal) {
-        confirmModal.classList.add('hidden');
-        popHistoryStateIfNeeded();
-      }
-    });
-  }
 
-  const btnResetConfirmOk = document.getElementById('btn-reset-confirm-ok');
-  if (btnResetConfirmOk) {
-    btnResetConfirmOk.addEventListener('click', () => {
-      const confirmModal = document.getElementById('reset-confirm-modal');
-      if (confirmModal) {
-        confirmModal.classList.add('hidden');
-        popHistoryStateIfNeeded();
-      }
-      performReset();
-      currentExperimentHasLogs = false;
-    });
-  }
-
-  const resetConfirmModal = document.getElementById('reset-confirm-modal');
-  if (resetConfirmModal) {
-    resetConfirmModal.addEventListener('click', (e) => {
-      if (e.target === resetConfirmModal) {
-        resetConfirmModal.classList.add('hidden');
-        popHistoryStateIfNeeded();
-      }
-    });
-  }
 
   // Buy Credits event listener
   const btnBuyCredits = document.getElementById('btn-buy-credits');
