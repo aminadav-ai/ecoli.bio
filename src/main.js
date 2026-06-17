@@ -6248,7 +6248,7 @@ function closeAuthModal() {
   pendingChatCursorStart = null;
   pendingChatCursorEnd = null;
   
-  if (wasModalOpen) {
+  if (wasModalOpen && !authEntryPoint) {
     popHistoryStateIfNeeded();
   }
 }
@@ -6638,7 +6638,7 @@ function closeWelcomeModal() {
     modal.classList.add('hidden');
   }
   tempGoogleCredential = null;
-  if (wasModalOpen) {
+  if (wasModalOpen && !authEntryPoint) {
     popHistoryStateIfNeeded();
   }
 }
@@ -6658,7 +6658,7 @@ function closeMaintenanceCreditsModal() {
     wasModalOpen = !modal.classList.contains('hidden');
     modal.classList.add('hidden');
   }
-  if (wasModalOpen) {
+  if (wasModalOpen && !authEntryPoint) {
     popHistoryStateIfNeeded();
   }
   handlePostWelcomeRedirect();
@@ -7213,9 +7213,9 @@ function setupScenariosAndChat() {
   const btnCloseAuth = document.getElementById('btn-close-auth');
   if (btnCloseAuth) {
     btnCloseAuth.addEventListener('click', () => {
-      closeAuthModal();
       pendingChatMessage = null;
       authEntryPoint = null;
+      closeAuthModal();
     });
   }
 
@@ -7440,9 +7440,9 @@ function setupScenariosAndChat() {
   const btnWelcomeCancel = document.getElementById('btn-welcome-cancel');
   if (btnWelcomeCancel) {
     btnWelcomeCancel.addEventListener('click', () => {
-      closeWelcomeModal();
       pendingChatMessage = null;
       authEntryPoint = null;
+      closeWelcomeModal();
     });
   }
 
