@@ -7505,7 +7505,8 @@ async function sendChatMessage(customMessage = null) {
 
   // Check if user is logged in
   if (!userProfile) {
-    showToast('Please sign in to chat with the AI assistant.', 'error');
+    showToast('Sign in to chat', 'error');
+    openAuthModal();
     return;
   }
 
