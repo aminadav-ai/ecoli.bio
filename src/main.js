@@ -6187,7 +6187,7 @@ function openAuthModal(customTitle, customMessage) {
     const iconEl = document.querySelector('.auth-card .auth-icon');
     
     if (titleEl) titleEl.textContent = customTitle || 'Sign In';
-    if (messageEl) messageEl.textContent = customMessage || 'Please sign in to use all features of the site, generate reports, and chat with the AI assistant.';
+    if (messageEl) messageEl.textContent = customMessage || 'Sign in to keep your simulation data private and securely sync your experiments and chat history across all your devices.';
     if (iconEl) {
       iconEl.innerHTML = '👤';
       iconEl.classList.remove('pulse-animation');
