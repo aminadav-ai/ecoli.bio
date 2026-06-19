@@ -7590,7 +7590,7 @@ async function sendChatMessage(customMessage = null) {
       aiChatHistory.push({ role: 'user', text: message });
       aiChatHistory.push({ role: 'model', text: data.reply });
       
-      if (data.credits !== undefined) {
+      if (data.credits !== undefined && userProfile) {
         userProfile.credits = data.credits;
       }
       updateUserStatusUI();
