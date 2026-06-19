@@ -92,6 +92,15 @@ async function logReactionChanges(db, simulation, incomingParams, singleId = nul
   }
 }
 
+function getChatIdentifier(userEmail, sessionId, guestId) {
+  if (userEmail && !userEmail.startsWith('guest')) {
+    return sessionId ? `user:${userEmail}:${sessionId}` : `user:${userEmail}`;
+  } else {
+    const gId = guestId || (userEmail && userEmail.startsWith('guest:') ? userEmail.split(':')[1] : 'unknown');
+    return sessionId ? `guest:${gId}:${sessionId}` : `guest:${gId}`;
+  }
+}
+
 // ==========================================
 // 1. Durable Object: SolverDO
 // ==========================================
@@ -653,6 +662,16 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           } catch (err) {
             console.error('[DO] Failed to clear experiment logs in D1 on reset:', err);
           }
+          
+          if (this.userEmail.startsWith('guest')) {
+            const chatIdentifier = getChatIdentifier(this.userEmail, this.sessionId, this.guestId);
+            try {
+              await this.env.DB.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(chatIdentifier).run();
+              console.log('[DO] Cleared guest chat history on reset. Identifier:', chatIdentifier);
+            } catch (err) {
+              console.error('[DO] Failed to clear guest chat history on reset:', err);
+            }
+          }
         }
         
         const isNotCustom = !this.isCustomName || isDefaultOrAutoName(this.name);
@@ -1012,6 +1031,16 @@ Instructions:
             console.log('[DO] Cleared experiment logs in D1 successfully on HTTP reset.');
           } catch (err) {
             console.error('[DO] Failed to clear experiment logs in D1 on HTTP reset:', err);
+          }
+          
+          if (email.startsWith('guest')) {
+            const chatIdentifier = getChatIdentifier(email, this.sessionId, this.guestId);
+            try {
+              await this.env.DB.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(chatIdentifier).run();
+              console.log('[DO] Cleared guest chat history on HTTP reset. Identifier:', chatIdentifier);
+            } catch (err) {
+              console.error('[DO] Failed to clear guest chat history on HTTP reset:', err);
+            }
           }
         }
         

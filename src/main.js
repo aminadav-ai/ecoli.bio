@@ -949,6 +949,10 @@ function setupUIListeners() {
     if (overlay) overlay.classList.add('hidden');
     console.log('[App] Simulation state reset.');
 
+    if (!userProfile) {
+      resetChatToGreeting();
+    }
+
     // Recalculate fluxes immediately on reset
     wakeUpSolver();
     updateFbaBounds(performance.now(), { 
@@ -967,9 +971,26 @@ function setupUIListeners() {
 
   // Reset/Restart handler
   const resetHandler = () => {
-    if (currentExperimentHasLogs) {
+    const hasLogs = currentExperimentHasLogs;
+    const hasChat = !userProfile && aiChatHistory.length > 0;
+    
+    if (hasLogs || hasChat) {
       const confirmModal = document.getElementById('reset-confirm-modal');
       if (confirmModal) {
+        const warningMsgEl = confirmModal.querySelector('p');
+        if (warningMsgEl) {
+          if (!userProfile) {
+            if (hasLogs && hasChat) {
+              warningMsgEl.textContent = 'This will permanently delete all recorded actions, logs, and your AI chat history for this experiment. This action cannot be undone.';
+            } else if (hasChat) {
+              warningMsgEl.textContent = 'This will permanently delete your AI chat history for this experiment. This action cannot be undone.';
+            } else {
+              warningMsgEl.textContent = 'This will permanently delete all recorded actions and logs for this experiment. This action cannot be undone.';
+            }
+          } else {
+            warningMsgEl.textContent = 'This will permanently delete all recorded actions and logs for this experiment. This action cannot be undone.';
+          }
+        }
         confirmModal.classList.remove('hidden');
         pushHistoryStateIfNeeded();
       }
