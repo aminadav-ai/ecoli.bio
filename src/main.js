@@ -5253,6 +5253,9 @@ async function loadExperimentsList(selectedId = null) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  if (guestId) {
+    headers['x-guest-id'] = guestId;
+  }
 
   try {
     const res = await fetch('/api/experiments', { headers });
@@ -5331,6 +5334,9 @@ async function createNewExperiment() {
   const headers = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (guestId) {
+    headers['x-guest-id'] = guestId;
   }
 
   try {
@@ -5510,6 +5516,9 @@ async function saveRename(id, newName) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  if (guestId) {
+    headers['x-guest-id'] = guestId;
+  }
 
   try {
     const res = await fetch('/api/experiments/rename', {
@@ -5549,6 +5558,9 @@ async function handleDeleteExperiment(exp) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  if (guestId) {
+    headers['x-guest-id'] = guestId;
+  }
 
   try {
     isDeletingLocally = true;
@@ -5582,10 +5594,10 @@ function connectSessionWebSocket() {
     sessionWebSocket = null;
   }
 
-  if (!userProfile) return;
+  if (!userProfile && !guestId) return;
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/api/session-websocket?sessionId=${sessionId}`;
+  const wsUrl = `${protocol}//${window.location.host}/api/session-websocket?sessionId=${sessionId}&guestId=${guestId || ''}`;
   
   console.log(`[WS] Connecting to WebSocket: ${wsUrl}`);
   sessionWebSocket = new WebSocket(wsUrl);
@@ -5593,10 +5605,10 @@ function connectSessionWebSocket() {
   sessionWebSocket.onopen = () => {
     console.log('[WS] Connection established.');
     if (sessionWebSocket.readyState === WebSocket.OPEN) {
-      console.log('[WS DEBUG] Sending INIT message with dbTicks:', userProfile ? userProfile.solverTicks : 'no userProfile');
+      console.log('[WS DEBUG] Sending INIT message with dbTicks:', userProfile ? userProfile.solverTicks : 'guest');
       sessionWebSocket.send(JSON.stringify({
         type: "INIT",
-        userEmail: userProfile ? userProfile.email : null,
+        userEmail: userProfile ? userProfile.email : (guestId ? 'guest:' + guestId : 'guest'),
         dbTicks: userProfile ? (userProfile.solverTicks || 0) : 0,
         dailyTicks: userProfile ? (userProfile.dailySolverTicks || 0) : 0,
         credits: userProfile ? userProfile.credits : null
@@ -5925,6 +5937,16 @@ async function checkAuthStatus(isVisit = false) {
     isSolverWorking = false;
     isPaused = false;
     updateSolverStatusUI();
+
+    // Show experiments dropdown and load/connect for guest
+    const experimentsContainer = document.getElementById('experiments-container');
+    if (experimentsContainer) {
+      experimentsContainer.classList.remove('hidden');
+    }
+    const loadedExisting = await loadExperimentsList();
+    if (loadedExisting) {
+      connectSessionWebSocket();
+    }
     return;
   }
 

@@ -256,6 +256,11 @@ export async function getSimulationSession(db, id) {
 // 17. Upsert simulation session
 export async function upsertSimulationSession(db, id, email, baseName, name, state, isCustomName = null) {
   try {
+    if (email && email.startsWith('guest:')) {
+      await db.prepare(
+        'INSERT OR IGNORE INTO users (email, name, credits) VALUES (?, ?, 0.0)'
+      ).bind(email, 'Guest User').run();
+    }
     if (isCustomName !== null) {
       await db.prepare(
         'INSERT INTO simulation_sessions (id, email, base_name, name, state, is_custom_name, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now")) ' +

@@ -508,12 +508,12 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       if (data.type === 'INIT') {
         const { userEmail, credits } = data;
         console.log(`[DO INIT] Received userEmail=${userEmail}, credits=${credits}`);
-        this.userEmail = userEmail || 'guest';
+        this.userEmail = userEmail || (this.guestId ? 'guest:' + this.guestId : 'guest');
         if (credits !== undefined && credits !== null) {
           this.credits = parseFloat(credits);
         }
         
-        if (this.userEmail && this.userEmail !== 'guest') {
+        if (this.userEmail && !this.userEmail.startsWith('guest')) {
           try {
             const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
             if (user && user.credits !== undefined && user.credits !== null) {
@@ -739,6 +739,10 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
     if (qSessionId) {
       this.sessionId = qSessionId;
     }
+    const qGuestId = url.searchParams.get('guestId') || request.headers.get('x-guest-id');
+    if (qGuestId) {
+      this.guestId = qGuestId;
+    }
 
     if (url.pathname === '/api/session-websocket') {
       if (request.headers.get("Upgrade") !== "websocket") {
@@ -833,7 +837,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       const guestId = request.headers.get('x-guest-id');
       const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown';
       let identifier;
-      if (this.userEmail && this.userEmail !== 'guest') {
+      if (this.userEmail && !this.userEmail.startsWith('guest')) {
         identifier = this.sessionId 
           ? `user:${this.userEmail}:${this.sessionId}` 
           : `user:${this.userEmail}`;
@@ -924,7 +928,7 @@ Instructions:
         creditsCost = (regularTokens * (1 / 11000)) + (cachedTokens * (1 / 44000));
       }
 
-      if (this.userEmail && this.userEmail !== 'guest') {
+      if (this.userEmail && !this.userEmail.startsWith('guest')) {
         await deductUserCredits(this.env.DB, this.userEmail, creditsCost);
         const updatedUser = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
         const updatedCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
@@ -1354,6 +1358,7 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
+        const guestId = request.headers.get('x-guest-id');
 
         const sessionId = request.headers.get('x-session-id') || 'default_user';
         const body = await request.json();
@@ -1367,14 +1372,15 @@ export default {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'x-session-id': sessionId
+            'x-session-id': sessionId,
+            'x-guest-id': guestId || ''
           },
           body: JSON.stringify({
             concentrations: body.concentrations,
             parameters: body.parameters,
             reset: body.reset,
             scenario: body.scenario,
-            userEmail: user ? user.email : null,
+            userEmail: user ? user.email : (guestId ? 'guest:' + guestId : 'guest'),
             dbTicks: 0,
             dailyTicks: 0,
             credits: user ? user.credits : null
@@ -1393,7 +1399,7 @@ export default {
         result.credits = result.credits !== undefined ? result.credits : (user ? user.credits : null);
         result.lastTimestamp = Date.now();
 
-        if (user && body.logAction) {
+        if (body.logAction) {
           const biomass = result.biomass_flux || 0.0;
           const glcFlux = result.fluxes ? (result.fluxes['EX_glc__D_e'] || 0.0) : 0.0;
           const o2Flux = result.fluxes ? (result.fluxes['EX_o2_e'] || 0.0) : 0.0;
@@ -1427,15 +1433,25 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
+        let email;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+        if (user) {
+          email = user.email;
+        } else {
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          email = 'guest:' + guestId;
+          await env.DB.prepare('INSERT OR IGNORE INTO users (email, name, credits) VALUES (?, ?, 0.0)')
+            .bind(email, 'Guest User')
+            .run();
         }
 
-        const list = await getSimulationSessions(env.DB, user.email);
+        const list = await getSimulationSessions(env.DB, email);
         return new Response(JSON.stringify(list), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -1446,12 +1462,22 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
+        let email;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+        if (user) {
+          email = user.email;
+        } else {
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          email = 'guest:' + guestId;
+          await env.DB.prepare('INSERT OR IGNORE INTO users (email, name, credits) VALUES (?, ?, 0.0)')
+            .bind(email, 'Guest User')
+            .run();
         }
 
         const sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -1459,7 +1485,7 @@ export default {
         // Calculate initial formatted name
         const baseName = "Experiment";
         const dateStr = new Date().toISOString().split('T')[0];
-        const count = await getExperimentCount(env.DB, user.email, baseName, dateStr);
+        const count = await getExperimentCount(env.DB, email, baseName, dateStr);
         const fullName = `${baseName} (${dateStr} #${count + 1})`;
         
         const defaultState = JSON.stringify({
@@ -1470,7 +1496,7 @@ export default {
           lastTimestamp: 0
         });
 
-        await upsertSimulationSession(env.DB, sessionId, user.email, baseName, fullName, defaultState);
+        await upsertSimulationSession(env.DB, sessionId, email, baseName, fullName, defaultState);
 
         return new Response(JSON.stringify({ id: sessionId, base_name: baseName, name: fullName }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -1482,12 +1508,19 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
+        let email;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+        if (user) {
+          email = user.email;
+        } else {
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          email = 'guest:' + guestId;
         }
 
         const { id } = await request.json();
@@ -1522,7 +1555,7 @@ export default {
         await deleteSimulationSession(env.DB, id);
 
         // Delete chat history for this session
-        await deleteChatHistoryForSession(env.DB, user.email, id);
+        await deleteChatHistoryForSession(env.DB, email, id);
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -1536,10 +1569,13 @@ export default {
         const user = token ? await getUserByToken(env.DB, token) : null;
 
         if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
         }
 
         const { id, name } = await request.json();
