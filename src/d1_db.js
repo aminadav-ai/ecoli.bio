@@ -59,10 +59,6 @@ export async function verifyGoogleTokenAndLogin(db, credential, consentGiven = f
   const existingUser = await db.prepare('SELECT email FROM users WHERE email = ?').bind(email).first();
   const isNewUser = !existingUser;
 
-  if (isNewUser && !consentGiven) {
-    return { isNewUser: true, email, name, picture };
-  }
-
   if (isNewUser) {
     const countRow = await db.prepare('SELECT COUNT(*) as count FROM users').first();
     const currentCount = countRow ? countRow.count : 0;
@@ -191,15 +187,9 @@ export async function bulkIncrementUserStats(db, updates) {
   // Solver is free, do not deduct credits for solver ticks
 }
 
-// 13b. Deduct user credits (for AI query or other operations)
+// 13b. Deduct user credits (for AI query or other operations) - disabled (no-op)
 export async function deductUserCredits(db, email, amount) {
-  try {
-    await db.prepare(
-      'UPDATE users SET credits = MAX(0.0, COALESCE(credits, 0.0) - ?) WHERE email = ?'
-    ).bind(amount, email).run();
-  } catch (err) {
-    console.error('[D1 DB] Failed to deduct user credits:', err);
-  }
+  // Free trial period - credits deduction disabled
 }
 
 // 14. Record guest visit by session and date
@@ -349,5 +339,47 @@ export async function getExperimentLogs(db, sessionId) {
   } catch (err) {
     console.error('[D1 DB] getExperimentLogs error:', err);
     return [];
+  }
+}
+
+// 22. Record reaction parameter changes (Vmax / Km counts) in database
+export async function recordReactionActivity(db, reaction, vmaxChanged, kmChanged) {
+  try {
+    await db.prepare(
+      'INSERT INTO reaction_activity (reaction, vmax_count, km_count) ' +
+      'VALUES (?, ?, ?) ' +
+      'ON CONFLICT(reaction) DO UPDATE SET ' +
+      'vmax_count = vmax_count + excluded.vmax_count, ' +
+      'km_count = km_count + excluded.km_count'
+    ).bind(
+      reaction,
+      vmaxChanged ? 1 : 0,
+      kmChanged ? 1 : 0
+    ).run();
+  } catch (err) {
+    console.error('[D1 DB] recordReactionActivity error:', err);
+  }
+}
+
+// 23. Increment guest session activity (AI chats and reports count)
+export async function incrementGuestActivity(db, sessionId, dateStr, activityType) {
+  if (!sessionId) return;
+  try {
+    const chatVal = activityType === 'chat' ? 1 : 0;
+    const reportVal = activityType === 'report' ? 1 : 0;
+    await db.prepare(
+      'INSERT INTO guest_visits (session_id, visit_date, visit_count, chat_count, report_count) ' +
+      'VALUES (?, ?, 0, ?, ?) ' +
+      'ON CONFLICT(session_id, visit_date) DO UPDATE SET ' +
+      'chat_count = chat_count + excluded.chat_count, ' +
+      'report_count = report_count + excluded.report_count'
+    ).bind(
+      sessionId,
+      dateStr,
+      chatVal,
+      reportVal
+    ).run();
+  } catch (err) {
+    console.error('[D1 DB] incrementGuestActivity error:', err);
   }
 }

@@ -5304,7 +5304,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .header-credits-badge {
-  display: flex;
+  display: none !important;
   align-items: center;
   gap: 6px;
   background: rgba(99, 102, 241, 0.08);

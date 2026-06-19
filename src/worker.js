@@ -32,13 +32,64 @@ import {
   getExperimentCount,
   logExperimentAction,
   getExperimentLogs,
-  deductUserCredits
+  deductUserCredits,
+  recordReactionActivity,
+  incrementGuestActivity
 } from './d1_db.js';
 
 function isDefaultOrAutoName(name) {
   if (!name || name === "Experiment") return true;
   const regex = /^Experiment \(\d{4}-\d{2}-\d{2} #\d+\)$/;
   return regex.test(name);
+}
+
+// Helper to log reaction parameter changes on the server side
+async function logReactionChanges(db, simulation, incomingParams, singleId = null, singleParam = null, singleVal = null) {
+  const changes = {}; // reactionId -> { vmaxChanged: bool, kmChanged: bool }
+  
+  if (incomingParams) {
+    for (const [rId, paramObj] of Object.entries(incomingParams)) {
+      const rxn = simulation.reactions[rId];
+      if (rxn) {
+        let vmaxChanged = false;
+        let kmChanged = false;
+        if (paramObj.vMax !== undefined && paramObj.vMax !== rxn.vMax) {
+          vmaxChanged = true;
+        }
+        if (paramObj.km !== undefined && paramObj.km !== rxn.km) {
+          kmChanged = true;
+        }
+        if (vmaxChanged || kmChanged) {
+          changes[rId] = { vmaxChanged, kmChanged };
+        }
+      }
+    }
+  }
+  
+  if (singleId && singleParam && singleVal !== null && singleVal !== undefined) {
+    const rxn = simulation.reactions[singleId];
+    if (rxn) {
+      let vmaxChanged = false;
+      let kmChanged = false;
+      if (singleParam === 'vMax' && parseFloat(singleVal) !== rxn.vMax) {
+        vmaxChanged = true;
+      }
+      if (singleParam === 'km' && parseFloat(singleVal) !== rxn.km) {
+        kmChanged = true;
+      }
+      if (vmaxChanged || kmChanged) {
+        if (!changes[singleId]) {
+          changes[singleId] = { vmaxChanged: false, kmChanged: false };
+        }
+        changes[singleId].vmaxChanged = changes[singleId].vmaxChanged || vmaxChanged;
+        changes[singleId].kmChanged = changes[singleId].kmChanged || kmChanged;
+      }
+    }
+  }
+
+  for (const [rId, chg] of Object.entries(changes)) {
+    await recordReactionActivity(db, rId, chg.vmaxChanged, chg.kmChanged);
+  }
 }
 
 // ==========================================
@@ -457,12 +508,12 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       if (data.type === 'INIT') {
         const { userEmail, credits } = data;
         console.log(`[DO INIT] Received userEmail=${userEmail}, credits=${credits}`);
-        this.userEmail = userEmail || null;
+        this.userEmail = userEmail || 'guest';
         if (credits !== undefined && credits !== null) {
           this.credits = parseFloat(credits);
         }
         
-        if (this.userEmail) {
+        if (this.userEmail && this.userEmail !== 'guest') {
           try {
             const user = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
             if (user && user.credits !== undefined && user.credits !== null) {
@@ -536,19 +587,16 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         return;
       }
       
-      if (data.type === 'UPDATE_PARAMETER' || data.type === 'RESET_SIMULATION' || data.type === 'APPLY_SCENARIO') {
-        if (this.userEmail && this.credits !== undefined && (this.credits === null || this.credits <= 0)) {
-          ws.send(JSON.stringify({
-            type: "ERROR",
-            error: "insufficient_credits",
-            message: "Insufficient credits. Please refill your account."
-          }));
-          return;
-        }
-      }
+      // Credits constraints removed
       
       if (data.type === 'UPDATE_PARAMETER') {
         const { id, param, value, concentrations, parameters, logAction } = data;
+        
+        // Log changes on the server BEFORE applying them
+        this.state.waitUntil(logReactionChanges(this.env.DB, this.simulation, parameters, id, param, value).catch(err => {
+          console.error('[DO] Failed to log reaction parameter changes:', err);
+        }));
+
         if (logAction) {
           this.pendingLogAction = logAction;
         }
@@ -777,22 +825,23 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           if (this.credits === undefined || this.credits === null) {
             this.credits = parseFloat(user.credits);
           }
+        } else {
+          this.userEmail = 'guest';
         }
       }
 
-      if (this.credits !== undefined && this.credits !== null && this.credits <= 0) {
-        return new Response(JSON.stringify({ 
-          error: 'insufficient_credits', 
-          message: 'Insufficient credits. Please refill your account.' 
-        }), {
-          status: 402,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      const guestId = request.headers.get('x-guest-id');
+      const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown';
+      let identifier;
+      if (this.userEmail && this.userEmail !== 'guest') {
+        identifier = this.sessionId 
+          ? `user:${this.userEmail}:${this.sessionId}` 
+          : `user:${this.userEmail}`;
+      } else {
+        identifier = this.sessionId
+          ? `guest:${guestId || ip || 'unknown'}:${this.sessionId}`
+          : `guest:${guestId || ip || 'unknown'}`;
       }
-
-      const identifier = this.sessionId 
-        ? `user:${this.userEmail}:${this.sessionId}` 
-        : `user:${this.userEmail}`;
       
       this.state.waitUntil(saveChatMessage(this.env.DB, identifier, 'user', message, context));
 
@@ -875,12 +924,14 @@ Instructions:
         creditsCost = (regularTokens * (1 / 11000)) + (cachedTokens * (1 / 44000));
       }
 
-      await deductUserCredits(this.env.DB, this.userEmail, creditsCost);
-      const updatedUser = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
-      const updatedCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
-
-      // Update in-memory credits
-      this.credits = updatedCredits;
+      if (this.userEmail && this.userEmail !== 'guest') {
+        await deductUserCredits(this.env.DB, this.userEmail, creditsCost);
+        const updatedUser = await this.env.DB.prepare('SELECT credits FROM users WHERE email = ?').bind(this.userEmail).first();
+        const updatedCredits = updatedUser ? parseFloat(updatedUser.credits) : 0.0;
+        this.credits = updatedCredits;
+      } else {
+        this.credits = 0.0;
+      }
 
       // Broadcast update to all clients
       this.broadcast({
@@ -939,6 +990,11 @@ Instructions:
         reset: data.reset,
         scenario: data.scenario
       };
+
+      // Log changes on the server BEFORE applying them
+      this.state.waitUntil(logReactionChanges(this.env.DB, this.simulation, parameters).catch(err => {
+        console.error('[DO] Failed to log HTTP solve reaction parameter changes:', err);
+      }));
 
       if (data.reset) {
         this.pendingLogAction = null;
@@ -1519,14 +1575,8 @@ export default {
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
-        const { sessionId } = await request.json();
+        const body = await request.json();
+        const sessionId = body.sessionId || request.headers.get('x-session-id');
         if (!sessionId) {
           return new Response(JSON.stringify({ error: 'Session ID is required.' }), {
             status: 400,
@@ -1534,18 +1584,13 @@ export default {
           });
         }
 
-        // Deduct 1 credit for generating the report
-        if (user.credits < 1.0) {
-          return new Response(JSON.stringify({
-            error: 'insufficient_credits',
-            message: 'Generating this report costs 1.0 credit. Insufficient credits.'
-          }), {
-            status: 402,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+        // Log guest report activity if not logged in
+        if (!user) {
+          const dateStr = new Date().toISOString().slice(0, 10);
+          ctx.waitUntil(incrementGuestActivity(env.DB, sessionId, dateStr, 'report').catch(err => {
+            console.error('[Worker] Failed to increment guest report count:', err);
+          }));
         }
-
-        await deductUserCredits(env.DB, user.email, 1.0);
 
         const doId = env.SOLVER_DO.idFromName(sessionId);
         const doStub = env.SOLVER_DO.get(doId);
@@ -1629,14 +1674,17 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Authentication required. Please sign in.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
 
         const sessionId = request.headers.get('x-session-id') || 'default_user';
+
+        // Log guest chat activity if not logged in
+        if (!user) {
+          const dateStr = new Date().toISOString().slice(0, 10);
+          ctx.waitUntil(incrementGuestActivity(env.DB, sessionId, dateStr, 'chat').catch(err => {
+            console.error('[Worker] Failed to increment guest chat count:', err);
+          }));
+        }
+
         const doId = env.SOLVER_DO.idFromName(sessionId);
         const doStub = env.SOLVER_DO.get(doId);
 

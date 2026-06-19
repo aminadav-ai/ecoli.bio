@@ -1937,7 +1937,7 @@ function setupUIListeners() {
       const selectedId = e.target.value;
       if (selectedId && selectedId !== sessionId) {
         sessionId = selectedId;
-        sessionStorage.setItem('simulationSessionId', sessionId);
+        localStorage.setItem('simulationSessionId', sessionId);
         connectSessionWebSocket();
         await loadChatHistory();
 
@@ -1975,14 +1975,6 @@ function setupUIListeners() {
 
   if (btnExperimentReport && reportModal && reportContentContainer) {
     btnExperimentReport.addEventListener('click', async () => {
-      if (!userProfile) {
-        authEntryPoint = 'report';
-        openAuthModal(
-          "Unlock AI Chat & Reports",
-          "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
-        );
-        return;
-      }
       if (!sessionId) {
         showToast('Please select an experiment to view the report.', 'error');
         return;
@@ -1990,13 +1982,16 @@ function setupUIListeners() {
       
       try {
         const token = localStorage.getItem('userToken');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         
         const res = await fetch(`/api/experiments/report`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers,
           body: JSON.stringify({ sessionId })
         });
         if (res.status === 402) {
@@ -2008,7 +2003,9 @@ function setupUIListeners() {
         const data = await res.json();
         
         // Update credit UI in background after deduction
-        checkAuthStatus();
+        if (token) {
+          checkAuthStatus();
+        }
         
         reportContentContainer.textContent = data.reportText;
         reportModal.classList.remove('hidden');
@@ -5180,10 +5177,10 @@ if (!guestId) {
   localStorage.setItem('chatGuestId', guestId);
 }
 
-let sessionId = sessionStorage.getItem('simulationSessionId');
+let sessionId = localStorage.getItem('simulationSessionId');
 if (!sessionId) {
   sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  sessionStorage.setItem('simulationSessionId', sessionId);
+  localStorage.setItem('simulationSessionId', sessionId);
 }
 let lastSimulationTimestamp = 0;
 
@@ -5302,7 +5299,7 @@ async function loadExperimentsList(selectedId = null) {
         }
         if (list.length > 0) {
           sessionId = list[0].id;
-          sessionStorage.setItem('simulationSessionId', sessionId);
+          localStorage.setItem('simulationSessionId', sessionId);
           select.value = sessionId;
           isSolverWorking = false;
           updateSolverStatusUI();
@@ -5313,10 +5310,10 @@ async function loadExperimentsList(selectedId = null) {
       } else {
         if (exists) {
           sessionId = activeId;
-          sessionStorage.setItem('simulationSessionId', sessionId);
+          localStorage.setItem('simulationSessionId', sessionId);
         } else if (list.length > 0) {
           sessionId = list[0].id;
-          sessionStorage.setItem('simulationSessionId', sessionId);
+          localStorage.setItem('simulationSessionId', sessionId);
         }
         
         // Always sync the select dropdown with the active sessionId
@@ -5348,7 +5345,7 @@ async function createNewExperiment() {
     if (res.ok) {
       const newExp = await res.json();
       sessionId = newExp.id;
-      sessionStorage.setItem('simulationSessionId', sessionId);
+      localStorage.setItem('simulationSessionId', sessionId);
       
       if (simulation) {
         simulation.reset();
@@ -6066,14 +6063,6 @@ async function handleGoogleCredentialResponse(response) {
       }
       renderGoogleButton();
 
-      if (data.isNewUser && !data.token) {
-        // New user needs to consent to terms and privacy policy
-        tempGoogleCredential = response.credential;
-        closeAuthModal();
-        openWelcomeModal();
-        return;
-      }
-
       localStorage.setItem('userToken', data.token);
       userToken = data.token;
       
@@ -6085,32 +6074,19 @@ async function handleGoogleCredentialResponse(response) {
       // Perform background session checks
       await checkAuthStatus(true);
       
-      const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
       if (authEntryPoint === 'chat') {
         openChatDrawer();
         if (msg) {
           const chatInput = document.getElementById('ai-chat-input');
-          if (userCredits > 0) {
-            if (chatInput) {
-              chatInput.value = '';
-            }
-            sendChatMessage(msg);
-          } else {
-            if (chatInput) {
-              chatInput.value = msg;
-              setTimeout(() => chatInput.focus(), 100);
-            }
-            showToast('Please top up your account. Credits are required to chat.', 'error');
+          if (chatInput) {
+            chatInput.value = '';
           }
+          sendChatMessage(msg);
         }
       } else if (authEntryPoint === 'report') {
-        if (userCredits <= 0) {
-          showToast('Please top up your account. Credits are required to generate reports.', 'error');
-        } else {
-          const btnReport = document.getElementById('btn-experiment-report');
-          if (btnReport) {
-            btnReport.click();
-          }
+        const btnReport = document.getElementById('btn-experiment-report');
+        if (btnReport) {
+          btnReport.click();
         }
       }
       authEntryPoint = null;
@@ -6180,7 +6156,7 @@ async function handleLogout() {
   isExperimentsListLoaded = false;
 
   sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  sessionStorage.setItem('simulationSessionId', sessionId);
+  localStorage.setItem('simulationSessionId', sessionId);
 
   await checkAuthStatus();
 }
@@ -6915,7 +6891,7 @@ function updateUserStatusUI() {
         
         headerProfileContainer.innerHTML = `
           <div class="user-header-credits-wrapper">
-            <div class="header-credits-badge">
+            <div class="header-credits-badge" style="display: none !important;">
               <span class="credits-icon">🪙</span>
               <span id="header-credits-balance-val" class="credits-balance">${userProfile.credits !== undefined ? parseFloat(userProfile.credits).toFixed(2) : '250.00'}</span>
             </div>
@@ -7853,28 +7829,6 @@ async function sendChatMessage(customMessage = null) {
     if (!message) return;
   }
 
-  // Check if user is logged in
-  if (!userProfile) {
-    pendingChatMessage = message;
-    authEntryPoint = 'chat';
-    openAuthModal(
-      "Unlock AI Chat & Reports",
-      "These features require Credits to cover computing costs. Sign in with Google to create your account and purchase a credit package"
-    );
-    return;
-  }
-
-  // Check if user has credits
-  const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
-  if (userCredits <= 0) {
-    showToast('Insufficient credits. Please top up your account.', 'error');
-    if (chatInput && !customMessage) {
-      chatInput.value = message;
-      setTimeout(() => chatInput.focus(), 100);
-    }
-    return;
-  }
-
   if (!customMessage && chatInput) {
     chatInput.value = '';
   }
@@ -7986,25 +7940,7 @@ My answer to the reflection question: "${SCENARIOS[activeScenarioId].reflection}
 Answer: "${answer}"
 Please evaluate my answer for biological correctness based on the current metabolic map parameters, correct me if I am wrong, and explain the biology in detail.`;
 
-  if (!userProfile) {
-    showToast('Please sign in to submit your answer to the AI tutor.', 'error');
-    pendingChatMessage = promptMessage;
-    authEntryPoint = 'chat';
-    openAuthModal();
-    return;
-  }
-
-  const userCredits = userProfile ? parseFloat(userProfile.credits) : 0;
-  if (userCredits <= 0) {
-    showToast('Insufficient credits. Please top up your account.', 'error');
-    openChatDrawer();
-    const chatInput = document.getElementById('ai-chat-input');
-    if (chatInput) {
-      chatInput.value = promptMessage;
-      setTimeout(() => chatInput.focus(), 100);
-    }
-    return;
-  }
+  // Reflections submitted directly without credit checks
 
   // Focus on AI chat and open drawer
   openChatDrawer();
