@@ -6449,7 +6449,7 @@ function showConfirm(message) {
 
 function openFeedbackModal() {
   const token = localStorage.getItem('userToken');
-  if (!token) {
+  if (!token && !guestId) {
     showToast('You must be logged in to submit feedback.', 'error');
     return;
   }
@@ -6578,7 +6578,7 @@ async function handleFeedbackSubmit() {
   }
 
   const token = localStorage.getItem('userToken');
-  if (!token) {
+  if (!token && !guestId) {
     showToast('You must be logged in to submit feedback.', 'error');
     closeFeedbackModal();
     return;
@@ -6589,12 +6589,19 @@ async function handleFeedbackSubmit() {
   btn.textContent = 'Sending...';
 
   try {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (guestId) {
+      headers['x-guest-id'] = guestId;
+    }
+
     const res = await fetch('/api/feedback', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers,
       body: JSON.stringify({ feedback: text })
     });
 
@@ -6653,7 +6660,7 @@ function updateUserStatusUI() {
 
   const experimentsContainer = document.getElementById('experiments-container');
   if (experimentsContainer) {
-    if (userProfile) {
+    if (userProfile || guestId) {
       experimentsContainer.classList.remove('hidden');
     } else {
       experimentsContainer.classList.add('hidden');
@@ -6662,7 +6669,7 @@ function updateUserStatusUI() {
 
   const mobileExperimentsSection = document.getElementById('mobile-experiments-section');
   if (mobileExperimentsSection) {
-    if (userProfile) {
+    if (userProfile || guestId) {
       mobileExperimentsSection.classList.remove('hidden');
     } else {
       mobileExperimentsSection.classList.add('hidden');
@@ -6782,7 +6789,7 @@ function updateUserStatusUI() {
   // Update Feedback button visibility
   const feedbackSection = document.getElementById('feedback-section');
   if (feedbackSection) {
-    if (userProfile) {
+    if (userProfile || guestId) {
       feedbackSection.classList.remove('hidden');
     } else {
       feedbackSection.classList.add('hidden');

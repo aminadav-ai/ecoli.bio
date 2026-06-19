@@ -1910,12 +1910,19 @@ export default {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const user = token ? await getUserByToken(env.DB, token) : null;
+        let email;
 
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
+        if (user) {
+          email = user.email;
+        } else {
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          email = 'guest:' + guestId;
         }
 
         const { feedback } = await request.json();
@@ -1933,7 +1940,7 @@ export default {
           .replace(/>/g, '&gt;');
 
         const alertText = `📝 <b>New Feedback Received!</b>\n\n` +
-                          `<b>User:</b> <code>${user.email}</code>\n` +
+                          `<b>User:</b> <code>${email}</code>\n` +
                           `<b>IP:</b> <code>${ip}</code>\n\n` +
                           `<b>Feedback:</b>\n<blockquote>${safeFeedback}</blockquote>`;
 
