@@ -1052,7 +1052,6 @@ function setupUIListeners() {
     });
 
     globalO2Slider.addEventListener('change', (e) => {
-      if (!userProfile) return;
       if (simulation && simulation.metabolites['o2_e']) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
@@ -1086,7 +1085,6 @@ function setupUIListeners() {
     });
 
     globalGlcSlider.addEventListener('change', (e) => {
-      if (!userProfile) return;
       if (simulation && simulation.metabolites['glc__D_e']) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
@@ -1651,7 +1649,6 @@ function setupUIListeners() {
     });
 
     vmaxSlider.addEventListener('change', (e) => {
-      if (!userProfile) return;
       if (selectedReactionId) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
@@ -1684,7 +1681,6 @@ function setupUIListeners() {
     });
 
     kmSlider.addEventListener('change', (e) => {
-      if (!userProfile) return;
       if (selectedReactionId) {
         wakeUpSolver();
         const val = parseFloat(e.target.value);
@@ -3039,7 +3035,6 @@ function renderPinnedReactions() {
     });
 
     slider.addEventListener('change', (e) => {
-      if (!userProfile) return;
       wakeUpSolver();
       const val = parseFloat(e.target.value);
       const targetKey = `Reaction ${rxnId} Vmax`;
@@ -5244,7 +5239,7 @@ function updateActiveExperimentNameUI(name) {
 }
 
 async function loadExperimentsList(selectedId = null) {
-  if (!userProfile) return false;
+  if (!userProfile && !guestId) return false;
   const select = document.getElementById('experiment-select');
   if (!select) return false;
 
@@ -7305,7 +7300,6 @@ function startScenario(scenarioId) {
       });
 
       input.addEventListener('change', (e) => {
-        if (!userProfile) return;
         if (simulation.metabolites[ctrl.id]) {
           wakeUpSolver();
           const val = parseFloat(e.target.value);
