@@ -1643,7 +1643,7 @@ export default {
 
         const session = await getSimulationSession(env.DB, sessionId);
         const expName = session ? session.name : 'Unknown Experiment';
-        const logs = await getExperimentLogs(env.DB, sessionId);
+        let logs = await getExperimentLogs(env.DB, sessionId);
 
         const isDead = simState.is_dead || simState.isDead || false;
         const currentGrowth = Math.max(0.0, simState.biomass_flux || 0.0);
@@ -1651,7 +1651,29 @@ export default {
         const currentGlcUptake = Math.max(0.0, -glcFlux);
         const o2Flux = simState.fluxes ? (simState.fluxes['EX_o2_e'] || 0.0) : 0.0;
         const currentO2Uptake = Math.max(0.0, -o2Flux);
-        const atpFlux = Math.max(0.0, Math.abs(simState.fluxes ? (simState.fluxes['ATPS4r'] || 0.0) : 0.0));
+        const atpFlux = Math.max(0.0, Math.abs(simState.fluxes ? (simState.fluxes['ATPS4rpp'] || simState.fluxes['ATPS4r'] || 0.0) : 0.0));
+
+        if (logs.length === 0) {
+          const isDeadVal = isDead ? 1 : 0;
+          try {
+            await logExperimentAction(
+              env.DB,
+              sessionId,
+              'initial',
+              'Initial State',
+              null,
+              null,
+              currentGrowth,
+              currentGlcUptake,
+              currentO2Uptake,
+              atpFlux,
+              isDeadVal
+            );
+            logs = await getExperimentLogs(env.DB, sessionId);
+          } catch (err) {
+            console.error('[Worker] Failed to write initial state log:', err);
+          }
+        }
 
         let reportText = `Experiment: ${expName}\n`;
         reportText += `Current Status: ${isDead ? 'Dead 💀' : 'Alive (Optimal) 🟢'}\n`;
