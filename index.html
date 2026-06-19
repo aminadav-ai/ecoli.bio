@@ -614,57 +614,7 @@
         </div>
       </div>
 
-      <!-- Welcome Consent Modal -->
-      <div id="welcome-modal" class="global-auth-overlay hidden">
-        <div class="auth-card glass" style="max-width: 450px; width: 100%; text-align: left; padding: 28px;">
-          <div class="auth-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
-            <span class="auth-icon" style="margin: 0; line-height: 1;">🌱</span>
-          </div>
-          <h3 style="text-align: center; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Welcome to ecoli.bio</h3>
-          
-          <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px; text-align: center;">
-            Please review our 
-            <button id="btn-welcome-terms" class="text-link-btn" style="background: none; border: none; color: #818cf8; text-decoration: underline; cursor: pointer; padding: 0; font-family: inherit; font-size: inherit; display: inline;">Terms of Use</button> 
-            and 
-            <button id="btn-welcome-privacy" class="text-link-btn" style="background: none; border: none; color: #818cf8; text-decoration: underline; cursor: pointer; padding: 0; font-family: inherit; font-size: inherit; display: inline;">Privacy Policy</button> 
-            to complete your account setup.
-          </p>
-          
-          <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 24px;">
-            <input type="checkbox" id="welcome-consent-checkbox" style="margin-top: 4px; cursor: pointer;" />
-            <label for="welcome-consent-checkbox" style="font-size: 13px; color: #94a3b8; line-height: 1.5; cursor: pointer; user-select: none;">
-              I have read and agree to the Terms of Use and Privacy Policy.
-            </label>
-          </div>
-          
-          <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
-            <button id="btn-welcome-cancel" class="btn" style="background: rgba(255, 255, 255, 0.1); color: #cbd5e1; height: 38px; flex: 1; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; transition: background 0.2s;">
-              Cancel
-            </button>
-            <button id="btn-welcome-complete" class="btn btn-primary" style="height: 38px; flex: 1;" disabled>
-              Complete Setup
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Maintenance Credits Modal -->
-      <div id="maintenance-credits-modal" class="global-auth-overlay hidden">
-        <div class="auth-card glass" style="max-width: 450px; width: 100%; text-align: center; padding: 28px;">
-          <div class="auth-icon-wrapper" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
-            <span class="auth-icon" style="margin: 0; line-height: 1;">🪙</span>
-          </div>
-          <h3 style="text-align: center; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Complimentary Credits</h3>
-          
-          <p id="maintenance-credits-message" style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px; text-align: center;">
-            Payment systems are currently in maintenance. We have added 50 complimentary credits to your account for testing purposes.
-          </p>
-          
-          <button id="btn-maintenance-credits-ok" class="btn btn-primary" style="height: 38px; width: 100%;">
-            Got it
-          </button>
-        </div>
-      </div>
 
       <!-- Reset Confirmation Modal -->
       <div id="reset-confirm-modal" class="global-auth-overlay hidden">
@@ -888,57 +838,7 @@
         </div>
       </div>
 
-      <!-- Credits & Tariffs Modal -->
-      <div id="credits-modal" class="global-auth-overlay hidden">
-        <div class="auth-card glass" style="max-width: 450px; width: 100%; text-align: left; padding: 24px; max-height: 85vh; overflow-y: auto;">
-          <button id="btn-close-credits" class="btn-close-auth">✕</button>
-          <div class="auth-icon-wrapper" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px;">
-            <span class="auth-icon" style="margin: 0; line-height: 1;">🪙</span>
-          </div>
-          <h3 style="text-align: center; margin-bottom: 12px; font-family: 'Outfit', sans-serif;">Credits & Tariffs</h3>
-          <p style="font-size: 13.5px; color: #cbd5e1; text-align: center; margin-bottom: 20px; line-height: 1.5;">
-            Credits are consumed to perform metabolic FBA calculations, generate reports, and consult the AI Metabolic Assistant.
-          </p>
-          
-          <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 12px 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-weight: 600; color: #f8fafc; font-family: 'Outfit', sans-serif;">🔬 FBA Simulation</span>
-                <span style="font-weight: 600; color: #10b981;">Free</span>
-              </div>
-              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                Running flux balance analysis solver ticks and tuning parameters is free of charge.
-              </p>
-            </div>
 
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 12px 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-weight: 600; color: #f8fafc; font-family: 'Outfit', sans-serif;">📋 Experiment Report</span>
-                <span style="font-weight: 600; color: #818cf8;">1.00 credit / report</span>
-              </div>
-              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                Deducted per generated metabolic experiment report.
-              </p>
-            </div>
-            
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 12px 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-weight: 600; color: #f8fafc; font-family: 'Outfit', sans-serif;">💬 AI Chat Queries</span>
-                <span style="font-weight: 600; color: #818cf8;">1.00 credit / 11,000 tokens</span>
-              </div>
-              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                Calculated proportionally based on Gemini API usage tokens (prompt + response + cache).
-              </p>
-            </div>
-
-
-
-
-          </div>
-          
-          <button id="btn-close-credits-ok" class="btn btn-primary" style="margin: 24px auto 0 auto; height: 38px; width: auto; padding: 0 24px; display: block;">Close</button>
-        </div>
-      </div>
 
       <!-- Floating AI Chatbot Widget -->
       <div id="ai-chat-widget" class="ai-chat-widget">
