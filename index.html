@@ -731,7 +731,7 @@
                 <li><strong>Interactive Visualization:</strong> Explorable GPU-accelerated metabolic map rendering powered by PixiJS, displaying real-time flux magnitudes and direction.</li>
                 <li><strong>Environmental & Genetic Perturbations:</strong> Modify substrate availability (e.g., glucose and oxygen supply) or tune enzyme parameters to simulate knockdowns, upregulation, or inhibition.</li>
                 <li><strong>Guided Scenarios:</strong> Pre-configured interactive learning modules designed to demonstrate core metabolic principles, such as the anaerobic shift or pathway saturation.</li>
-                <li><strong>Experiment Management:</strong> Secure cloud synchronization to save, load, and compare metabolic simulation profiles and history logs.</li>
+                <li><strong>Experiment Management:</strong> Save, load, rename, and compare multiple metabolic simulation experiments. Unregistered guests use localized storage identifiers to persist workspaces, while registered users gain cloud synchronization across devices. All features are provided completely free of charge during our public beta/testing phase.</li>
               </ul>
             </div>
             
@@ -767,8 +767,8 @@
             </div>
             
             <div>
-              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">3. Accounts and Credits System</h4>
-              <p style="margin: 0; color: #cbd5e1;">To access simulation synchronization, history logging, generating reports, and the AI Metabolic Assistant, you must sign in via Google OAuth. Registered users are allocated a credit balance. Credits are deducted automatically for generating experiment reports and conducting AI queries, while core FBA simulation and tuning parameters are provided free of charge. Any attempt to exploit, bypass, or abuse the credit system (including automated script spamming or multi-accounting) will result in immediate suspension of access.</p>
+              <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">3. Accounts and Free Access</h4>
+              <p style="margin: 0; color: #cbd5e1;">The platform is currently provided completely free of charge. Both unregistered guests and registered users have full interactive access to all capabilities, including simulations, custom parameters, experiment reports, and AI Metabolic Assistant queries. Authenticating via Google OAuth is optional and enables cross-device synchronization and persistent cloud storage of your experiments and chat histories. Any attempt to exploit or disrupt the platform's services (including automated spamming or bot operations) may result in access restrictions.</p>
             </div>
             
             <div>
@@ -804,12 +804,12 @@
           <div class="about-modal-body" style="font-size: 13.5px; color: #e2e8f0; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
             <div>
               <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">1. Information We Collect</h4>
-              <p style="margin: 0; color: #cbd5e1;">When you authenticate using Google OAuth, we check if you are a new user. You will be asked to explicitly consent to our Terms of Use and Privacy Policy before an account is created. Once consent is given, we collect basic profile details: your email address, name, and profile picture. Additionally, we store metadata and session data including simulation experiment setups, logs of parameters you adjust, and histories of your chats with the AI Metabolic Assistant.</p>
+              <p style="margin: 0; color: #cbd5e1;">For registered users authenticating via Google OAuth, we collect basic profile details: your email address, name, and profile picture. For unregistered guest users, we generate a unique guest session identifier stored in your browser's Local Storage. For all users (guests and registered), we store session data including simulation experiment setups, logs of parameters you adjust (used to generate experiment reports), and histories of your chats with the AI Metabolic Assistant to ensure continuity.</p>
             </div>
             
             <div>
               <h4 style="color: #818cf8; font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 6px; font-size: 15px;">2. How We Use Your Data</h4>
-              <p style="margin: 0; color: #cbd5e1;">Your profile information is used to maintain your account and verify credit balances. Saved simulation session states and experiment history logs are stored to allow you to reload your workspaces across devices. Chat history is saved to maintain continuity during your educational sessions with the AI.</p>
+              <p style="margin: 0; color: #cbd5e1;">Your profile information or guest identifier is used to maintain and manage your saved simulation sessions. Saved states and experiment history logs are stored to allow you to reload and manage your experiments. Chat history is saved to maintain context during your sessions with the AI. We do not use your data for advertising or monetization.</p>
             </div>
             
             <div>
