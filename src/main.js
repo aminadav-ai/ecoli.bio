@@ -952,7 +952,12 @@ function setupUIListeners() {
     // Recalculate fluxes immediately on reset
     wakeUpSolver();
     updateFbaBounds(performance.now(), { 
-      reset: true
+      reset: true,
+      logAction: {
+        type: 'reset',
+        target: 'Simulation',
+        value: 0
+      }
     });
 
     // Refresh UI parameters and inputs to default values

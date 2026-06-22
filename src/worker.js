@@ -652,7 +652,7 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
       
       if (data.type === 'RESET_SIMULATION') {
         this.simulation.reset();
-        this.pendingLogAction = null;
+        this.pendingLogAction = data.logAction || null;
         this.hasCheckedInitialLog = false;
         this.state.waitUntil(this.startSolveLoop());
         return;
@@ -1014,7 +1014,7 @@ Instructions:
       }));
 
       if (data.reset) {
-        this.pendingLogAction = null;
+        this.pendingLogAction = data.logAction || null;
         this.hasCheckedInitialLog = false;
       }
 
