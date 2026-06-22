@@ -949,10 +949,6 @@ function setupUIListeners() {
     if (overlay) overlay.classList.add('hidden');
     console.log('[App] Simulation state reset.');
 
-    if (!userProfile) {
-      resetChatToGreeting();
-    }
-
     // Recalculate fluxes immediately on reset
     wakeUpSolver();
     updateFbaBounds(performance.now(), { 
@@ -971,32 +967,12 @@ function setupUIListeners() {
 
   // Reset/Restart handler
   const resetHandler = () => {
-    const hasLogs = currentExperimentHasLogs;
-    const hasChat = !userProfile && aiChatHistory.length > 0;
-    
-    if (hasLogs || hasChat) {
-      const confirmModal = document.getElementById('reset-confirm-modal');
-      if (confirmModal) {
-        const warningMsgEl = confirmModal.querySelector('p');
-        if (warningMsgEl) {
-          if (!userProfile) {
-            if (hasLogs && hasChat) {
-              warningMsgEl.textContent = 'This will permanently delete all recorded actions, logs, and your AI chat history for this experiment. This action cannot be undone.';
-            } else if (hasChat) {
-              warningMsgEl.textContent = 'This will permanently delete your AI chat history for this experiment. This action cannot be undone.';
-            } else {
-              warningMsgEl.textContent = 'This will permanently delete all recorded actions and logs for this experiment. This action cannot be undone.';
-            }
-          } else {
-            warningMsgEl.textContent = 'This will permanently delete all recorded actions and logs for this experiment. This action cannot be undone.';
-          }
-        }
-        confirmModal.classList.remove('hidden');
-        pushHistoryStateIfNeeded();
-      }
-    } else {
-      performReset();
-    }
+    showConfirmModal({
+      title: 'Reset Simulation?',
+      message: 'This will restore all metabolite concentrations and enzyme parameters to their default values.',
+      okText: 'Reset',
+      onConfirm: performReset
+    });
   };
 
   const resetBtnEl = document.getElementById('reset-btn');
@@ -1009,6 +985,35 @@ function setupUIListeners() {
     deathResetBtn.addEventListener('click', resetHandler);
   }
 
+  const desktopResetBtn = document.getElementById('desktop-reset-btn');
+  if (desktopResetBtn) {
+    desktopResetBtn.addEventListener('click', resetHandler);
+  }
+
+  const clearChatBtn = document.getElementById('btn-clear-chat');
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      showConfirmModal({
+        title: 'Clear Chat History?',
+        message: 'This will permanently delete all AI chat history for this experiment. This action cannot be undone.',
+        okText: 'Clear Chat',
+        onConfirm: performClearChat
+      });
+    });
+  }
+
+  const clearExperimentBtn = document.getElementById('btn-clear-experiment');
+  if (clearExperimentBtn) {
+    clearExperimentBtn.addEventListener('click', () => {
+      showConfirmModal({
+        title: 'Clear Experiment Logs?',
+        message: 'This will permanently delete all recorded actions and logs for this experiment and reset its name. This action cannot be undone.',
+        okText: 'Clear',
+        onConfirm: performClearExperiment
+      });
+    });
+  }
+
   // Reset Confirmation Modal event listeners
   const btnResetConfirmCancel = document.getElementById('btn-reset-confirm-cancel');
   if (btnResetConfirmCancel) {
@@ -1018,6 +1023,7 @@ function setupUIListeners() {
         confirmModal.classList.add('hidden');
         popHistoryStateIfNeeded();
       }
+      confirmActionCallback = null;
     });
   }
 
@@ -1029,8 +1035,13 @@ function setupUIListeners() {
         confirmModal.classList.add('hidden');
         popHistoryStateIfNeeded();
       }
-      performReset();
-      currentExperimentHasLogs = false;
+      if (confirmActionCallback) {
+        confirmActionCallback();
+        confirmActionCallback = null;
+      } else {
+        performReset();
+        currentExperimentHasLogs = false;
+      }
     });
   }
 
@@ -2267,6 +2278,116 @@ function setupUIListeners() {
   }
 }
 
+let confirmActionCallback = null;
+
+function showConfirmModal({ title, message, okText, onConfirm }) {
+  const confirmModal = document.getElementById('reset-confirm-modal');
+  if (!confirmModal) return;
+  
+  const titleEl = confirmModal.querySelector('h3');
+  const msgEl = confirmModal.querySelector('p');
+  const okBtn = document.getElementById('btn-reset-confirm-ok');
+  
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  if (okBtn) okBtn.textContent = okText;
+  
+  confirmActionCallback = onConfirm;
+  confirmModal.classList.remove('hidden');
+  pushHistoryStateIfNeeded();
+}
+
+async function performClearChat() {
+  aiChatHistory = [];
+  resetChatToGreeting();
+  
+  const token = localStorage.getItem('userToken');
+  const headers = { 
+    'x-guest-id': guestId,
+    'x-session-id': sessionId
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  try {
+    const res = await fetch('/api/chat/history', {
+      method: 'DELETE',
+      headers
+    });
+    if (res.ok) {
+      showToast('Chat history cleared successfully.', 'success');
+    } else {
+      console.error('Failed to clear chat history on server:', res.statusText);
+      showToast('Failed to clear chat history on server.', 'error');
+    }
+  } catch (err) {
+    console.error('Error clearing chat history:', err);
+    showToast('Error clearing chat history.', 'error');
+  }
+}
+
+async function performClearExperiment() {
+  const token = localStorage.getItem('userToken');
+  const headers = { 
+    'Content-Type': 'application/json',
+    'x-guest-id': guestId,
+    'x-session-id': sessionId
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  try {
+    const res = await fetch('/api/experiments/clear', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id: sessionId })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentExperimentHasLogs = false;
+      
+      if (data.name) {
+        updateActiveExperimentNameUI(data.name);
+      }
+      
+      showToast('Experiment logs cleared successfully.', 'success');
+      
+      const reportModal = document.getElementById('experiment-report-modal');
+      if (reportModal && !reportModal.classList.contains('hidden')) {
+        reportModal.classList.add('hidden');
+      }
+    } else {
+      console.error('Failed to clear experiment logs on server:', res.statusText);
+      showToast('Failed to clear experiment logs.', 'error');
+    }
+  } catch (err) {
+    console.error('Error clearing experiment logs:', err);
+    showToast('Error clearing experiment logs.', 'error');
+  }
+}
+
+function updateDesktopResetBtnVisibility() {
+  const btn = document.getElementById('desktop-reset-btn');
+  if (!btn) return;
+  
+  const isMobile = window.innerWidth <= 768;
+  const inspectorPanel = document.getElementById('inspector-panel');
+  const chatDrawer = document.getElementById('ai-chat-drawer');
+  const mobileDrawer = document.getElementById('mobile-drawer');
+  
+  const isInspectorOpen = inspectorPanel && !inspectorPanel.classList.contains('hidden-panel');
+  const isChatOpen = chatDrawer && !chatDrawer.classList.contains('hidden');
+  const isDrawerOpen = mobileDrawer && mobileDrawer.classList.contains('active');
+  
+  if (isMobile || isInspectorOpen || isChatOpen || isDrawerOpen) {
+    btn.style.setProperty('display', 'none', 'important');
+  } else {
+    btn.style.setProperty('display', 'flex', 'important');
+  }
+}
+
 let isCurrentlyMobile = null;
 
 function checkViewportChange() {
@@ -2345,6 +2466,7 @@ function checkViewportChange() {
       if (navMetrics) navMetrics.classList.add('active');
     }
   }
+  updateDesktopResetBtnVisibility();
 }
 
 /**
@@ -2580,6 +2702,7 @@ function hideInspector() {
   }
 
   updateOverviewListHighlight();
+  updateDesktopResetBtnVisibility();
 }
 
 function openChatDrawer() {
@@ -2610,6 +2733,7 @@ function openChatDrawer() {
   if (chatInput && !isChatPeeking) {
     setTimeout(() => chatInput.focus(), 80);
   }
+  updateDesktopResetBtnVisibility();
 }
 
 function closeChatDrawer() {
@@ -2621,6 +2745,7 @@ function closeChatDrawer() {
     }
     chatDrawer.classList.add('hidden');
   }
+  updateDesktopResetBtnVisibility();
 }
 
 function closeAllOtherPanels(except) {
@@ -2819,6 +2944,7 @@ function closeAllOtherPanels(except) {
       if (navScenarios) navScenarios.classList.add('active');
     }
   }
+  updateDesktopResetBtnVisibility();
 }
 
 /**
@@ -5756,6 +5882,11 @@ function connectSessionWebSocket() {
           exp.base_name = data.base_name;
         }
         loadExperimentsList(sessionId);
+        return;
+      }
+
+      if (data.type === 'CLEAR_LOGS_SUCCESS') {
+        currentExperimentHasLogs = false;
         return;
       }
       

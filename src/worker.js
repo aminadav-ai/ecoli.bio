@@ -654,59 +654,6 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         this.simulation.reset();
         this.pendingLogAction = null;
         this.hasCheckedInitialLog = false;
-        
-        if (this.userEmail) {
-          try {
-            await this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run();
-            console.log('[DO] Cleared experiment logs in D1 successfully on reset.');
-          } catch (err) {
-            console.error('[DO] Failed to clear experiment logs in D1 on reset:', err);
-          }
-          
-          if (this.userEmail.startsWith('guest')) {
-            const chatIdentifier = getChatIdentifier(this.userEmail, this.sessionId, this.guestId);
-            try {
-              await this.env.DB.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(chatIdentifier).run();
-              console.log('[DO] Cleared guest chat history on reset. Identifier:', chatIdentifier);
-            } catch (err) {
-              console.error('[DO] Failed to clear guest chat history on reset:', err);
-            }
-          }
-        }
-        
-        const isNotCustom = !this.isCustomName || isDefaultOrAutoName(this.name);
-        if (isNotCustom) {
-          const baseName = "Experiment";
-          const dateStr = new Date().toISOString().split('T')[0];
-          const count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
-          const fullName = `${baseName} (${dateStr} #${count + 1})`;
-
-          this.baseName = baseName;
-          this.name = fullName;
-          this.isCustomName = false;
-          this.state.waitUntil(this.state.storage.put('is_custom_name', false));
-          
-          if (this.userEmail) {
-            this.state.waitUntil(
-              upsertSimulationSession(
-                this.env.DB,
-                this.sessionId,
-                this.userEmail,
-                this.baseName,
-                this.name,
-                JSON.stringify(serializeSimulation(this.simulation)),
-                false
-              ).catch(err => console.error('[DO] Failed to update session in D1 on reset:', err))
-            );
-          }
-          
-          this.broadcast({
-            type: "RENAME_SESSION",
-            base_name: this.baseName,
-            name: this.name
-          });
-        }
-        
         this.state.waitUntil(this.startSolveLoop());
         return;
       }
@@ -805,6 +752,52 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
         name: this.name
       });
       return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (url.pathname === '/clear') {
+      this.pendingLogAction = null;
+      this.hasCheckedInitialLog = false;
+
+      const baseName = "Experiment";
+      const dateStr = new Date().toISOString().split('T')[0];
+      let count = 0;
+      if (this.userEmail) {
+        count = await getExperimentCount(this.env.DB, this.userEmail, baseName, dateStr);
+      }
+      const fullName = `${baseName} (${dateStr} #${count + 1})`;
+
+      this.baseName = baseName;
+      this.name = fullName;
+      this.isCustomName = false;
+      await this.state.storage.put('is_custom_name', false);
+
+      if (this.userEmail) {
+        this.state.waitUntil(
+          upsertSimulationSession(
+            this.env.DB,
+            this.sessionId,
+            this.userEmail,
+            this.baseName,
+            this.name,
+            JSON.stringify(serializeSimulation(this.simulation)),
+            false
+          ).catch(err => console.error('[DO] Failed to update session in D1 on clear:', err))
+        );
+      }
+
+      this.broadcast({
+        type: "RENAME_SESSION",
+        base_name: this.baseName,
+        name: this.name
+      });
+
+      this.broadcast({
+        type: "CLEAR_LOGS_SUCCESS"
+      });
+
+      return new Response(JSON.stringify({ success: true, name: fullName }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -1023,59 +1016,6 @@ Instructions:
       if (data.reset) {
         this.pendingLogAction = null;
         this.hasCheckedInitialLog = false;
-        
-        const email = data.userEmail || this.userEmail;
-        if (email) {
-          try {
-            await this.env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(this.sessionId).run();
-            console.log('[DO] Cleared experiment logs in D1 successfully on HTTP reset.');
-          } catch (err) {
-            console.error('[DO] Failed to clear experiment logs in D1 on HTTP reset:', err);
-          }
-          
-          if (email.startsWith('guest')) {
-            const chatIdentifier = getChatIdentifier(email, this.sessionId, this.guestId);
-            try {
-              await this.env.DB.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(chatIdentifier).run();
-              console.log('[DO] Cleared guest chat history on HTTP reset. Identifier:', chatIdentifier);
-            } catch (err) {
-              console.error('[DO] Failed to clear guest chat history on HTTP reset:', err);
-            }
-          }
-        }
-        
-        const isNotCustom = !this.isCustomName || isDefaultOrAutoName(this.name);
-        if (isNotCustom) {
-          const baseName = "Experiment";
-          const dateStr = new Date().toISOString().split('T')[0];
-          const count = await getExperimentCount(this.env.DB, email, baseName, dateStr);
-          const fullName = `${baseName} (${dateStr} #${count + 1})`;
-
-          this.baseName = baseName;
-          this.name = fullName;
-          this.isCustomName = false;
-          this.state.waitUntil(this.state.storage.put('is_custom_name', false));
-          
-          if (email) {
-            this.state.waitUntil(
-              upsertSimulationSession(
-                this.env.DB,
-                this.sessionId,
-                email,
-                this.baseName,
-                this.name,
-                JSON.stringify(serializeSimulation(this.simulation)),
-                false
-              ).catch(err => console.error('[DO] Failed to update session in D1 on reset:', err))
-            );
-          }
-          
-          this.broadcast({
-            type: "RENAME_SESSION",
-            base_name: this.baseName,
-            name: this.name
-          });
-        }
       }
 
       const result = solveFba(this.highs, staticLpHeader, concentrations, parameters, this.simulation, options);
@@ -1635,6 +1575,50 @@ export default {
         });
       }
 
+      // 1g. Clear experiment logs and reset name
+      if (url.pathname === '/api/experiments/clear' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+
+        if (!user) {
+          const guestId = request.headers.get('x-guest-id');
+          if (!guestId) {
+            return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+        }
+
+        const { id } = await request.json();
+        if (!id) {
+          return new Response(JSON.stringify({ error: 'Experiment ID is required.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // Delete logs from D1 database
+        await env.DB.prepare('DELETE FROM experiment_logs WHERE session_id = ?').bind(id).run();
+
+        // Notify active DO of clear
+        const doId = env.SOLVER_DO.idFromName(id);
+        const doStub = env.SOLVER_DO.get(doId);
+        
+        const doClearReq = new Request(new URL('/clear', url.origin), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const doRes = await doStub.fetch(doClearReq);
+        const doResData = await doRes.json();
+
+        return new Response(JSON.stringify({ success: true, name: doResData.name }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // 1f. Generate experiment report
       if (url.pathname === '/api/experiments/report' && request.method === 'POST') {
         const authHeader = request.headers.get('authorization');
@@ -1896,7 +1880,7 @@ export default {
       }
 
       // 5. Chat History
-      if (url.pathname === '/api/chat/history' && request.method === 'GET') {
+      if (url.pathname === '/api/chat/history') {
         const authHeader = request.headers.get('authorization');
         const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
         const guestId = request.headers.get('x-guest-id');
@@ -1915,10 +1899,19 @@ export default {
           }
         }
 
-        const history = await getChatHistory(env.DB, identifier);
-        return new Response(JSON.stringify(history), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+        if (request.method === 'GET') {
+          const history = await getChatHistory(env.DB, identifier);
+          return new Response(JSON.stringify(history), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        if (request.method === 'DELETE') {
+          await env.DB.prepare('DELETE FROM chat_history WHERE identifier = ?').bind(identifier).run();
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
       }
 
       // 6. Logout
