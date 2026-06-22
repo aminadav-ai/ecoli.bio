@@ -5412,9 +5412,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Desktop Duplicate Reset Button */
 #desktop-reset-btn {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #cbd5e1 !important;
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
   transition: all 0.2s ease !important;
   display: flex !important;
   align-items: center !important;
@@ -5422,10 +5423,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 #desktop-reset-btn:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: linear-gradient(135deg, #f87171, #ef4444) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45) !important;
 }
 
 #desktop-reset-btn:active {
@@ -5437,5 +5438,26 @@ input[type="range"]::-webkit-slider-thumb:hover {
     display: none !important;
   }
 }
+
+/* Mobile Drawer Reset Button */
+#reset-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+#reset-btn:hover {
+  background: linear-gradient(135deg, #f87171, #ef4444) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45) !important;
+}
+
+#reset-btn:active {
+  transform: translateY(0) !important;
+}
+
 
 
