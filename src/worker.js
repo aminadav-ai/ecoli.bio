@@ -1114,10 +1114,10 @@ async function sendTelegramNotification(env, text) {
 
 // Helper to send message using Telegram Support Bot API
 async function sendTelegramSupportNotification(env, text) {
-  const token = env.TELEGRAM_SUPPORT_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
-  const chatId = env.TELEGRAM_SUPPORT_CHAT_ID || env.TELEGRAM_CHAT_ID;
+  const token = env.TELEGRAM_SUPPORT_BOT_TOKEN;
+  const chatId = env.TELEGRAM_SUPPORT_CHAT_ID;
   const mode = env.MODE || 'production';
-  const textWithMode = `⚙️ <b>Mode:</b> <code>${mode}</code>\n\n` + text;
+  const textWithMode = `⚙️ <b>mode:</b> <code>${mode}</code>\n\n` + text;
 
   if (!token || !chatId) {
     console.log(`[Telegram Support Notification (Console-only)]: ${textWithMode.replace(/<[^>]*>/g, '')}`);
