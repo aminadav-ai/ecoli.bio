@@ -960,7 +960,7 @@ Instructions:
         credits: this.credits
       });
 
-      this.state.waitUntil(trackWorkerChatQuery(this.env, request, this.userEmail, message, usageMetadata));
+      this.state.waitUntil(trackWorkerChatQuery(this.env, request, this.userEmail, message, reply, usageMetadata));
 
       return new Response(JSON.stringify({ 
         reply, 
@@ -1112,6 +1112,39 @@ async function sendTelegramNotification(env, text) {
   }
 }
 
+// Helper to send message using Telegram Support Bot API
+async function sendTelegramSupportNotification(env, text) {
+  const token = env.TELEGRAM_SUPPORT_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_SUPPORT_CHAT_ID || env.TELEGRAM_CHAT_ID;
+  const mode = env.MODE || 'production';
+  const textWithMode = `⚙️ <b>Mode:</b> <code>${mode}</code>\n\n` + text;
+
+  if (!token || !chatId) {
+    console.log(`[Telegram Support Notification (Console-only)]: ${textWithMode.replace(/<[^>]*>/g, '')}`);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: textWithMode,
+        parse_mode: 'HTML'
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[Telegram Support] API error: ${res.status} - ${errText}`);
+    } else {
+      console.log(`[Telegram Support Bot] Message sent successfully.`);
+    }
+  } catch (err) {
+    console.error('[Telegram Support] Failed to send message:', err);
+  }
+}
+
 // Track new user signup in Telegram
 async function trackUserSignup(env, request, email, name) {
   try {
@@ -1130,8 +1163,57 @@ async function trackUserSignup(env, request, email, name) {
   }
 }
 
+// Check if text contains Russian characters
+function isRussianText(text) {
+  return /[а-яА-ЯёЁ]/.test(text || '');
+}
+
+// Translate query and response to Russian using Gemini API
+async function translateToRussian(apiKey, query, response) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `Translate the following user query and AI response to Russian. Keep the biological/scientific terminology accurate.\n\nUser Query:\n${query}\n\nAI Response:\n${response}`
+          }]
+        }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              translatedQuery: { type: "STRING" },
+              translatedResponse: { type: "STRING" }
+            },
+            required: ["translatedQuery", "translatedResponse"]
+          }
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[Translation] API returned ${res.status}: ${errText}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) {
+      return JSON.parse(text);
+    }
+  } catch (err) {
+    console.error('[Translation] Error translating text:', err);
+  }
+  return null;
+}
+
 // Track chat queries in Telegram
-async function trackWorkerChatQuery(env, request, email, message, usageMetadata = null) {
+async function trackWorkerChatQuery(env, request, email, message, reply, usageMetadata = null) {
   try {
     const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'Unknown IP';
     const ua = request.headers.get('user-agent') || '';
@@ -1153,12 +1235,41 @@ async function trackWorkerChatQuery(env, request, email, message, usageMetadata 
                    `• Total: <b>${totalTokens}</b>`;
     }
 
-    const text = `💬 <b>AI Chat Request!</b>\n\n` +
-                 `<b>User:</b> <code>${email}</code>\n` +
-                 `<b>IP:</b> <code>${ip}</code>\n` +
-                 `<b>Device:</b> <code>${device}</code>\n\n` +
-                 `<b>Prompt:</b>\n<blockquote>${safeMessage}</blockquote>` +
-                 tokensInfo;
+    const isReport = message.includes("Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment");
+
+    let text = `💬 <b>AI Chat Request!</b>\n\n` +
+               `<b>User:</b> <code>${email}</code>\n` +
+               `<b>IP:</b> <code>${ip}</code>\n` +
+               `<b>Device:</b> <code>${device}</code>\n\n` +
+               `<b>Prompt:</b>\n<blockquote>${safeMessage}</blockquote>`;
+
+    if (!isReport) {
+      const safeReply = (reply || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      text += `\n\n<b>AI Response:</b>\n<blockquote>${safeReply}</blockquote>`;
+
+      if (!isRussianText(message) && env.GOOGLE_API_KEY) {
+        const translation = await translateToRussian(env.GOOGLE_API_KEY, message, reply);
+        if (translation) {
+          const safeTranslatedQuery = (translation.translatedQuery || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          const safeTranslatedResponse = (translation.translatedResponse || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+          text += `\n\n<b>[RU] Translated Prompt:</b>\n<blockquote>${safeTranslatedQuery}</blockquote>\n\n` +
+                  `<b>[RU] Translated Response:</b>\n<blockquote>${safeTranslatedResponse}</blockquote>`;
+        }
+      }
+    }
+
+    text += tokensInfo;
 
     await sendTelegramNotification(env, text);
   } catch (err) {
@@ -1968,6 +2079,65 @@ export default {
                           `<b>Feedback:</b>\n<blockquote>${safeFeedback}</blockquote>`;
 
         ctx.waitUntil(sendTelegramNotification(env, alertText));
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      // 8b. Support message submission
+      if (url.pathname === '/api/support' && request.method === 'POST') {
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const user = token ? await getUserByToken(env.DB, token) : null;
+        
+        let userEmailStr = '';
+        let userNameStr = '';
+        let isRegistered = false;
+
+        if (user) {
+          userEmailStr = user.email;
+          userNameStr = user.name || 'N/A';
+          isRegistered = true;
+        }
+
+        const { message: supportMsg, name: guestName, email: guestEmail } = await request.json();
+        
+        if (!supportMsg || !supportMsg.trim()) {
+          return new Response(JSON.stringify({ error: 'Message cannot be empty.' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        // If guest, use optional guestName/guestEmail
+        if (!isRegistered) {
+          userEmailStr = guestEmail ? guestEmail.trim() : 'Guest (No Email)';
+          userNameStr = guestName ? guestName.trim() : 'Guest (No Name)';
+        }
+
+        const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
+        const safeMsg = supportMsg
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const safeName = userNameStr
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const safeEmail = userEmailStr
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        const alertText = `🎫 <b>New Support Request!</b>\n\n` +
+                          `<b>User Type:</b> <code>${isRegistered ? 'Registered User' : 'Guest'}</code>\n` +
+                          `<b>Name:</b> <code>${safeName}</code>\n` +
+                          `<b>Email:</b> <code>${safeEmail}</code>\n` +
+                          `<b>IP:</b> <code>${ip}</code>\n\n` +
+                          `<b>Message:</b>\n<blockquote>${safeMsg}</blockquote>`;
+
+        ctx.waitUntil(sendTelegramSupportNotification(env, alertText));
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }

@@ -6634,6 +6634,46 @@ function closeFeedbackModal() {
   }
 }
 
+function openSupportModal() {
+  const modal = document.getElementById('support-modal');
+  const guestFields = document.getElementById('support-guest-fields');
+  const nameInput = document.getElementById('support-name');
+  const emailInput = document.getElementById('support-email');
+  const textarea = document.getElementById('support-text');
+  
+  if (modal) {
+    modal.classList.remove('hidden');
+    
+    // Check if logged in
+    const token = localStorage.getItem('userToken');
+    if (token) {
+      if (guestFields) guestFields.style.display = 'none';
+    } else {
+      if (guestFields) guestFields.style.display = 'flex';
+    }
+    
+    if (nameInput) nameInput.value = '';
+    if (emailInput) emailInput.value = '';
+    if (textarea) {
+      textarea.value = '';
+      textarea.focus();
+    }
+    pushHistoryStateIfNeeded();
+  }
+}
+
+function closeSupportModal() {
+  const modal = document.getElementById('support-modal');
+  let wasModalOpen = false;
+  if (modal) {
+    wasModalOpen = !modal.classList.contains('hidden');
+    modal.classList.add('hidden');
+  }
+  if (wasModalOpen) {
+    popHistoryStateIfNeeded();
+  }
+}
+
 function openExperimentsHelpModal() {
   const modal = document.getElementById('experiments-help-modal');
   if (modal) {
@@ -6773,6 +6813,66 @@ async function handleFeedbackSubmit() {
   } catch (err) {
     console.error('Failed to submit feedback:', err);
     showToast('Network error. Failed to send feedback.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function handleSupportSubmit() {
+  const textarea = document.getElementById('support-text');
+  const nameInput = document.getElementById('support-name');
+  const emailInput = document.getElementById('support-email');
+  const btn = document.getElementById('btn-submit-support');
+  if (!textarea || !btn) return;
+
+  const text = textarea.value.trim();
+  if (!text) {
+    showToast('Please enter your message.', 'error');
+    textarea.focus();
+    return;
+  }
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const email = emailInput ? emailInput.value.trim() : '';
+
+  const token = localStorage.getItem('userToken');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Sending...';
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (guestId) {
+      headers['x-guest-id'] = guestId;
+    }
+
+    const res = await fetch('/api/support', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message: text,
+        name: name,
+        email: email
+      })
+    });
+
+    if (res.ok) {
+      closeSupportModal();
+      closeAllOtherPanels(null);
+      showToast('Your message has been sent successfully.', 'success');
+    } else {
+      const data = await res.json();
+      showToast(`Error: ${data.error || 'Failed to send message.'}`, 'error');
+    }
+  } catch (err) {
+    console.error('Failed to submit support request:', err);
+    showToast('Network error. Failed to send message.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
@@ -7200,6 +7300,37 @@ function setupScenariosAndChat() {
     feedbackModal.addEventListener('click', (e) => {
       if (e.target === feedbackModal) {
         closeFeedbackModal();
+      }
+    });
+  }
+
+  // Support Modal event listeners
+  const btnSupport = document.getElementById('btn-support');
+  if (btnSupport) {
+    btnSupport.addEventListener('click', () => {
+      openSupportModal();
+    });
+  }
+
+  const btnCloseSupport = document.getElementById('btn-close-support');
+  if (btnCloseSupport) {
+    btnCloseSupport.addEventListener('click', () => {
+      closeSupportModal();
+    });
+  }
+
+  const btnSubmitSupport = document.getElementById('btn-submit-support');
+  if (btnSubmitSupport) {
+    btnSubmitSupport.addEventListener('click', () => {
+      handleSupportSubmit();
+    });
+  }
+
+  const supportModal = document.getElementById('support-modal');
+  if (supportModal) {
+    supportModal.addEventListener('click', (e) => {
+      if (e.target === supportModal) {
+        closeSupportModal();
       }
     });
   }
