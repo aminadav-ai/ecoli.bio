@@ -1219,7 +1219,14 @@ async function trackWorkerChatQuery(env, request, email, message, reply, usageMe
     const ua = request.headers.get('user-agent') || '';
     const device = parseUserAgent(ua);
 
-    const safeMessage = (message || '')
+    const maxPartLength = 800;
+    const maxReplyLength = 1200;
+
+    const truncatedMessage = (message || '').length > maxPartLength 
+      ? message.substring(0, maxPartLength) + '... [truncated]' 
+      : message;
+
+    const safeMessage = (truncatedMessage || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
@@ -1244,7 +1251,11 @@ async function trackWorkerChatQuery(env, request, email, message, reply, usageMe
                `<b>Prompt:</b>\n<blockquote>${safeMessage}</blockquote>`;
 
     if (!isReport) {
-      const safeReply = (reply || '')
+      const truncatedReply = (reply || '').length > maxReplyLength 
+        ? reply.substring(0, maxReplyLength) + '... [truncated]' 
+        : reply;
+
+      const safeReply = (truncatedReply || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
@@ -1254,11 +1265,18 @@ async function trackWorkerChatQuery(env, request, email, message, reply, usageMe
       if (!isRussianText(message) && env.GOOGLE_API_KEY) {
         const translation = await translateToRussian(env.GOOGLE_API_KEY, message, reply);
         if (translation) {
-          const safeTranslatedQuery = (translation.translatedQuery || '')
+          const truncatedTransQuery = (translation.translatedQuery || '').length > maxPartLength 
+            ? translation.translatedQuery.substring(0, maxPartLength) + '... [truncated]' 
+            : translation.translatedQuery;
+          const truncatedTransResponse = (translation.translatedResponse || '').length > maxReplyLength 
+            ? translation.translatedResponse.substring(0, maxReplyLength) + '... [truncated]' 
+            : translation.translatedResponse;
+
+          const safeTranslatedQuery = (truncatedTransQuery || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
-          const safeTranslatedResponse = (translation.translatedResponse || '')
+          const safeTranslatedResponse = (truncatedTransResponse || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
@@ -2149,6 +2167,47 @@ export default {
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
+      }
+
+      // Test Telegram connection
+      if (url.pathname === '/api/test-telegram') {
+        const token = env.TELEGRAM_BOT_TOKEN;
+        const chatId = env.TELEGRAM_CHAT_ID;
+        if (!token || !chatId) {
+          return new Response(JSON.stringify({ 
+            error: 'Credentials missing', 
+            hasToken: !!token, 
+            hasChatId: !!chatId 
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: `🔔 <b>Test message from staging worker!</b>`,
+              parse_mode: 'HTML'
+            })
+          });
+          const body = await res.text();
+          return new Response(JSON.stringify({
+            status: res.status,
+            ok: res.ok,
+            telegramResponse: body
+          }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
       }
 
       // Fallback 404 for unknown API calls
