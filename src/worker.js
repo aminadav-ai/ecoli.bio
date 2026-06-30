@@ -2169,46 +2169,6 @@ export default {
         });
       }
 
-      // Test Telegram connection
-      if (url.pathname === '/api/test-telegram') {
-        const token = env.TELEGRAM_BOT_TOKEN;
-        const chatId = env.TELEGRAM_CHAT_ID;
-        if (!token || !chatId) {
-          return new Response(JSON.stringify({ 
-            error: 'Credentials missing', 
-            hasToken: !!token, 
-            hasChatId: !!chatId 
-          }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        
-        try {
-          const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: `🔔 <b>Test message from staging worker!</b>`,
-              parse_mode: 'HTML'
-            })
-          });
-          const body = await res.text();
-          return new Response(JSON.stringify({
-            status: res.status,
-            ok: res.ok,
-            telegramResponse: body
-          }), {
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        } catch (err) {
-          return new Response(JSON.stringify({ error: err.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-      }
 
       // Fallback 404 for unknown API calls
       return new Response(JSON.stringify({ error: 'API route not found' }), {
