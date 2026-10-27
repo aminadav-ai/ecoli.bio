@@ -53,6 +53,8 @@ const CHAT_LIMITS = {
   outputTokens: 2048,
   reportOutputTokens: 4096
 };
+// Gemini model for chat, rename and translation (gemini-2.5-flash is unavailable to new projects)
+const GEMINI_MODEL = 'gemini-3.8-flash';
 const REPORT_PROMPT_PREFIX = 'Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment';
 
 // IPv6 clients usually own a whole /64, so rate-limit by that prefix instead of the full address
@@ -478,7 +480,7 @@ ${modifiedList.join('\n')}
 Return ONLY the raw title string, with no other text, comments, markdown, or quotation marks.`;
 
         const apiKey = this.env.GOOGLE_API_KEY;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -961,7 +963,7 @@ Instructions:
       });
 
       // Request Gemini API
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1226,7 +1228,7 @@ function isRussianText(text) {
 // Translate query and response to Russian using Gemini API
 async function translateToRussian(apiKey, query, response) {
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
