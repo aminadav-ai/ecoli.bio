@@ -182,6 +182,28 @@ export async function getChatHistory(db, identifier, limit = 50) {
   }
 }
 
+// 12b. Load the most recent N chat messages (oldest first) for building the AI prompt server-side
+export async function getRecentChatHistory(db, identifier, limit = 10) {
+  try {
+    const res = await db.prepare(
+      'SELECT role, message FROM chat_history WHERE identifier = ? ORDER BY id DESC LIMIT ?'
+    ).bind(identifier, limit).all();
+    return (res.results || []).reverse();
+  } catch (err) {
+    console.warn('[D1 DB] Failed to load recent chat history:', err.message);
+    return [];
+  }
+}
+
+// 12c. Atomically increment the daily AI chat counter for a key and return the new count
+export async function incrementChatRateLimit(db, key, day) {
+  const row = await db.prepare(
+    'INSERT INTO chat_rate_limits (key, day, count) VALUES (?, ?, 1) ' +
+    'ON CONFLICT(key, day) DO UPDATE SET count = count + 1 RETURNING count'
+  ).bind(key, day).first();
+  return row ? row.count : 1;
+}
+
 // 13. Bulk increment user solver ticks (Batch API) - now only deducts credits
 export async function bulkIncrementUserStats(db, updates) {
   // Solver is free, do not deduct credits for solver ticks

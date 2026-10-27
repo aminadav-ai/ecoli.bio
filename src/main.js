@@ -7855,7 +7855,7 @@ async function sendChatMessage(customMessage = null) {
 
   try {
     const context = getSimulationContext();
-    const history = aiChatHistory.slice(-10); // Keep last 10 messages context to prevent tokens overflow
+    // Chat history is loaded server-side from D1; the client no longer sends it.
 
     const headers = {
       'Content-Type': 'application/json',
@@ -7870,7 +7870,7 @@ async function sendChatMessage(customMessage = null) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message, history, context })
+      body: JSON.stringify({ message, context })
     });
 
     isAiTyping = false;
@@ -7907,6 +7907,11 @@ async function sendChatMessage(customMessage = null) {
           chatInput.value = message;
         }
         await checkAuthStatus();
+      } else if (res.status === 429 || res.status === 413) {
+        appendModelMessage(chatLimitMessage(res.status, err));
+        if (chatInput && !customMessage) {
+          chatInput.value = message;
+        }
       } else {
         appendModelMessage(`Error: ${err.error || 'Failed to send query to AI.'}`);
         if (chatInput && !customMessage) {
@@ -7924,6 +7929,18 @@ async function sendChatMessage(customMessage = null) {
       chatInput.value = message;
     }
   }
+}
+
+function chatLimitMessage(status, err) {
+  if (status === 413) {
+    return err.limit
+      ? `System: Message is too long (limit ${err.limit} characters). Please shorten it.`
+      : 'System: Message is too long. Please shorten it.';
+  }
+  if (err.guest) {
+    return `System: Daily AI assistant limit for guests reached (${err.limit} messages). Sign in with Google to continue, or come back tomorrow.`;
+  }
+  return `System: Daily AI assistant limit reached (${err.limit} messages). Please come back tomorrow.`;
 }
 
 async function submitReflectionAnswer() {
@@ -7970,7 +7987,6 @@ Please evaluate my answer for biological correctness based on the current metabo
 
   try {
     const context = getSimulationContext();
-    const history = aiChatHistory.slice(-10);
 
     const headers = {
       'Content-Type': 'application/json',
@@ -7985,7 +8001,7 @@ Please evaluate my answer for biological correctness based on the current metabo
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message: promptMessage, history, context })
+      body: JSON.stringify({ message: promptMessage, context })
     });
 
     isAiTyping = false;
@@ -8007,8 +8023,11 @@ Please evaluate my answer for biological correctness based on the current metabo
       if (res.status === 401) {
         appendModelMessage(`System: Authentication required. Please sign in.`);
         await checkAuthStatus();
+      } else if (res.status === 429 || res.status === 413) {
+        const err = await res.json().catch(() => ({}));
+        appendModelMessage(chatLimitMessage(res.status, err));
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         appendModelMessage(`Error: ${err.error || 'Failed to submit answer for evaluation.'}`);
       }
     }

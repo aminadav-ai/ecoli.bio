@@ -20,6 +20,8 @@ import {
   logoutSession, 
   saveChatMessage, 
   getChatHistory, 
+  getRecentChatHistory,
+  incrementChatRateLimit,
   bulkIncrementUserStats,
   incrementUserVisits,
   recordGuestVisit,
@@ -36,6 +38,20 @@ import {
   recordReactionActivity,
   incrementGuestActivity
 } from './d1_db.js';
+
+// AI chat abuse protection (caps Gemini token spend)
+const CHAT_LIMITS = {
+  guestPerDay: 10,          // messages per guest IP per UTC day
+  userPerDay: 100,          // messages per registered account per UTC day
+  messageChars: 3000,       // regular question (incl. scenario reflection template)
+  reportMessageChars: 20000, // "analyze experiment report" request includes the timeline
+  contextChars: 120000,     // serialized simulation context (all map reactions/metabolites), ~30k tokens max
+  historyMessages: 10,      // previous messages loaded from D1
+  historyItemChars: 4000,   // per history message
+  outputTokens: 2048,
+  reportOutputTokens: 4096
+};
+const REPORT_PROMPT_PREFIX = 'Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment';
 
 function isDefaultOrAutoName(name) {
   if (!name || name === "Experiment") return true;
@@ -823,7 +839,28 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
 
     if (url.pathname === '/chat') {
       const body = await request.json();
-      const { message, history, context } = body;
+      // NOTE: client-supplied `history` is intentionally ignored; history is loaded from D1 below.
+      const { message, context } = body;
+      const isReportRequest = typeof message === 'string' && message.startsWith(REPORT_PROMPT_PREFIX);
+      const maxMessageChars = isReportRequest ? CHAT_LIMITS.reportMessageChars : CHAT_LIMITS.messageChars;
+      if (typeof message !== 'string' || !message.trim()) {
+        return new Response(JSON.stringify({ error: 'empty_message' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      if (message.length > maxMessageChars) {
+        return new Response(JSON.stringify({ error: 'message_too_long', limit: maxMessageChars }), {
+          status: 413,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      if (context && JSON.stringify(context).length > CHAT_LIMITS.contextChars) {
+        return new Response(JSON.stringify({ error: 'context_too_large' }), {
+          status: 413,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const apiKey = this.env.GOOGLE_API_KEY;
       if (!apiKey) {
         return new Response(JSON.stringify({ error: 'GOOGLE_API_KEY is not configured.' }), {
@@ -859,6 +896,9 @@ Return ONLY the raw title string, with no other text, comments, markdown, or quo
           : `guest:${guestId || ip || 'unknown'}`;
       }
       
+      // Load recent history from D1 BEFORE saving the current message
+      const history = await getRecentChatHistory(this.env.DB, identifier, CHAT_LIMITS.historyMessages);
+
       this.state.waitUntil(saveChatMessage(this.env.DB, identifier, 'user', message, context));
 
       const systemPrompt = `You are a helpful and expert AI Metabolic Assistant for a student using the ecoli.bio portal (E. coli Central Metabolism Lab).
@@ -881,7 +921,7 @@ PORTAL FEATURES:
 - Experiment Report: The "Report" button is located in the center of the bottom dock panel (floating dock on desktop, full-width on mobile), between the Scenarios tab and the AI Chat button. It opens the Experiment Report modal showing a timeline of user actions and biological impacts.
 - Chat Context: The chat header features an "👁️ Context" button to view raw JSON simulation context sent to the AI. This button is hidden in production (ecoli.bio / www.ecoli.bio) and only visible in development and staging environments.
 - Guest Mode: Unregistered guests have full interactive access to all capabilities of the platform. They can adjust sliders, run simulations, spikes, and depletions, use Scenarios, manage multiple experiments, view logs and reports, and chat with the AI assistant. Their state and histories are preserved across browser restarts via local identifiers.
-- Free Public Preview: The ecoli.bio platform is currently completely free of charge. There are no credit checks, tokens, or usage limits for any of the features (including simulation runs, AI chat interactions, and report generation). If users ask about limits, credits, or subscriptions, reassure them that all features are currently free during this public testing/preview phase.
+- Free Public Preview: The simulation itself is free. The AI assistant has a small daily message allowance for guests (${CHAT_LIMITS.guestPerDay} messages per day); signing in with Google gives a larger allowance. If users ask about limits, explain this briefly and politely.
 
 Here is the current state of the metabolic simulation on the student's screen:
 ${JSON.stringify(context, null, 2)}
@@ -895,13 +935,13 @@ Instructions:
 `;
 
       const contents = [];
-      if (history && history.length > 0) {
-        for (const msg of history) {
-          contents.push({
-            role: msg.role === 'model' ? 'model' : 'user',
-            parts: [{ text: msg.text }]
-          });
-        }
+      for (const msg of history) {
+        const text = String(msg.message || '').slice(0, CHAT_LIMITS.historyItemChars);
+        if (!text) continue;
+        contents.push({
+          role: msg.role === 'model' ? 'model' : 'user',
+          parts: [{ text }]
+        });
       }
       contents.push({
         role: 'user',
@@ -916,6 +956,9 @@ Instructions:
           contents,
           systemInstruction: {
             parts: [{ text: systemPrompt }]
+          },
+          generationConfig: {
+            maxOutputTokens: isReportRequest ? CHAT_LIMITS.reportOutputTokens : CHAT_LIMITS.outputTokens
           }
         })
       });
@@ -1877,6 +1920,33 @@ export default {
         const user = token ? await getUserByToken(env.DB, token) : null;
 
         const sessionId = request.headers.get('x-session-id') || 'default_user';
+
+        // Daily AI chat cap: per IP for guests (client cannot spoof cf-connecting-ip), per account for users
+        const day = new Date().toISOString().slice(0, 10);
+        const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+        const limitKey = user ? `user:${user.email}` : `ip:${ip}`;
+        const dailyLimit = user ? CHAT_LIMITS.userPerDay : CHAT_LIMITS.guestPerDay;
+        let usedToday = 0;
+        try {
+          usedToday = await incrementChatRateLimit(env.DB, limitKey, day);
+        } catch (err) {
+          console.error('[Worker] Chat rate limit check failed:', err);
+          return new Response(JSON.stringify({ error: 'rate_limit_unavailable' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        if (usedToday > dailyLimit) {
+          return new Response(JSON.stringify({
+            error: 'daily_limit_reached',
+            limit: dailyLimit,
+            guest: !user,
+            resetAt: `${day}T23:59:59Z`
+          }), {
+            status: 429,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
 
         // Log guest chat activity if not logged in
         if (!user) {
