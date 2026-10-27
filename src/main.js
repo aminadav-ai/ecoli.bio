@@ -6644,13 +6644,8 @@ function openSupportModal() {
   if (modal) {
     modal.classList.remove('hidden');
     
-    // Check if logged in
-    const token = localStorage.getItem('userToken');
-    if (token) {
-      if (guestFields) guestFields.style.display = 'none';
-    } else {
-      if (guestFields) guestFields.style.display = 'flex';
-    }
+    // Always hide guest name/email fields so the form is an anonymous bug report (portfolio-safe)
+    if (guestFields) guestFields.style.display = 'none';
     
     if (nameInput) nameInput.value = '';
     if (emailInput) emailInput.value = '';
