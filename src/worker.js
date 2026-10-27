@@ -43,6 +43,8 @@ import {
 const CHAT_LIMITS = {
   guestPerDay: 10,          // messages per guest IP per UTC day
   userPerDay: 100,          // messages per registered account per UTC day
+  guestTotalPerDay: 300,    // circuit breaker: all guest messages combined per UTC day
+  guestTotalAlertRatio: 0.8, // Telegram alert when this share of guestTotalPerDay is used
   messageChars: 3000,       // regular question (incl. scenario reflection template)
   reportMessageChars: 20000, // "analyze experiment report" request includes the timeline
   contextChars: 120000,     // serialized simulation context (all map reactions/metabolites), ~30k tokens max
@@ -52,6 +54,16 @@ const CHAT_LIMITS = {
   reportOutputTokens: 4096
 };
 const REPORT_PROMPT_PREFIX = 'Please write a scientific, neutral analysis of the biological meaning and impact of this metabolic experiment';
+
+// IPv6 clients usually own a whole /64, so rate-limit by that prefix instead of the full address
+function rateLimitIpKey(ip) {
+  if (!ip || !ip.includes(':')) return ip || 'unknown';
+  const [head, tail] = ip.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail !== undefined && tail ? tail.split(':') : [];
+  const groups = tail !== undefined ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map(g => (parseInt(g, 16) || 0).toString(16)).join(':') + '::/64';
+}
 
 function isDefaultOrAutoName(name) {
   if (!name || name === "Experiment") return true;
@@ -1924,7 +1936,7 @@ export default {
         // Daily AI chat cap: per IP for guests (client cannot spoof cf-connecting-ip), per account for users
         const day = new Date().toISOString().slice(0, 10);
         const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-        const limitKey = user ? `user:${user.email}` : `ip:${ip}`;
+        const limitKey = user ? `user:${user.email}` : `ip:${rateLimitIpKey(ip)}`;
         const dailyLimit = user ? CHAT_LIMITS.userPerDay : CHAT_LIMITS.guestPerDay;
         let usedToday = 0;
         try {
@@ -1948,6 +1960,38 @@ export default {
           });
         }
 
+        // Global guest circuit breaker (protects against many IPs / proxies)
+        if (!user) {
+          let guestTotal = 0;
+          try {
+            guestTotal = await incrementChatRateLimit(env.DB, 'guests:total', day);
+          } catch (err) {
+            console.error('[Worker] Guest total limit check failed:', err);
+            return new Response(JSON.stringify({ error: 'rate_limit_unavailable' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          const alertAt = Math.floor(CHAT_LIMITS.guestTotalPerDay * CHAT_LIMITS.guestTotalAlertRatio);
+          if (guestTotal === alertAt || guestTotal === CHAT_LIMITS.guestTotalPerDay + 1) {
+            const pct = guestTotal > CHAT_LIMITS.guestTotalPerDay ? 100 : Math.round(CHAT_LIMITS.guestTotalAlertRatio * 100);
+            ctx.waitUntil(sendTelegramNotification(env,
+              `⚠️ <b>Гостевой AI-чат: использовано ${pct}% суточного лимита</b>\n` +
+              `${Math.min(guestTotal, CHAT_LIMITS.guestTotalPerDay)} / ${CHAT_LIMITS.guestTotalPerDay} сообщений за ${day} (UTC).\n` +
+              `Последний IP: <code>${ip}</code>`
+            ).catch(err => console.error('[Worker] Telegram alert failed:', err)));
+          }
+          if (guestTotal > CHAT_LIMITS.guestTotalPerDay) {
+            return new Response(JSON.stringify({
+              error: 'guest_quota_exhausted',
+              guest: true,
+              resetAt: `${day}T23:59:59Z`
+            }), {
+              status: 429,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+        }
         // Log guest chat activity if not logged in
         if (!user) {
           const dateStr = new Date().toISOString().slice(0, 10);

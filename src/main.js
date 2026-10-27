@@ -7937,6 +7937,9 @@ function chatLimitMessage(status, err) {
       ? `System: Message is too long (limit ${err.limit} characters). Please shorten it.`
       : 'System: Message is too long. Please shorten it.';
   }
+  if (err.error === 'guest_quota_exhausted') {
+    return 'System: The shared guest AI quota for today is used up. Sign in with Google to continue chatting, or come back tomorrow.';
+  }
   if (err.guest) {
     return `System: Daily AI assistant limit for guests reached (${err.limit} messages). Sign in with Google to continue, or come back tomorrow.`;
   }
